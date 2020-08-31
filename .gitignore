@@ -1,0 +1,47 @@
+*.class
+*.log
+*.pyc
+sbt/*.jar
+
+# sbt specific
+.cache/
+.history/
+.lib/
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+
+# idea
+.idea/
+*.iml
+
+# Mac
+.DS_Store
+
+# emacs
+*.*~
+
+# docs
+docs/*.html
+docs/*.tex
+docs/auto/
+*-blx.bib
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+docs/*.xml
+docs/*.key
+*.tex
+*.tiff
+docs/benchmark/*.html
+**/auto/
+docs/notes/*_ImplNotes.org
+
+# docker
+docker/driver
+docker/worker
+docker/.env
