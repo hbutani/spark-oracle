@@ -11,7 +11,10 @@ ThisBuild / organization := "com.oracle.spark"
 ThisBuild / organizationName := "Oracle"
 ThisBuild / version := Versions.sparkOracleVersion
 
-ThisBuild / updateOptions := updateOptions.value.withLatestSnapshots(false)
+// from https://www.scala-sbt.org/1.x/docs/Cached-Resolution.html
+// added to commonSettings
+// ThisBuild / updateOptions := updateOptions.value.withLatestSnapshots(false)
+// ThisBuild / updateOptions := updateOptions.value.withCachedResolution(true)
 
 Global / resolvers ++= Seq(
   DefaultMavenRepository,
@@ -19,6 +22,8 @@ Global / resolvers ++= Seq(
   "Apache snapshots repo" at "https://repository.apache.org/content/groups/snapshots/")
 
 lazy val commonSettings = Seq(
+  updateOptions := updateOptions.value.withLatestSnapshots(false),
+  updateOptions := updateOptions.value.withCachedResolution(true),
   javaOptions := Seq(
     "-Xms1g",
     "-Xmx3g",
@@ -66,8 +71,18 @@ lazy val mllib = project
 
 lazy val spark_extend = project
   .in(file("packaging/spark_extend"))
+  .enablePlugins(UniversalPlugin)
   .settings(commonSettings: _*)
   .settings(Assembly.assemblySettings: _*)
+  // remove root folder; set jar name; add maintainer
+  .settings(
+    maintainer in Universal := "harish.butani@oracle.com",
+    packageName in Universal := "spark-oracle-" + (version.value),
+    topLevelDirectory in Universal := None,
+    mappings in Universal += {
+      val assemblyJar = (assembly).value
+      assemblyJar -> ("jars/" + assemblyJar.getName)
+    })
   .dependsOn(test_support % "test", common, orastuff, sql, mllib)
 
 lazy val spark_embed = project

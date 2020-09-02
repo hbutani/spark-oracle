@@ -25,7 +25,6 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.catalyst.plans.logical.LocalRelation
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
-import org.apache.spark.sql.oracle.{OraSparkUtils, SparkSessionExtensions}
 import org.apache.spark.sql.types.DataType
 
 // scalastyle:off println
