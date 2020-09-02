@@ -22,6 +22,7 @@ import java.util.concurrent.{ConcurrentHashMap => CMap}
 
 import oracle.hcat.db.conn.OracleDBConnectionCache
 import oracle.ucp.jdbc.PoolDataSource
+
 import org.apache.spark.internal.Logging
 
 /**
@@ -39,7 +40,7 @@ import org.apache.spark.internal.Logging
  * Pool set with `maxPoolSize = Runtime.availableProcessors()` and
  * `connectionWaitTime = 1 sec`.
  */
-private[oracle] object ConnectionManagement extends DataSources with Logging {
+object ConnectionManagement extends DataSources with Logging {
 
   private val pdsMap = new CMap[DataSourceKey, PoolDataSource]()
 
@@ -49,42 +50,34 @@ private[oracle] object ConnectionManagement extends DataSources with Logging {
     override def initialValue() = None
   }
 
-  private def attachAndGetConnection(dsKey : DataSourceKey,
-                                     pds : PoolDataSource) : Connection = {
+  private def attachAndGetConnection(dsKey: DataSourceKey, pds: PoolDataSource): Connection = {
     _threadLocalConnection.get() match {
       case Some((tDsKey, conn)) if (tDsKey == dsKey && !conn.isClosed) => conn
-      case None => {
-        logDebug(
-          s"Connection request for ${dsKey} on ${Thread.currentThread().getName}"
-        )
-        val conn : Connection = pds.getConnection()
+      case None =>
+        logDebug(s"Connection request for ${dsKey} on ${Thread.currentThread().getName}")
+        val conn: Connection = pds.getConnection()
         _threadLocalConnection.set(Some(dsKey, conn))
         conn
-      }
-      case Some((tDsKey, conn)) => {
+      case Some((tDsKey, conn)) =>
         logDebug(
           s"Connection request for ${dsKey} on ${Thread.currentThread().getName}," +
-            s" when thread has open connection for ${tDsKey}"
-        )
+            s" when thread has open connection for ${tDsKey}")
         if (!conn.isClosed) {
           conn.close()
         }
         _threadLocalConnection.set(None)
         attachAndGetConnection(dsKey, pds)
-      }
     }
   }
 
-  private def _setupPool(dsKey : DataSourceKey,
-                         connInfo: ConnectionInfo) : PoolDataSource = {
+  private def _setupPool(dsKey: DataSourceKey, connInfo: ConnectionInfo): PoolDataSource = {
 
     val createPDS = new java.util.function.Function[DataSourceKey, PoolDataSource] {
       override def apply(t: DataSourceKey): PoolDataSource = {
         val pds = OracleDBConnectionCache.getNewPDS(
           connInfo.authMethod.getOrElse(null),
           connInfo.asConnectionProperties,
-          connInfo.url
-        )
+          connInfo.url)
         logInfo(s"Setting up Connection Pool ${dsKey}")
         pds.setMaxPoolSize(Runtime.getRuntime.availableProcessors())
         pds.setConnectionWaitTimeout(1)
@@ -95,26 +88,27 @@ private[oracle] object ConnectionManagement extends DataSources with Logging {
     pdsMap.computeIfAbsent(dsKey, createPDS)
   }
 
-  private[oracle] def getConnection(dsKey : DataSourceKey,
-                                    connInfo: ConnectionInfo) : Connection = {
+  private[oracle] def getConnection(
+      dsKey: DataSourceKey,
+      connInfo: ConnectionInfo): Connection = {
     val pds = _setupPool(dsKey, connInfo)
     attachAndGetConnection(dsKey, pds)
   }
 
-  def getConnection(dsInfo : DataSourceInfo) : Connection = {
+  def getConnection(dsInfo: DataSourceInfo): Connection = {
     val pds = _setupPool(dsInfo.key, dsInfo.connInfo)
     attachAndGetConnection(dsInfo.key, pds)
   }
 
   def reset(): Unit = synchronized {
     import scala.collection.JavaConverters._
-    for(pds <- pdsMap.values().asScala) {
+    for (pds <- pdsMap.values().asScala) {
       // TODO
     }
     pdsMap.clear()
   }
 
-  def getConnectionInExecutor(ds : DataSourceInfo) : Connection = {
+  def getConnectionInExecutor(ds: DataSourceInfo): Connection = {
     ConnectionManagement.getConnection(ds)
   }
 

@@ -19,14 +19,15 @@ package org.apache.spark.sql.oracle
 
 import java.util.Locale
 
+import scala.util.Random
+
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.{SparkConf, SparkContext, SparkEnv}
-import org.apache.spark.sql.{AnalysisException, SparkSession}
+import org.apache.spark.sql.{AnalysisException, DataFrame, Dataset, SQLContext, SparkSession}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.oracle.util.CrossProductIterator
-import org.apache.spark.sql.types.{DataType, NumericType}
+import org.apache.spark.sql.types.{DataType, FractionalType, NumericType, StructType}
 import org.apache.spark.util.Utils
-
-import scala.util.Random
 
 object OraSparkUtils {
 
@@ -34,15 +35,15 @@ object OraSparkUtils {
     Utils.getLocalDir(conf)
   }
 
-  def isNumeric(dt: DataType) = NumericType.acceptsType(dt)
-
+  def isNumeric(dt: DataType): Boolean = NumericType.acceptsType(dt)
+  def isApproximateNumeric(dt: DataType): Boolean = dt.isInstanceOf[FractionalType]
 
   def setLogLevel(logLevel: String): Unit = {
     val upperCased = logLevel.toUpperCase(Locale.ENGLISH)
     org.apache.spark.util.Utils.setLogLevel(org.apache.log4j.Level.toLevel(logLevel))
   }
 
-  def currentSparkSession : SparkSession = {
+  def currentSparkSession: SparkSession = {
     var spkSessionO = SparkSession.getActiveSession
     if (!spkSessionO.isDefined) {
       spkSessionO = SparkSession.getDefaultSession
@@ -50,9 +51,9 @@ object OraSparkUtils {
     spkSessionO.getOrElse(???)
   }
 
-  def currentSparkContext : SparkContext = currentSparkSession.sparkContext
+  def currentSparkContext: SparkContext = currentSparkSession.sparkContext
 
-  def currentSQLConf : SQLConf = {
+  def currentSQLConf: SQLConf = {
     var spkSessionO = SparkSession.getActiveSession
     if (!spkSessionO.isDefined) {
       spkSessionO = SparkSession.getDefaultSession
@@ -61,11 +62,16 @@ object OraSparkUtils {
     spkSessionO.map(_.sqlContext.conf).getOrElse {
       val sprkConf = SparkEnv.get.conf
       val sqlConf = new SQLConf
-      sprkConf.getAll.foreach { case (k, v) =>
-        sqlConf.setConfString(k, v)
+      sprkConf.getAll.foreach {
+        case (k, v) =>
+          sqlConf.setConfString(k, v)
       }
       sqlConf
     }
+  }
+
+  def dataFrame(lP: LogicalPlan)(implicit sqlContext: SQLContext): DataFrame = {
+    Dataset.ofRows(sqlContext.sparkSession, lP)
   }
 
   def throwAnalysisException[T](msg: => String): T = {
@@ -74,7 +80,7 @@ object OraSparkUtils {
 
   private val r = new Random()
 
-  def nextRandomInt(n : Int) = r.nextInt(n)
+  def nextRandomInt(n: Int): Int = r.nextInt(n)
 
   /**
    * from fpinscala book
@@ -89,10 +95,10 @@ object OraSparkUtils {
       case h :: t => h flatMap (hh => sequence(t) map (hh :: _))
     }
 
-  def crossProduct[T](seqs : Seq[Seq[T]]) : Iterator[Seq[T]] = {
+  def crossProduct[T](seqs: Seq[Seq[T]]): Iterator[Seq[T]] = {
     val rseqs = seqs.reverse
     rseqs.tail.foldLeft(CrossProductIterator[T](None, rseqs.head)) {
-      case (currItr, nSeq) => CrossProductIterator[T](Some(currItr),nSeq)
+      case (currItr, nSeq) => CrossProductIterator[T](Some(currItr), nSeq)
     }
   }
 

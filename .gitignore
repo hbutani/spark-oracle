@@ -40,6 +40,9 @@ docs/*.key
 docs/benchmark/*.html
 **/auto/
 docs/notes/*_ImplNotes.org
+snap-oracle-spark
+spark-oracle.wiki
+
 
 # docker
 docker/driver

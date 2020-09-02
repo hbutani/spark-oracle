@@ -19,29 +19,28 @@ package oracle.spark
 
 import java.sql.Connection
 import java.util.concurrent.{ConcurrentHashMap => CMap}
-import oracle.hcat.db.conn.OracleDBConnectionCacheUtil
-import org.apache.spark.sql.catalyst.TableIdentifier
-import oracle.spark.ORASQLUtils._
+
 import scala.language.implicitConversions
+
+import oracle.hcat.db.conn.OracleDBConnectionCacheUtil
+import oracle.spark.ORASQLUtils._
+
+import org.apache.spark.sql.catalyst.TableIdentifier
 
 case class DataSourceKey(connectionURL: String, userName: String)
 
 object DataSourceKey {
-  implicit def dataSourceKey(connInfo: ConnectionInfo) =
+  implicit def dataSourceKey(connInfo: ConnectionInfo): DataSourceKey =
     DataSourceKey(connInfo.url, connInfo.username)
 }
 
-case class DataSourceInfo(key: DataSourceKey,
-                          connInfo: ConnectionInfo,
-                          isSharded: Boolean
-                         )
+case class DataSourceInfo(key: DataSourceKey, connInfo: ConnectionInfo, isSharded: Boolean)
 
 trait DataSources {
 
   private val dsMap = new CMap[DataSourceKey, DataSourceInfo]()
 
-  private[oracle] def registerDataSource(dsKey: DataSourceKey,
-                                         connInfo: ConnectionInfo): Unit = {
+  private[oracle] def registerDataSource(dsKey: DataSourceKey, connInfo: ConnectionInfo): Unit = {
     val createDSI = new java.util.function.Function[DataSourceKey, DataSourceInfo] {
       override def apply(t: DataSourceKey): DataSourceInfo = {
         val isSharded = setupConnectionPool(dsKey, connInfo)
@@ -50,16 +49,14 @@ trait DataSources {
     }
     val dsInfo = dsMap.computeIfAbsent(dsKey, createDSI)
     if (dsInfo.connInfo != connInfo) {
-      throwAnalysisException(
-        s"""
+      throwAnalysisException(s"""
            |Currently we require all table definitions to a database to have the
            |same connection properties:
            |Properties Already registered:
            |${dsInfo.connInfo.dump}
            |Properties specified:
            |${connInfo.dump}
-         """.stripMargin
-      )
+         """.stripMargin)
     }
   }
 
@@ -71,9 +68,9 @@ trait DataSources {
 
   private[oracle] def info(dsKey: DataSourceKey): DataSourceInfo = {
     import scala.collection.JavaConverters._
-    dsMap.asScala.getOrElse(dsKey,
-      throwAnalysisException(s"Couldn't find details about DataSource ${dsKey}")
-    )
+    dsMap.asScala.getOrElse(
+      dsKey,
+      throwAnalysisException(s"Couldn't find details about DataSource ${dsKey}"))
   }
 
   private[oracle] def isSharded(dsKey: DataSourceKey): Boolean = {
@@ -89,12 +86,11 @@ trait DataSources {
     new TableIdentifier(arr(1), Option(arr(0)))
   }
 
-  private def setupConnectionPool(dsKey: DataSourceKey,
-                                  connInfo: ConnectionInfo): Boolean = {
+  private def setupConnectionPool(dsKey: DataSourceKey, connInfo: ConnectionInfo): Boolean = {
     val b = withConnection[Boolean](
       dsKey,
-      ConnectionManagement.getConnection(dsKey, connInfo), "setup connection pool"
-    ) { conn =>
+      ConnectionManagement.getConnection(dsKey, connInfo),
+      "setup connection pool") { conn =>
       OracleDBConnectionCacheUtil.isShardedDB(conn)
     }
     b
