@@ -33,6 +33,7 @@ object Dependencies {
       "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
       "org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
       "org.apache.spark" %% "spark-hive" % sparkVersion % "provided",
+      "org.apache.spark" %% "spark-hive" % sparkVersion % "test" classifier "tests",
       "org.apache.spark" %% "spark-hive-thriftserver" % sparkVersion % "provided",
       "org.apache.spark" %% "spark-repl" % sparkVersion % "provided",
       "org.apache.spark" %% "spark-unsafe" % sparkVersion % "provided")

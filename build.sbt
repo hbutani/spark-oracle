@@ -39,35 +39,29 @@ lazy val commonSettings = Seq(
     utils.dependencies ++
     test_infra.dependencies))
 
-lazy val test_support = project
-  .in(file("test_support"))
-  .disablePlugins(AssemblyPlugin)
-  .settings(commonSettings: _*)
-
 lazy val common = project
   .in(file("common"))
   .disablePlugins(AssemblyPlugin)
   .settings(commonSettings: _*)
-  .dependsOn(test_support % "test")
 
 lazy val orastuff = project
   .in(file("orastuff"))
   .disablePlugins(AssemblyPlugin)
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= oracle.dependencies)
-  .dependsOn(test_support % "test", common)
+  .dependsOn(common)
 
 lazy val sql = project
   .in(file("sql"))
   .disablePlugins(AssemblyPlugin)
   .settings(commonSettings: _*)
-  .dependsOn(test_support % "test", common, orastuff)
+  .dependsOn(common, orastuff)
 
 lazy val mllib = project
   .in(file("mllib"))
   .disablePlugins(AssemblyPlugin)
   .settings(commonSettings: _*)
-  .dependsOn(test_support % "test", common, orastuff)
+  .dependsOn(common, orastuff)
 
 lazy val spark_extend = project
   .in(file("packaging/spark_extend"))
@@ -83,10 +77,10 @@ lazy val spark_extend = project
       val assemblyJar = (assembly).value
       assemblyJar -> ("jars/" + assemblyJar.getName)
     })
-  .dependsOn(test_support % "test", common, orastuff, sql, mllib)
+  .dependsOn(common, orastuff, sql, mllib)
 
 lazy val spark_embed = project
   .in(file("packaging/spark_embed"))
   .settings(commonSettings: _*)
   .settings(Assembly.assemblySettings: _*)
-  .dependsOn(test_support % "test", common, orastuff, sql, mllib)
+  .dependsOn(common, orastuff, sql, mllib)
