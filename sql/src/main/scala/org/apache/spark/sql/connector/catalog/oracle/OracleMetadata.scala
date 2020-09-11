@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.connector.catalog.oracle
 
+import java.nio.charset.StandardCharsets.UTF_8
 import java.util
 
 import org.apache.spark.sql.AnalysisException
@@ -102,6 +103,9 @@ object OracleMetadata {
    *
    */
 
+  private[oracle] val NAMESPACES_CACHE_KEY = "__namespaces__".getBytes(UTF_8)
+  private[oracle] val TABLE_LIST_CACHE_KEY = "__tables_list__".getBytes(UTF_8)
+
   // https://medium.com/@wishmithasmendis/leveldb-from-scratch-in-java-c300e21c7445
 
   /*
@@ -112,6 +116,8 @@ object OracleMetadata {
  *  - what do i need for dbsplits ?
  *  - levelDB infra
  *  - read method -> get from cache or read from db + put
+ *  - test infrastructure: provide oraclemetadata w/o db connection in test env.
+ *  - test suite: 30 tables: tpcds + av tables in adw instance + our hand created tables
  *
  */
 

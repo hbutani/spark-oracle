@@ -48,6 +48,9 @@ object OracleTestConf {
     .set(SQLConf.OPTIMIZER_EXCLUDED_RULES.key, ConvertToLocalRelation.ruleName)
     .set("spark.sql.extensions", "org.apache.spark.sql.oracle.SparkSessionExtensions")
     .set(
+      "spark.kryo.registrator",
+      "org.apache.spark.sql.connector.catalog.oracle.OraKryoRegistrator")
+    .set(
       "spark.sql.catalog.oracle",
       "org.apache.spark.sql.connector.catalog.oracle.OracleCatalog")
     .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@hbutani-Mac:1521/orclpdb1")

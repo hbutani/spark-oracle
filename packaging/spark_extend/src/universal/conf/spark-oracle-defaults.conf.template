@@ -27,8 +27,10 @@
 # spark.executor.extraJavaOptions  -XX:+PrintGCDetails -Dkey=value -Dnumbers="one two three"
 
 # Configure Oracle Catalog
-#Example
-#spark.sql.extensions=org.apache.spark.sql.oracle.SparkSessionExtensions
+spark.kryo.registrator=org.apache.spark.sql.connector.catalog.oracle.OraKryoRegistrator
+spark.sql.extensions=org.apache.spark.sql.oracle.SparkSessionExtensions
+
+#Example config for a single instance Oracle DB
 #spark.sql.catalog.oracle=org.apache.spark.sql.connector.catalog.oracle.OracleCatalog
 #spark.sql.catalog.oracle.url=jdbc:oracle:thin:@hbutani-Mac:1521/orclpdb1
 #spark.sql.catalog.oracle.user=sh

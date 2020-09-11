@@ -83,7 +83,7 @@ case class OraNumber(precision: Option[Int], scale: Option[Int]) extends OraData
       Types.BIGINT
     }
 
-  val sqlType: Int = (precision, scale) match {
+  val sqlType: Int = ((precision, scale): @unchecked) match {
     case (Some(p), Some(0)) => precisionToSQLType(p)
     case (Some(p), None) => precisionToSQLType(p)
     case (Some(_), _) => Types.NUMERIC
@@ -98,11 +98,12 @@ case class OraNumber(precision: Option[Int], scale: Option[Int]) extends OraData
 object OraNumber {
   import OracleMetadata.checkDataType
 
-  def toOraTypeNm(precision: Option[Int], scale: Option[Int]): String = (precision, scale) match {
-    case (None, None) => "NUMBER"
-    case (Some(p), None) => s"NUMBER(${p})"
-    case (Some(p), Some(s)) => s"NUMBER(${p}, ${s})"
-  }
+  def toOraTypeNm(precision: Option[Int], scale: Option[Int]): String =
+    ((precision, scale): @unchecked) match {
+      case (None, None) => "NUMBER"
+      case (Some(p), None) => s"NUMBER(${p})"
+      case (Some(p), Some(s)) => s"NUMBER(${p}, ${s})"
+    }
 
   def checkSupported(precision: Option[Int], scale: Option[Int]): Unit = {
     if (!precision.isDefined) {
@@ -235,7 +236,6 @@ object OraDataType {
     case (Types.NUMERIC, _, _) => DecimalType.SYSTEM_DEFAULT
     case (Types.FLOAT, _, _) => FloatType
     case (Types.DOUBLE, _, _) => DoubleType
-    case (Types.NUMERIC, _, _) => DecimalType.SYSTEM_DEFAULT
     case (Types.LONGNVARCHAR, _, _) => StringType
     case (Types.DATE, _, _) => DateType
     case (Types.TIMESTAMP, _, _) => TimestampType

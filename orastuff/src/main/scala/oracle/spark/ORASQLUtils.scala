@@ -18,42 +18,40 @@
 package oracle.spark
 
 import java.sql.{CallableStatement, Connection, PreparedStatement, ResultSet, Statement}
+
+import scala.util.Try
+
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.oracle.OraSparkUtils
-import scala.util.Try
 
 object ORASQLUtils extends Logging {
 
-  def actionMessage(dsKey : DataSourceKey, actionDetails : String) =
+  private def actionMessage(dsKey: DataSourceKey, actionDetails: String) =
     s"Failed ${actionDetails} on ${dsKey}"
 
-  def withConnection[V](dsKey : DataSourceKey,
-                        conn : Connection,
-                        actionDetails : => String
-                       )(action : Connection => V) : V = {
+  def withConnection[V](dsKey: DataSourceKey, conn: Connection, actionDetails: => String)(
+      action: Connection => V): V = {
     try {
       logDebug(actionDetails)
       action(conn)
     } catch {
-      case ex : Throwable => {
+      case ex: Throwable =>
         val errMsg = actionMessage(dsKey, actionDetails)
         logError(errMsg, ex)
         throw new RuntimeException(errMsg, ex)
-      }
     } finally {
       conn.close
     }
   }
 
-  private def getConnection(dsKey : DataSourceKey) : Connection = {
+  private def getConnection(dsKey: DataSourceKey): Connection = {
     try {
       ConnectionManagement.getConnection(dsKey)
     } catch {
-      case ex : Throwable => {
+      case ex: Throwable =>
         val errMsg = actionMessage(dsKey, "get connection")
         logError(errMsg, ex)
         throw new RuntimeException(errMsg, ex)
-      }
     }
   }
 
@@ -68,34 +66,27 @@ object ORASQLUtils extends Logging {
    * @tparam V return type of the action callback
    * @return value returned by the action callback.
    */
-  def perform[V](dsKey : DataSourceKey,
-                 actionDetails : => String
-                )(action : Connection => V) : V = {
-    withConnection(
-      dsKey,
-      getConnection(dsKey),
-      s"Failed ${actionDetails} on ${dsKey}"
-    )(action)
+  def perform[V](dsKey: DataSourceKey, actionDetails: => String)(action: Connection => V): V = {
+    withConnection(dsKey, getConnection(dsKey), s"Failed ${actionDetails} on ${dsKey}")(action)
   }
 
-  private def performOrLogFailure[T](
-                                      action : => T,
-                                      logMsg : => String) : T = {
+  private def performOrLogFailure[T](action: => T, logMsg: => String): T = {
     Try {
       action
     }.recover[T] {
-      case tx: Throwable =>
-        logError(logMsg, tx)
-        null.asInstanceOf[T]
-    }.get
+        case tx: Throwable =>
+          logError(logMsg, tx)
+          null.asInstanceOf[T]
+      }
+      .get
   }
 
-  def performQuery[V](conn : Connection,
-                      stmt : => String,
-                      setStmtParams : PreparedStatement => Unit = ps => ()
-                     )(action : ResultSet => V) : V = {
-    var pStmt : PreparedStatement = null
-    var rs : ResultSet = null
+  def performQuery[V](
+      conn: Connection,
+      stmt: => String,
+      setStmtParams: PreparedStatement => Unit = ps => ())(action: ResultSet => V): V = {
+    var pStmt: PreparedStatement = null
+    var rs: ResultSet = null
 
     try {
       pStmt = conn.prepareStatement(stmt)
@@ -103,73 +94,72 @@ object ORASQLUtils extends Logging {
       rs = pStmt.executeQuery()
       action(rs)
     } finally {
-      performOrLogFailure({
-        if (rs != null) rs.close()
-        ()
-      },
+      performOrLogFailure(
+        {
+          if (rs != null) rs.close()
+          ()
+        },
         s"""Failed to close resultSet for statment:
                 ${stmt}
-          """.stripMargin
-      )
+          """.stripMargin)
 
-      performOrLogFailure({
-        if (pStmt != null) pStmt.close()
-        ()
-      },
+      performOrLogFailure(
+        {
+          if (pStmt != null) pStmt.close()
+          ()
+        },
         s"""Failed to close statment:
                 ${stmt}
-          """.stripMargin
-      )
+          """.stripMargin)
     }
 
   }
 
-  def performDML[V](conn : Connection,
-                    stmt : => String,
-                    setStmtParams : PreparedStatement => Unit = ps => ()
-                   ) : Array[Int] = {
-    var pStmt : PreparedStatement = null
+  def performDML[V](
+      conn: Connection,
+      stmt: => String,
+      setStmtParams: PreparedStatement => Unit = ps => ()): Array[Int] = {
+    var pStmt: PreparedStatement = null
 
     try {
       pStmt = conn.prepareStatement(stmt)
       setStmtParams(pStmt)
       pStmt.executeBatch()
     } finally {
-      performOrLogFailure({
-        if (pStmt != null) pStmt.close()
-        ()
-      },
+      performOrLogFailure(
+        {
+          if (pStmt != null) pStmt.close()
+          ()
+        },
         s"""Failed to close statment:
                 ${stmt}
-          """.stripMargin
-      )
+          """.stripMargin)
     }
   }
 
-  def performSQL(conn : Connection,
-                 sql : => String) : Boolean = {
-    var stmt : Statement = null
+  def performSQL(conn: Connection, sql: => String): Boolean = {
+    var stmt: Statement = null
     try {
       stmt = conn.createStatement()
       stmt.execute(sql)
     } finally {
-      performOrLogFailure({
-        if (stmt != null) stmt.close()
-        ()
-      },
+      performOrLogFailure(
+        {
+          if (stmt != null) stmt.close()
+          ()
+        },
         s"""Failed to close statment :
                 ${stmt}
-          """.stripMargin
-      )
+          """.stripMargin)
     }
   }
 
-  def performCall[V](conn : Connection,
-                     stmt : => String,
-                     setInParams : CallableStatement => Unit = cs => (),
-                     getOutParams : CallableStatement => Unit = cs => ()
-                    ) : Boolean = {
-    var cStmt : CallableStatement = null
+  def performCall(
+      conn: Connection,
+      stmt: => String,
+      setInParams: CallableStatement => Unit = cs => (),
+      getOutParams: CallableStatement => Unit = cs => ()): Boolean = {
+    var cStmt: CallableStatement = null
 
     try {
       cStmt = conn.prepareCall(stmt)
@@ -178,14 +168,14 @@ object ORASQLUtils extends Logging {
       getOutParams(cStmt)
       r
     } finally {
-      performOrLogFailure({
-        if (cStmt != null) cStmt.close()
-        ()
-      },
+      performOrLogFailure(
+        {
+          if (cStmt != null) cStmt.close()
+          ()
+        },
         s"""Failed to close statment:
                 ${stmt}
-          """.stripMargin
-      )
+          """.stripMargin)
     }
   }
 
@@ -201,65 +191,46 @@ object ORASQLUtils extends Logging {
    * @tparam V result type of the callback
    * @return value returned from the callback
    */
-  def performDSQuery[V](dsKey : DataSourceKey,
-                        stmt : => String,
-                        actionDetails : => String,
-                        setStmtParams : PreparedStatement => Unit = ps => ()
-                       )(action : ResultSet => V) : V = {
-    perform[V](
-      dsKey,
-      s"Performing ${actionDetails} by running Query: '${stmt}"
-    ) { conn =>
+  def performDSQuery[V](
+      dsKey: DataSourceKey,
+      stmt: => String,
+      actionDetails: => String,
+      setStmtParams: PreparedStatement => Unit = ps => ())(action: ResultSet => V): V = {
+    perform[V](dsKey, s"Performing ${actionDetails} by running Query: '${stmt}") { conn =>
       performQuery(conn, stmt, setStmtParams)(action)
     }
   }
 
-  def performDSDML(dsKey : DataSourceKey,
-                   stmt : => String,
-                   actionDetails : => String,
-                   setStmtParams : PreparedStatement => Unit = ps => ()
-                  ) : Array[Int] = {
-    perform[Array[Int]](
-      dsKey,
-      s"Performing ${actionDetails} by executing DML: '${stmt}"
-    ) { conn =>
-      performDML(conn, stmt, setStmtParams)
+  def performDSDML(
+      dsKey: DataSourceKey,
+      stmt: => String,
+      actionDetails: => String,
+      setStmtParams: PreparedStatement => Unit = ps => ()): Array[Int] = {
+    perform[Array[Int]](dsKey, s"Performing ${actionDetails} by executing DML: '${stmt}") {
+      conn =>
+        performDML(conn, stmt, setStmtParams)
     }
   }
 
-  def performDSCall(dsKey : DataSourceKey,
-                    stmt : => String,
-                    actionDetails : => String,
-                    setInParams : CallableStatement => Unit = cs => (),
-                    getOutParams : CallableStatement => Unit = cs => ()
-                   ) : Boolean = {
-    perform[Boolean](
-      dsKey,
-      s"Performing ${actionDetails} by executing DML: '${stmt}"
-    ) { conn =>
+  def performDSCall(
+      dsKey: DataSourceKey,
+      stmt: => String,
+      actionDetails: => String,
+      setInParams: CallableStatement => Unit = cs => (),
+      getOutParams: CallableStatement => Unit = cs => ()): Boolean = {
+    perform[Boolean](dsKey, s"Performing ${actionDetails} by executing DML: '${stmt}") { conn =>
       performCall(conn, stmt, setInParams, getOutParams)
     }
   }
 
-  def performDSSQL(dsKey : DataSourceKey,
-                   stmt : => String,
-                   actionDetails : => String
-                  ) : Boolean = {
-    perform[Boolean](
-      dsKey,
-      s"Performing ${actionDetails}SQL by running Statement: '${stmt}"
-    ) { conn =>
-      performSQL(conn, stmt)
+  def performDSSQL(dsKey: DataSourceKey, stmt: => String, actionDetails: => String): Boolean = {
+    perform[Boolean](dsKey, s"Performing ${actionDetails}SQL by running Statement: '${stmt}") {
+      conn =>
+        performSQL(conn, stmt)
     }
   }
 
   val throwAnalysisException = OraSparkUtils.throwAnalysisException _
-
-  def sequence[A](a: List[Option[A]]): Option[List[A]] =
-    a match {
-      case Nil => Some(Nil)
-      case h :: t => h flatMap (hh => sequence(t) map (hh :: _))
-    }
 
   //  def getOraQueryRelations(plan : SparkPlan) : Seq[OracleQueryRelation] =
   //    plan.collect {
@@ -269,4 +240,3 @@ object ORASQLUtils extends Logging {
   //    }
 
 }
-

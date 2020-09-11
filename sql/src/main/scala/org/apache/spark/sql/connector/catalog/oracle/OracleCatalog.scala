@@ -19,8 +19,6 @@ package org.apache.spark.sql.connector.catalog.oracle
 
 import java.util
 
-import oracle.spark.{ConnectionInfo, ConnectionManagement, DataSourceKey}
-
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog._
 import org.apache.spark.sql.connector.expressions.Transform
@@ -43,16 +41,12 @@ import org.apache.spark.sql.util.CaseInsensitiveStringMap
 class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTableCatalog {
 
   private var _name: String = _
-  private var connInfo: ConnectionInfo = _
-  private var catalogOptions: OracleCatalogOptions = _
-  private var dsKey: DataSourceKey = _
+  private var metadataManager: OracleMetadataManager = _
 
   override def initialize(name: String, options: CaseInsensitiveStringMap): Unit = {
     import scala.collection.JavaConverters._
     val cMap: CaseInsensitiveMap[String] = CaseInsensitiveMap(options.asScala.toMap)
-    connInfo = OracleCatalogOptions.connectionInfo(cMap)
-    catalogOptions = OracleCatalogOptions.catalogOptions(cMap)
-    dsKey = ConnectionManagement.registerDataSource(connInfo)
+    metadataManager = new OracleMetadataManager(cMap)
     _name = name
   }
 

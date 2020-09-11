@@ -28,7 +28,9 @@ case class OracleCatalogOptions(
     partitionerType: String,
     fetchSize: Int,
     isChunkSplitter: Boolean,
-    chunkSQL: Option[String])
+    chunkSQL: Option[String],
+    isTestEnv: Boolean,
+    metadataCacheLoc: Option[String])
 
 object OracleCatalogOptions {
 
@@ -61,6 +63,8 @@ object OracleCatalogOptions {
   val ORACLE_JDBC_IS_CHUNK_SPLITTER = newOption("isChunkSplitter")
   val ORACLE_CUSTOM_CHUNK_SQL = newOption("customPartitionSQL")
   val ORACLE_PARALLELISM = newOption("useOracleParallelism")
+  val ORACLE_IS_TEST_ENV = newOption("isTestEnv")
+  val ORACLE_METADATA_CACHE = newOption("metadataCacheLoc")
 
   val DEFAULT_MAX_SPLITS = 1
 
@@ -74,7 +78,9 @@ object OracleCatalogOptions {
       parameters.getOrElse(ORACLE_JDBC_PARTITIONER_TYPE, "SINGLE_SPLITTER"),
       parameters.getOrElse(ORACLE_FETCH_SIZE, "10").asInstanceOf[String].toInt,
       parameters.getOrElse(ORACLE_JDBC_IS_CHUNK_SPLITTER, "true").toBoolean,
-      parameters.get(ORACLE_CUSTOM_CHUNK_SQL))
+      parameters.get(ORACLE_CUSTOM_CHUNK_SQL),
+      parameters.get(ORACLE_IS_TEST_ENV).map(_.toBoolean).getOrElse(false),
+      parameters.get(ORACLE_METADATA_CACHE))
   }
 
 }
