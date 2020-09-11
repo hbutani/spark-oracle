@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util
 
 import org.apache.spark.sql.AnalysisException
+import org.apache.spark.sql.connector.catalog.Identifier
 import org.apache.spark.sql.oracle.OraSparkUtils
 
 object OracleMetadata {
@@ -56,6 +57,8 @@ object OracleMetadata {
       case _ => OraSparkUtils.throwAnalysisException(s"Unsupported Partition type '${s}'")
     }
   }
+
+  case class OraIdentifier(namespace: Array[String], name: String) extends Identifier
 
   case class OraColumn(
       name: String,

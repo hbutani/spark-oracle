@@ -19,40 +19,44 @@ package org.apache.spark.sql.connector.catalog.oracle
 
 import java.io.File
 
-import oracle.spark.{ConnectionManagement, ORAMetadataSQLs}
+import oracle.spark.{ConnectionManagement, DataSourceKey, ORAMetadataSQLs}
 import org.fusesource.leveldbjni.JniDBFactory
 import org.iq80.leveldb.{DB, Options}
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog.Identifier
-import org.apache.spark.util.Utils
+import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraIdentifier
+import org.apache.spark.util.{ShutdownHookManager, Utils}
 
-private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) {
+private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) extends Logging {
 
   val connInfo = OracleCatalogOptions.connectionInfo(cMap)
   val catalogOptions = OracleCatalogOptions.catalogOptions(cMap)
-  val dsKey = {
+
+  val dsKey: DataSourceKey = if (!catalogOptions.use_metadata_cache) {
     val dsKey = ConnectionManagement.registerDataSource(connInfo)
-
-    if (!catalogOptions.isTestEnv) {
-      ORAMetadataSQLs.validateConnection(dsKey)
-    }
-
+    ORAMetadataSQLs.validateConnection(dsKey)
     dsKey
+  } else {
+    DataSourceKey("FAKE", "FAKE")
   }
 
-  private val cacheLoc: File = {
-    if (catalogOptions.isTestEnv) {
-      new File("src/test/resources/metadata_cache")
-    } else {
-      catalogOptions.metadataCacheLoc.map(new File(_)).getOrElse(Utils.createTempDir())
-    }
-  }
+  private val cacheLoc: File =
+    catalogOptions.metadataCacheLoc.map(new File(_)).getOrElse(Utils.createTempDir())
 
   private val cache: DB = {
     val options = new Options
     options.createIfMissing(true)
-    JniDBFactory.factory.open(cacheLoc, options)
+    val db = JniDBFactory.factory.open(cacheLoc, options)
+
+    log.info(s"Opened metadata_cache at ${cacheLoc.getAbsolutePath}")
+
+    ShutdownHookManager.addShutdownHook { () =>
+      log.info(s"closing metadata_cache at ${cacheLoc.getAbsolutePath}")
+      db.close()
+    }
+    db
   }
 
   private[oracle] val namespaces: Array[Array[String]] = {
@@ -81,7 +85,7 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) {
       val tblMap = ORAMetadataSQLs.listAllTables(dsKey).map {
         case (u, tbls) =>
           val ns = Array(u)
-          ns -> tbls.map(Identifier.of(ns, _))
+          ns -> tbls.map(OraIdentifier(ns, _): Identifier)
       }
 
       cache.put(

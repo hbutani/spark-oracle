@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.hive.test.oracle
 
-import org.apache.spark.internal.config.UI.UI_ENABLED
-import org.apache.spark.internal.config
 import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.internal.config
+import org.apache.spark.internal.config.UI.UI_ENABLED
 import org.apache.spark.sql.catalyst.optimizer.ConvertToLocalRelation
 import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.sql.hive.test.TestHiveContext
@@ -28,7 +28,7 @@ import org.apache.spark.sql.internal.StaticSQLConf.WAREHOUSE_PATH
 
 object OracleTestConf {
 
-  lazy val localConf: SparkConf = new SparkConf()
+  private lazy val commonConf = new SparkConf()
     .set("spark.sql.test", "")
     .set(SQLConf.CODEGEN_FALLBACK.key, "false")
     .set(
@@ -53,17 +53,67 @@ object OracleTestConf {
     .set(
       "spark.sql.catalog.oracle",
       "org.apache.spark.sql.connector.catalog.oracle.OracleCatalog")
-    .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@hbutani-Mac:1521/orclpdb1")
-    .set("spark.sql.catalog.oracle.user", "sh")
-    .set("spark.sql.catalog.oracle.password", "welcome123")
+    .set("spark.sql.catalog.oracle.use_metadata_cache", "false")
+    .set("spark.sql.catalog.oracle.metadata_cache_loc", "sql/src/test/resources/metadata_cache")
+
+  lazy val localConf: SparkConf = {
+
+    var conf = commonConf
+
+    assert(
+      System.getProperty(SPARK_ORACLE_DB_INSTANCE) != null,
+      s"Running test requires setting ${SPARK_ORACLE_DB_INSTANCE} system property")
+
+    System.getProperty(SPARK_ORACLE_DB_INSTANCE) match {
+      case "local_hb" =>
+        conf = local_hb(conf)
+      case "local_sc" =>
+        conf = local_sc(conf)
+      case "mammoth_medium" =>
+        assert(
+          System.getProperty(SPARK_ORACLE_DB_WALLET_LOC) != null,
+          s"Use of mammoth instance requires setting ${SPARK_ORACLE_DB_WALLET_LOC} system property")
+        conf = mammoth_medium(conf)
+      // scalastyle:off
+      case _ => ???
+      // scalastyle:on
+    }
+    conf
+  }
+
+  def local_hb(conf: SparkConf): SparkConf =
+    conf
+      .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@hbutani-Mac:1521/orclpdb1")
+      .set("spark.sql.catalog.oracle.user", "sh")
+      .set("spark.sql.catalog.oracle.password", "welcome123")
+
+  def local_sc(conf: SparkConf): SparkConf =
+    conf
+      .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@//localhost:1521/ORCLCDB")
+      .set("spark.sql.catalog.oracle.user", "sparktest")
+      .set("spark.sql.catalog.oracle.password", "sparktest")
+
+  def mammoth_medium(conf: SparkConf): SparkConf =
+    conf
+      .set("spark.sql.catalog.oracle.authMethod", "ORACLE_WALLET")
+      .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@mammoth_medium")
+      .set("spark.sql.catalog.oracle.user", "sparktest")
+      .set("spark.sql.catalog.oracle.password", "Performance_1234")
+      .set(
+        "spark.sql.catalog.oracle.net.tns_admin",
+        System.getProperty(SPARK_ORACLE_DB_WALLET_LOC))
 
   def testMaster: String = "local[*]"
+
+  val SPARK_ORACLE_DB_INSTANCE = "spark.oracle.test.db_instance"
+  val SPARK_ORACLE_DB_WALLET_LOC = "spark.oracle.test.db_wallet_loc"
+
 }
 
 object TestOracleHive
     extends TestHiveContext(
       new SparkContext(
-        System.getProperty("spark.sql.test.master", "local[1]"),
+        System.getProperty("spark.sql.test.master", OracleTestConf.testMaster),
         "TestSQLContext",
         OracleTestConf.localConf),
       false)
