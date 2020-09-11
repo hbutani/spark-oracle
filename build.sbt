@@ -76,7 +76,10 @@ lazy val spark_extend = project
     mappings in Universal += {
       val assemblyJar = (assembly).value
       assemblyJar -> ("jars/" + assemblyJar.getName)
-    })
+    },
+    mappings in Universal ++= Assembly
+      .oraJarsToAdd((Runtime / externalDependencyClasspath).value)
+      .map(f => f -> ("jars/" + f.getName)))
   .dependsOn(common, orastuff, sql, mllib)
 
 lazy val spark_embed = project

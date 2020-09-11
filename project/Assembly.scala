@@ -69,4 +69,15 @@ object Assembly {
           oldStrategy(x)
       })
 
+  def oraJarsToAdd(clsPath: Keys.Classpath): Seq[File] = {
+    import sbt.Keys._
+    val addOraJars = sys.props.getOrElse("addOraJars", default = "false").toBoolean
+    if (addOraJars) {
+      {
+        clsPath
+          .map(f => f.data)
+          .filter(f => f.getAbsolutePath.contains("com.oracle.database"))
+      }
+    } else Seq.empty
+  }
 }
