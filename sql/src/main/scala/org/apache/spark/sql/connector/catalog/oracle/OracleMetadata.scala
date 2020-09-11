@@ -37,7 +37,7 @@ object OracleMetadata {
     throw new UnsupportedOraDataType(typeNm, None)
 
   def checkDataType(cond: Boolean, typeNm: => String, reason: => String): Unit = {
-    if (!cond) {
+    if (cond) {
       throw new UnsupportedOraDataType(typeNm, Some(reason))
     }
   }
@@ -63,9 +63,15 @@ object OracleMetadata {
   case class OraColumn(
       name: String,
       dataType: OraDataType,
-      notNull: Boolean,
-      precision: Int,
-      scale: Option[Int])
+      collateName : Option[String],
+      notNull: NotNullConstraint)
+
+  // Not Null Can be specified inline to coloumn
+  // or separately as a Not Null Constraint which
+  // will carry an optional name to the Constraint.
+
+  case class NotNullConstraint(notNull : Boolean,
+                              name : Option[String])
 
   case class OraPrimaryKey(cols: Array[String])
 
@@ -92,7 +98,7 @@ object OracleMetadata {
       partitionScheme: Option[TablePartitionScheme],
       partitions: Array[OraTablePartition],
       primaryKey: Option[OraPrimaryKey],
-      foreignKeys: Array[OraForeignKey],
+      foreignKeys: Option[Array[OraForeignKey]],
       is_external: Boolean,
       num_blocks: Long,
       block_size: Int,

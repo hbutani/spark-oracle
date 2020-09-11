@@ -87,6 +87,7 @@ case class OraNumber(precision: Option[Int], scale: Option[Int]) extends OraData
     case (Some(p), Some(0)) => precisionToSQLType(p)
     case (Some(p), None) => precisionToSQLType(p)
     case (Some(_), _) => Types.NUMERIC
+    case (None, Some(_)) => Types.NUMERIC
     case (None, None) => Types.NUMERIC
   }
 
@@ -104,11 +105,25 @@ object OraNumber {
       case (Some(p), None) => s"NUMBER(${p})"
       case (Some(p), Some(s)) => s"NUMBER(${p}, ${s})"
     }
+  /*
+=======
+  def toOraTypeNm(precision: Option[Int], scale: Option[Int]): String = (precision, scale) match {
+    case (None, None) => "NUMBER"
+    case (Some(p), None) => s"NUMBER(${p})"
+    case (None, Some(s)) => "NUMBER"
+    case (Some(p), Some(s)) => s"NUMBER(${p}, ${s})"
+  }
+>>>>>>> 1f96e8f... XMLReader Modified
+   */
 
+  // Precision Defined && Scale Defined -> Check if Scale is smaller that precision.
+  // Precision Not Defined && Scale Not Defined -> Allowed (NUMBER)
+  // Precision Not Defined && Scale Defined -> Not Allowed.
+  // Precision Defined && Scale Not Defined -> Allowed.
   def checkSupported(precision: Option[Int], scale: Option[Int]): Unit = {
     if (!precision.isDefined) {
       checkDataType(
-        scale.isDefined,
+        scale.isDefined && scale.get != 0,
         toOraTypeNm(precision, scale),
         s"scale cannot be defined if precision is undefined")
     } else {
@@ -177,11 +192,16 @@ case class OraTimestampWithLocalTZ(frac_secs_prec: Option[Int]) extends OraTimes
 
 object OraDataType {
 
-  def typeString(s: String, precision: Option[Int], scale: Option[Int]): String = {
+  def typeString(
+      s: String,
+      length: Option[Int],
+      precision: Option[Int],
+      scale: Option[Int]): String = {
     var r: String = s
 
     val pDefined = precision.isDefined
     val sDefined = scale.isDefined
+    val lDefined = length.isDefined
     val addBrackets = pDefined || sDefined
     val addComma = pDefined && sDefined
 
@@ -196,27 +216,33 @@ object OraDataType {
     add(addComma, ", ")
     add(sDefined, scale.get.toString)
     add(addBrackets, ")")
+    add(lDefined, length.get.toString)
 
     r
   }
 
-  def unapply(s: String, precision: Option[Int], scale: Option[Int]): OraDataType =
-    (s.toUpperCase(Locale.ROOT), precision, scale) match {
-      case ("CHAR", Some(p), None) => OraChar(p, true)
-      case ("VARCHAR2", Some(p), None) => OraVarchar2(p, true)
-      case ("NCHAR", Some(p), None) => OraNChar(p)
-      case ("NVARCHAR2", Some(p), None) => OraNVarchar2(p)
-      case ("NUMBER", p, s) =>
+  def unapply(
+      s: String,
+      length: Option[Int],
+      precision: Option[Int],
+      scale: Option[Int]): OraDataType =
+    (s.toUpperCase(Locale.ROOT), length, precision, scale) match {
+      case ("CHAR", Some(l), None, None) => OraChar(l, true)
+      case ("VARCHAR2", Some(l), None, None) => OraVarchar2(l, true)
+      case ("NCHAR", Some(l), None, None) => OraNChar(l)
+      case ("NVARCHAR2", Some(l), None, None) => OraNVarchar2(l)
+      case ("NUMBER", None, p, s) =>
         OraNumber.checkSupported(p, s)
         OraNumber(p, s)
-      case ("FLOAT", p, None) => OraFloat(p)
-      case ("LONG", None, None) => OraLong
-      case ("BINARY_FLOAT", None, None) => OraBinaryFloat
-      case ("BINARY_DOUBLE", None, None) => OraBinaryDouble
-      case ("DATE", None, None) => OraDate
-      case ("TIMESTAMP", p, None) => OraTimestamp(p)
+      case ("FLOAT", None, p, None) => OraFloat(p)
+      case ("LONG", None, None, None) => OraLong
+      case ("BINARY_FLOAT", None, None, None) => OraBinaryFloat
+      case ("BINARY_DOUBLE", None, None, None) => OraBinaryDouble
+      case ("DATE", None, None, None) => OraDate
+      // case ("TIMESTAMP", p, None) => OraTimestamp(p)
+      case ("TIMESTAMP", None, None, s) => OraTimestamp(s)
       // TODO TIMESTAMP WITH TZ, TIMESTAMP WITh LOCAL TZ
-      case _ => OracleMetadata.unsupportedOraDataType(typeString(s, precision, scale))
+      case _ => OracleMetadata.unsupportedOraDataType(typeString(s, length, precision, scale))
     }
 
   def toCatalystType(
