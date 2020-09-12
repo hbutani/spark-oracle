@@ -31,8 +31,8 @@ object ORAMetadataSQLs {
            r_xml clob;
            r_sxml clob;
          begin
-           SELECT DBMS_METADATA.get_xml ('TABLE', ?, USER) into r_xml from dual;
-           SELECT DBMS_METADATA.get_sxml ('TABLE', ?, USER) into r_sxml from dual;
+           SELECT DBMS_METADATA.get_xml ('TABLE', ?, ?) into r_xml from dual;
+           SELECT DBMS_METADATA.get_sxml ('TABLE', ?, ?) into r_sxml from dual;
            ? := r_xml;
            ? := r_sxml;
          end;""".stripMargin
@@ -50,13 +50,15 @@ object ORAMetadataSQLs {
     var xml: String = null
     var sxml: String = null
     performDSCall(dsKey, TABLE_METADATA_SQL, s"get table metadata for ${schema}.${table}", { cs =>
-      cs.setString(1, "TIMES")
-      cs.setString(2, "TIMES")
-      cs.registerOutParameter(3, Types.CLOB)
-      cs.registerOutParameter(4, Types.CLOB)
+      cs.setString(1, table)
+      cs.setString(2, schema)
+      cs.setString(3, table)
+      cs.setString(4, schema)
+      cs.registerOutParameter(5, Types.CLOB)
+      cs.registerOutParameter(6, Types.CLOB)
     }, { cs =>
-      xml = cs.getString(3)
-      sxml = cs.getString(4)
+      xml = cs.getString(5)
+      sxml = cs.getString(6)
     })
     (xml, sxml)
   }
@@ -123,6 +125,11 @@ object ORAMetadataSQLs {
         }
         currBuf += rs.getString(2)
       }
+
+      if (currBuf.nonEmpty) {
+        m(currOwner) = currBuf.toArray
+      }
+
       m.toMap
     }
   }

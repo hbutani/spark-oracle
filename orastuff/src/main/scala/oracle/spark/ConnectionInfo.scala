@@ -46,27 +46,29 @@ case class ConnectionInfo(
     val properties = new Properties()
     import ConnectionInfo._
 
-    properties.setProperty(ORACLE_URL, url)
-    properties.setProperty(ORACLE_JDBC_USER, username)
+    def orclPropName(nm: String) = ORCL_KEY_MAP(nm)
+
+    properties.setProperty(orclPropName(ORACLE_URL), url)
+    properties.setProperty(orclPropName(ORACLE_JDBC_USER), username)
 
     for (p <- password) {
-      properties.setProperty(ORACLE_JDBC_PASSWORD, p)
+      properties.setProperty(orclPropName(ORACLE_JDBC_PASSWORD), p)
     }
 
     for (sp <- sunPrincipal) {
-      properties.setProperty(SUN_SECURITY_KRB5_PRINCIPAL, sp)
+      properties.setProperty(orclPropName(SUN_SECURITY_KRB5_PRINCIPAL), sp)
     }
     for (kc <- kerberosCallback) {
-      properties.setProperty(KERB_AUTH_CALLBACK, kc)
+      properties.setProperty(orclPropName(KERB_AUTH_CALLBACK), kc)
     }
     for (kc <- krb5Conf) {
-      properties.setProperty(JAVA_SECURITY_KRB5_CONF, kc)
+      properties.setProperty(orclPropName(JAVA_SECURITY_KRB5_CONF), kc)
     }
     for (ta <- tnsAdmin) {
-      properties.setProperty(ORACLE_NET_TNS_ADMIN, ta)
+      properties.setProperty(orclPropName(ORACLE_NET_TNS_ADMIN), ta)
     }
     for (am <- authMethod) {
-      properties.setProperty(ORACLE_JDBC_AUTH_METHOD, am)
+      properties.setProperty(orclPropName(ORACLE_JDBC_AUTH_METHOD), am)
     }
 
     properties
@@ -90,6 +92,16 @@ object ConnectionInfo {
   val JAVA_SECURITY_KRB5_CONF = newOption("java.security.krb5.conf")
   val ORACLE_NET_TNS_ADMIN = newOption("net.tns_admin")
   val ORACLE_JDBC_AUTH_METHOD = newOption("authMethod")
+
+  val ORCL_KEY_MAP = Map(
+    ORACLE_URL -> ORACLE_URL,
+    ORACLE_JDBC_USER -> ORACLE_JDBC_USER,
+    ORACLE_JDBC_PASSWORD -> ORACLE_JDBC_PASSWORD,
+    SUN_SECURITY_KRB5_PRINCIPAL -> SUN_SECURITY_KRB5_PRINCIPAL,
+    KERB_AUTH_CALLBACK -> "oracle.hcat.osh.kerb.callback",
+    JAVA_SECURITY_KRB5_CONF -> JAVA_SECURITY_KRB5_CONF,
+    ORACLE_NET_TNS_ADMIN -> "oracle.net.tns_admin",
+    ORACLE_JDBC_AUTH_METHOD -> "oracle.hcat.osh.authentication")
 
   val DEFAULT_MAX_SPLITS = 1
 }

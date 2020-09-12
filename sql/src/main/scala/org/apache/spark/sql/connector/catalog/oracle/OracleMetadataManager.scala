@@ -26,7 +26,7 @@ import org.iq80.leveldb.{DB, Options}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog.Identifier
-import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraIdentifier
+import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{OraIdentifier, OraTable}
 import org.apache.spark.util.{ShutdownHookManager, Utils}
 
 private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) extends Logging {
@@ -97,6 +97,13 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
 
   private[oracle] def oraTable(schema: String, table: String): OracleTable = {
     ???
+  }
+
+  // for internal use only
+  private[oracle] def oraTableFromDB(tblId: Identifier): OraTable = {
+    val (schema, table) = (tblId.namespace().head, tblId.name())
+    val (xml, sxml) = ORAMetadataSQLs.tableMetadata(dsKey, schema, table)
+    XMLReader.parseTable(xml, sxml)
   }
 
 }

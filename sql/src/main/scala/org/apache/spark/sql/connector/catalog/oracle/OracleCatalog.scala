@@ -101,4 +101,6 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
       schema: StructType,
       partitions: Array[Transform],
       properties: util.Map[String, String]): StagedTable = ???
+
+  private[oracle] def getMetadataManager: OracleMetadataManager = metadataManager
 }

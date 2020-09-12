@@ -17,13 +17,29 @@
 
 package org.apache.spark.sql.connector.catalog.oracle
 
-import org.scalatest.fixture
+import org.apache.spark.sql.hive.test.oracle.TestOracleHive
+import org.apache.spark.sql.oracle.AbstractTest
 
-class OracleXMLTest extends fixture.FunSuite with fixture.TestDataFixture {
+/*
+run with params:
+-Dspark.oracle.test.db_instance=mammoth_medium
+-Dspark.oracle.test.db_wallet_loc=/Users/hbutani/oracle/wallet_mammoth
+ */
+class LoadMetadataCache extends AbstractTest {
 
-  test("t1") { td =>
-    XMLReader.testMain
+  lazy val mdMgr = {
+    val catMgr = TestOracleHive.sparkSession.sessionState.analyzer.catalogManager
+    val oraCat = catMgr.catalog("oracle").asInstanceOf[OracleCatalog]
+    oraCat.getMetadataManager
+  }
 
+  test("populateMetadataCache") { td =>
+    for ((_, tbls) <- mdMgr.tableMap;
+         tbl <- tbls) {
+      // scalastyle:off println
+      println(s"${tbl.namespace().head} ${tbl.name()}")
+      println(mdMgr.oraTableFromDB(tbl))
+    }
   }
 
 }

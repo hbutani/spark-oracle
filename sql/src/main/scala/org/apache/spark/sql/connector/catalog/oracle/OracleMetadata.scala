@@ -63,15 +63,8 @@ object OracleMetadata {
   case class OraColumn(
       name: String,
       dataType: OraDataType,
-      collateName : Option[String],
-      notNull: NotNullConstraint)
-
-  // Not Null Can be specified inline to coloumn
-  // or separately as a Not Null Constraint which
-  // will carry an optional name to the Constraint.
-
-  case class NotNullConstraint(notNull : Boolean,
-                              name : Option[String])
+      collateName: Option[String],
+      isNotNull: Boolean)
 
   case class OraPrimaryKey(cols: Array[String])
 
@@ -91,6 +84,12 @@ object OracleMetadata {
       partType: OraPartitionType.Value,
       subPartitionScheme: Option[TablePartitionScheme])
 
+  case class TableStats(
+      num_blocks: Option[Long],
+      block_size: Option[Int],
+      row_count: Option[Long],
+      avg_row_size_bytes: Option[Double])
+
   case class OraTable(
       schema: String,
       name: String,
@@ -98,12 +97,9 @@ object OracleMetadata {
       partitionScheme: Option[TablePartitionScheme],
       partitions: Array[OraTablePartition],
       primaryKey: Option[OraPrimaryKey],
-      foreignKeys: Option[Array[OraForeignKey]],
+      foreignKeys: Array[OraForeignKey],
       is_external: Boolean,
-      num_blocks: Long,
-      block_size: Int,
-      row_count: Long,
-      avg_row_size_bytes: Double,
+      tabStats: TableStats,
       properties: util.Map[String, String])
 
   /*

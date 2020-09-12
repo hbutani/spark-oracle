@@ -97,7 +97,7 @@ object OracleTestConf {
     conf
       .set("spark.sql.catalog.oracle.authMethod", "ORACLE_WALLET")
       .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@mammoth_medium")
-      .set("spark.sql.catalog.oracle.user", "sparktest")
+      .set("spark.sql.catalog.oracle.user", "tpcds")
       .set("spark.sql.catalog.oracle.password", "Performance_1234")
       .set(
         "spark.sql.catalog.oracle.net.tns_admin",
