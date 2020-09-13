@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.connector.catalog.oracle
 
-import java.io.File
 import java.util
 
 import scala.jdk.CollectionConverters.mapAsJavaMapConverter
@@ -140,7 +139,12 @@ trait TableSXMLParsing { self: XMLReader.type =>
     lazy val primaryKey: Option[OraPrimaryKey] = {
       val primaryKeyNode = nd \ "PRIMARY_KEY_CONSTRAINT_LIST"
       if (primaryKeyNode.nonEmpty) {
-        Some(OraPrimaryKey(primaryKeyNode.map(ns => columnNames(ns)).toArray.flatten))
+        Some(
+          OraPrimaryKey(
+            primaryKeyNode
+              .map(ns => columnNames(ns \ "PRIMARY_KEY_CONSTRAINT_LIST_ITEM"))
+              .toArray
+              .flatten))
       } else None
     }
 
@@ -148,7 +152,10 @@ trait TableSXMLParsing { self: XMLReader.type =>
       val foreignKeyNode = nd \ "FOREIGN_KEY_CONSTRAINT_LIST"
       def referencedTable(nd: NodeSeq): (String, String, Array[String]) = {
         // Pass the Schema and the Name and the Col List
-        ((nd \ SCHEMA_TAG).text, (nd \ NAME_TAG).text, columnNames(nd \ "REFERENCES"))
+        (
+          (nd \ SCHEMA_TAG).text,
+          (nd \ NAME_TAG).text,
+          columnNames(nd \ "FOREIGN_KEY_CONSTRAINT_LIST_ITEM"))
       }
 
       (

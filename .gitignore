@@ -48,3 +48,7 @@ spark-oracle.wiki
 docker/driver
 docker/worker
 docker/.env
+
+# leveldb
+**/metadata_cache/*.log
+**/metadata_cache/LOG*

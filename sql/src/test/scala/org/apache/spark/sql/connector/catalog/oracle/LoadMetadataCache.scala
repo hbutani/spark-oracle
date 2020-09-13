@@ -21,9 +21,15 @@ import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.AbstractTest
 
 /*
+Use to populate the cache for test env
 run with params:
 -Dspark.oracle.test.db_instance=mammoth_medium
 -Dspark.oracle.test.db_wallet_loc=/Users/hbutani/oracle/wallet_mammoth
+
+Set Conf
+.set("spark.sql.catalog.oracle.use_metadata_cache", "false")
+
+Delete the contents of the metadata_cache folder
  */
 class LoadMetadataCache extends AbstractTest {
 
@@ -33,12 +39,12 @@ class LoadMetadataCache extends AbstractTest {
     oraCat.getMetadataManager
   }
 
-  test("populateMetadataCache") { td =>
+  ignore("populateMetadataCache") { td =>
     for ((_, tbls) <- mdMgr.tableMap;
          tbl <- tbls) {
       // scalastyle:off println
       val bldr = new StringBuilder
-      mdMgr.oraTableFromDB(tbl).dump(bldr)
+      mdMgr.oraTable(tbl.namespace().head, tbl.name()).dump(bldr)
       println(bldr)
     }
   }

@@ -22,6 +22,14 @@ import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 class CatalogTest extends AbstractTest {
 
   test("showNS") { td =>
-    TestOracleHive.sql("show namespaces")
+    TestOracleHive.sql("show namespaces").show()
+  }
+
+  test("showTables") { td =>
+    TestOracleHive.sql("show tables").show()
+    TestOracleHive.sql("use TPCDS")
+    TestOracleHive.sql("show tables").show()
+    TestOracleHive.sql("use SPARKTEST")
+    TestOracleHive.sql("show tables").show()
   }
 }

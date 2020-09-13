@@ -19,6 +19,8 @@ package org.apache.spark.sql.connector.catalog.oracle
 
 import java.util
 
+import scala.jdk.CollectionConverters.mapAsJavaMapConverter
+
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog._
 import org.apache.spark.sql.connector.expressions.Transform
@@ -54,11 +56,16 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
 
   override def setDelegateCatalog(delegate: CatalogPlugin): Unit = ???
 
-  override def listNamespaces(): Array[Array[String]] = ???
+  override def listNamespaces(): Array[Array[String]] = {
+    metadataManager.namespaces
+  }
 
-  override def listNamespaces(namespace: Array[String]): Array[Array[String]] = ???
+  override def listNamespaces(namespace: Array[String]): Array[Array[String]] = {
+    Array.empty
+  }
 
-  override def loadNamespaceMetadata(namespace: Array[String]): util.Map[String, String] = ???
+  override def loadNamespaceMetadata(namespace: Array[String]): util.Map[String, String] =
+    Map.empty[String, String].asJava
 
   override def createNamespace(
       namespace: Array[String],
@@ -68,7 +75,10 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
 
   override def dropNamespace(namespace: Array[String]): Boolean = ???
 
-  override def listTables(namespace: Array[String]): Array[Identifier] = ???
+  override def listTables(namespace: Array[String]): Array[Identifier] = {
+    val ns = if (namespace.isEmpty) metadataManager.defaultNamespace else namespace
+    metadataManager.tableMap.getOrElse(ns.head, Array.empty)
+  }
 
   override def loadTable(ident: Identifier): Table = ???
 

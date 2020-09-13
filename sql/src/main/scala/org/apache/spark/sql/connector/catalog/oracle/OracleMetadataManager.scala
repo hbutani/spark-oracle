@@ -76,31 +76,40 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
 
   private[oracle] val defaultNamespace: Array[String] = Array(dsKey.userName)
 
-  private[oracle] val tableMap: Map[Array[String], Array[Identifier]] = {
+  private[oracle] val tableMap: CaseInsensitiveMap[Array[Identifier]] = {
     val tListBytes = cache.get(OracleMetadata.TABLE_LIST_CACHE_KEY)
 
     if (tListBytes != null) {
-      Serialization.deserialize[Map[Array[String], Array[Identifier]]](tListBytes)
+      CaseInsensitiveMap(Serialization.deserialize[Map[String, Array[Identifier]]](tListBytes))
     } else {
       val tblMap = ORAMetadataSQLs.listAllTables(dsKey).map {
         case (u, tbls) =>
-          val ns = Array(u)
-          ns -> tbls.map(OraIdentifier(ns, _): Identifier)
+          u -> tbls.map(OraIdentifier(Array(u), _): Identifier)
       }
 
       cache.put(
         OracleMetadata.TABLE_LIST_CACHE_KEY,
-        Serialization.serialize[Map[Array[String], Array[Identifier]]](tblMap))
-      tblMap
+        Serialization.serialize[Map[String, Array[Identifier]]](tblMap))
+      CaseInsensitiveMap(tblMap)
     }
   }
 
-  private[oracle] def oraTable(schema: String, table: String): OracleTable = {
-    ???
+  private[oracle] def oraTable(schema: String, table: String): OraTable = {
+    val tblId = OraIdentifier(Array(schema), table)
+    val tblIdKey = Serialization.serialize(tblId)
+    val tblMetadataBytes = cache.get(tblIdKey)
+
+    if (tblMetadataBytes != null) {
+      Serialization.deserialize[OraTable](tblMetadataBytes)
+    } else {
+      val oraTbl = oraTableFromDB(tblId)
+      val tblMetadatBytes = Serialization.serialize(oraTbl)
+      cache.put(tblIdKey, tblMetadatBytes)
+      oraTbl
+    }
   }
 
-  // for internal use only
-  private[oracle] def oraTableFromDB(tblId: Identifier): OraTable = {
+  private def oraTableFromDB(tblId: Identifier): OraTable = {
     val (schema, table) = (tblId.namespace().head, tblId.name())
     val (xml, sxml) = ORAMetadataSQLs.tableMetadata(dsKey, schema, table)
     XMLReader.parseTable(xml, sxml)
