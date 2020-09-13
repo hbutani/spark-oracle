@@ -64,31 +64,86 @@ object OracleMetadata {
       name: String,
       dataType: OraDataType,
       collateName: Option[String],
-      isNotNull: Boolean)
+      isNotNull: Boolean) {
+    def dump(buf: StringBuilder): Unit = {
+      buf.append(s"  Column : name=${name}, type=${dataType},")
+      if (collateName.isDefined) {
+        buf.append(s"collateName=${collateName}, ")
+      }
+      buf.append(s"isNotNull=${isNotNull}\n")
+    }
+  }
 
-  case class OraPrimaryKey(cols: Array[String])
+  case class OraPrimaryKey(cols: Array[String]) {
+    def dump(buf: StringBuilder): Unit = {
+      buf.append(s"  Primary Key columns: [${cols.mkString(",")}]")
+    }
+  }
 
   case class OraForeignKey(
       cols: Array[String],
       referencedTable: (String, String),
-      referencedCols: Array[String])
+      referencedCols: Array[String]) {
+    def dump(buf: StringBuilder): Unit = {
+      buf.append(
+        s"  Foreign Key : columns=[${cols.mkString(",")}], " +
+          s"referencedTable=${referencedTable}, " +
+          s"referencedColumns=[${referencedCols.mkString(",")}]\n")
+    }
+  }
 
   case class OraTablePartition(
       name: String,
       idx: Int,
       values: String,
-      subPartitions: Array[OraTablePartition])
+      subPartitions: Array[OraTablePartition]) {
+    def dump(buf: StringBuilder): Unit = {
+      buf.append(s"  Partition: name=${name}, values=${values}\n")
+      for (sP <- subPartitions) {
+        buf.append(s"    Sub-Partition: name=${sP.name}, values=${sP.values}\n")
+      }
+    }
+  }
 
   case class TablePartitionScheme(
       columns: Array[String],
       partType: OraPartitionType.Value,
-      subPartitionScheme: Option[TablePartitionScheme])
+      subPartitionScheme: Option[TablePartitionScheme]) {
+
+    def dump(buf: StringBuilder): Unit = {
+      buf.append(s"  Partition Scheme: type=${partType}, columns=[${columns.mkString(",")}]\n")
+      if (subPartitionScheme.isDefined) {
+        val sP = subPartitionScheme.get
+        buf.append(
+          s"  Sub-Partition Scheme: type=${sP.partType}, " +
+            s"columns=[${sP.columns.mkString(",")}]\n")
+      }
+    }
+  }
 
   case class TableStats(
       num_blocks: Option[Long],
       block_size: Option[Int],
       row_count: Option[Long],
-      avg_row_size_bytes: Option[Double])
+      avg_row_size_bytes: Option[Double]) {
+
+    def dump(buf: StringBuilder): Unit = {
+      buf.append(s"  Stats: ")
+      if (num_blocks.isDefined) {
+        buf.append(s"num_blocks = ${num_blocks.get} ")
+      }
+      if (block_size.isDefined) {
+        buf.append(s"block_size = ${block_size.get} ")
+      }
+      if (row_count.isDefined) {
+        buf.append(s"row_count = ${row_count.get} ")
+      }
+      if (avg_row_size_bytes.isDefined) {
+        buf.append(s"avg_row_size_bytes = ${avg_row_size_bytes.get} ")
+      }
+      buf.append("\n")
+    }
+  }
 
   case class OraTable(
       schema: String,
@@ -100,7 +155,28 @@ object OracleMetadata {
       foreignKeys: Array[OraForeignKey],
       is_external: Boolean,
       tabStats: TableStats,
-      properties: util.Map[String, String])
+      properties: util.Map[String, String]) {
+    def dump(buf: StringBuilder): Unit = {
+      buf.append(s"Table: schema=${schema}, name=${name}, isExternal=${is_external}")
+      for (c <- columns) {
+        c.dump(buf)
+      }
+      for (pS <- partitionScheme) {
+        pS.dump(buf)
+      }
+      for (p <- partitions) {
+        p.dump(buf)
+      }
+      for (pk <- primaryKey) {
+        pk.dump(buf)
+      }
+      for (fk <- foreignKeys) {
+        fk.dump(buf)
+      }
+      tabStats.dump(buf)
+      buf.append(s"  Properties: ${properties}")
+    }
+  }
 
   /*
    * backed by a LevelDB

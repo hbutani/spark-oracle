@@ -110,11 +110,9 @@ trait TableSXMLParsing { self: XMLReader.type =>
   }
 
   private[oracle] def table_sxml(nd: NodeSeq): TableSXML =
-    TableSXML(nd \ "RELATIONAL_TABLE")
+    TableSXML(nd \ "RELATIONAL_TABLE", (nd \ NAME_TAG).text, (nd \ SCHEMA_TAG).text)
 
-  private[oracle] case class TableSXML(nd: NodeSeq) {
-    lazy val name = (nd \ NAME_TAG).text
-    lazy val schema = (nd \ SCHEMA_TAG).text
+  private[oracle] case class TableSXML(nd: NodeSeq, name: String, schema: String) {
 
     private def column(nd: Node): OraColumn = {
       val tc = TableSchema(nd)
@@ -202,7 +200,7 @@ trait TableXMLParsing {
   self: XMLReader.type =>
 
   private[oracle] def table_xml(nd: NodeSeq): TableXML =
-    TableXML(nd \ "ROWSET" \ "ROW" \ "TABLE_T")
+    TableXML(nd \ "ROW" \ "TABLE_T")
 
   private[oracle] case class TableXML(tblNd: NodeSeq) {
     lazy val block_count = longValue(tblNd \ "BLKCNT")

@@ -37,8 +37,9 @@ class LoadMetadataCache extends AbstractTest {
     for ((_, tbls) <- mdMgr.tableMap;
          tbl <- tbls) {
       // scalastyle:off println
-      println(s"${tbl.namespace().head} ${tbl.name()}")
-      println(mdMgr.oraTableFromDB(tbl))
+      val bldr = new StringBuilder
+      mdMgr.oraTableFromDB(tbl).dump(bldr)
+      println(bldr)
     }
   }
 
