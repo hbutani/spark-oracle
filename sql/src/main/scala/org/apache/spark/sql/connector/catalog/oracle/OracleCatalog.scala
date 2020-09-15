@@ -23,6 +23,7 @@ import scala.jdk.CollectionConverters.mapAsJavaMapConverter
 
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog._
+import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraIdentifier
 import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
@@ -57,7 +58,7 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
   override def setDelegateCatalog(delegate: CatalogPlugin): Unit = ???
 
   override def listNamespaces(): Array[Array[String]] = {
-    metadataManager.namespaces
+    metadataManager.namespaces.map(ns => Array(ns)).toArray
   }
 
   override def listNamespaces(namespace: Array[String]): Array[Array[String]] = {
@@ -77,7 +78,12 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
 
   override def listTables(namespace: Array[String]): Array[Identifier] = {
     val ns = if (namespace.isEmpty) metadataManager.defaultNamespace else namespace
-    metadataManager.tableMap.getOrElse(ns.head, Array.empty)
+    metadataManager.tableMap
+      .get(ns.head)
+      .map {
+        case tSet => tSet.map(OraIdentifier(ns, _): Identifier).toArray
+      }
+      .getOrElse(Array.empty)
   }
 
   override def loadTable(ident: Identifier): Table = ???

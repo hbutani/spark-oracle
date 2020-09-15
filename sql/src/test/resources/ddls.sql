@@ -277,3 +277,17 @@ CREATE TABLE countries2
 grant all privileges on countries2 to public;
 
 
+CREATE TABLE "mixed_case_name"(
+    name varchar2(100)
+);
+grant all privileges on "mixed_case_name" to public;
+
+CREATE TABLE "Mixed_case_name"(
+    name varchar2(100)
+);
+grant all privileges on "Mixed_case_name" to public;
+
+CREATE TABLE MIXED_CASE_NAME(
+    name varchar2(100)
+);
+grant all privileges on MIXED_CASE_NAME to public;

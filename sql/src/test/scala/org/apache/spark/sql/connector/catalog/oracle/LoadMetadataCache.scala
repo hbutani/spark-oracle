@@ -40,11 +40,11 @@ class LoadMetadataCache extends AbstractTest {
   }
 
   ignore("populateMetadataCache") { td =>
-    for ((_, tbls) <- mdMgr.tableMap;
+    for ((ns, tbls) <- mdMgr.tableMap;
          tbl <- tbls) {
       // scalastyle:off println
       val bldr = new StringBuilder
-      mdMgr.oraTable(tbl.namespace().head, tbl.name()).dump(bldr)
+      mdMgr.oraTable(ns, tbl).dump(bldr)
       println(bldr)
     }
   }

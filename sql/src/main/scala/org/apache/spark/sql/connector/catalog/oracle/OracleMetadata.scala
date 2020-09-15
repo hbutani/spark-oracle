@@ -157,7 +157,7 @@ object OracleMetadata {
       tabStats: TableStats,
       properties: util.Map[String, String]) {
     def dump(buf: StringBuilder): Unit = {
-      buf.append(s"Table: schema=${schema}, name=${name}, isExternal=${is_external}")
+      buf.append(s"Table: schema=${schema}, name=${name}, isExternal=${is_external}\n")
       for (c <- columns) {
         c.dump(buf)
       }
@@ -191,13 +191,6 @@ object OracleMetadata {
 
   /*
  * Todo
- *  - define metadata classes
- *  - xml reader from sxml to classes
- *  - kyro serializer
- *  - what do i need for dbsplits ?
- *  - levelDB infra
- *  - read method -> get from cache or read from db + put
- *  - test infrastructure: provide oraclemetadata w/o db connection in test env.
  *  - test suite: 30 tables: tpcds + av tables in adw instance + our hand created tables
  *
  */

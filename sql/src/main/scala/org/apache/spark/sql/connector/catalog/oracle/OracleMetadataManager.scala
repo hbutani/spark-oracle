@@ -18,6 +18,7 @@
 package org.apache.spark.sql.connector.catalog.oracle
 
 import java.io.File
+import java.util.Locale
 
 import oracle.spark.{ConnectionManagement, DataSourceKey, ORAMetadataSQLs}
 import org.fusesource.leveldbjni.JniDBFactory
@@ -59,43 +60,46 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
     db
   }
 
-  private[oracle] val namespaces: Array[Array[String]] = {
+  private[oracle] val namespaces: Set[String] = {
     val nsBytes = cache.get(OracleMetadata.NAMESPACES_CACHE_KEY)
 
     if (nsBytes != null) {
-      Serialization.deserialize[Array[Array[String]]](nsBytes)
+      Serialization.deserialize[Set[String]](nsBytes)
     } else {
-      val accessibleUsers = ORAMetadataSQLs.listAccessibleUsers(dsKey).map(u => Array[String](u))
+      val accessibleUsers = ORAMetadataSQLs.listAccessibleUsers(dsKey).toSet
 
       cache.put(
         OracleMetadata.NAMESPACES_CACHE_KEY,
-        Serialization.serialize[Array[Array[String]]](accessibleUsers))
+        Serialization.serialize[Set[String]](accessibleUsers))
       accessibleUsers
     }
   }
 
   private[oracle] val defaultNamespace: Array[String] = Array(dsKey.userName)
 
-  private[oracle] val tableMap: CaseInsensitiveMap[Array[Identifier]] = {
+  private[oracle] val tableMap: Map[String, Set[String]] = {
     val tListBytes = cache.get(OracleMetadata.TABLE_LIST_CACHE_KEY)
 
-    if (tListBytes != null) {
-      CaseInsensitiveMap(Serialization.deserialize[Map[String, Array[Identifier]]](tListBytes))
+    val tablMap: Map[String, Array[String]] = if (tListBytes != null) {
+      Serialization.deserialize[Map[String, Array[String]]](tListBytes)
     } else {
-      val tblMap = ORAMetadataSQLs.listAllTables(dsKey).map {
-        case (u, tbls) =>
-          u -> tbls.map(OraIdentifier(Array(u), _): Identifier)
-      }
+      val tblMap = ORAMetadataSQLs.listAllTables(dsKey)
 
       cache.put(
         OracleMetadata.TABLE_LIST_CACHE_KEY,
-        Serialization.serialize[Map[String, Array[Identifier]]](tblMap))
-      CaseInsensitiveMap(tblMap)
+        Serialization.serialize[Map[String, Array[String]]](tblMap))
+      tblMap
     }
+    tablMap.mapValues(_.toSet)
   }
 
   private[oracle] def oraTable(schema: String, table: String): OraTable = {
-    val tblId = OraIdentifier(Array(schema), table)
+
+    val tblNm = if (tableMap(schema).contains(table)) {
+      table
+    } else table.toUpperCase(Locale.ROOT)
+
+    val tblId = OraIdentifier(Array(schema), tblNm)
     val tblIdKey = Serialization.serialize(tblId)
     val tblMetadataBytes = cache.get(tblIdKey)
 
