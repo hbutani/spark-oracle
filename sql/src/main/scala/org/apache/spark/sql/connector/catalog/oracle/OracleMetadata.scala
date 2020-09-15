@@ -42,6 +42,16 @@ object OracleMetadata {
     }
   }
 
+  class UnsupportedAction(action: String, alternate: Option[String])
+      extends AnalysisException(
+        s"Unsupported Action on Oracle Catalog: ${action}" +
+          s"${if (alternate.isDefined) "\n " + alternate.get else ""}")
+
+  def unsupportedAction(
+      action: String,
+      alternate: Option[String] = Some("you should perform this using Oracle SQL")): Nothing =
+    throw new UnsupportedAction(action, alternate)
+
   object OraPartitionType extends Enumeration {
     val RANGE = Value("RANGE")
     val LIST = Value("LIST")

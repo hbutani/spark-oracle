@@ -40,7 +40,7 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
     ORAMetadataSQLs.validateConnection(dsKey)
     dsKey
   } else {
-    DataSourceKey("FAKE", "FAKE")
+    connInfo
   }
 
   private val cacheLoc: File =
@@ -60,10 +60,10 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
     db
   }
 
-  private[oracle] val namespaces: Set[String] = {
+  private val namespacesMap: CaseInsensitiveMap[String] = {
     val nsBytes = cache.get(OracleMetadata.NAMESPACES_CACHE_KEY)
 
-    if (nsBytes != null) {
+    val nsSet = if (nsBytes != null) {
       Serialization.deserialize[Set[String]](nsBytes)
     } else {
       val accessibleUsers = ORAMetadataSQLs.listAccessibleUsers(dsKey).toSet
@@ -73,11 +73,17 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
         Serialization.serialize[Set[String]](accessibleUsers))
       accessibleUsers
     }
+    CaseInsensitiveMap(nsSet.map(n => n -> n).toMap)
   }
 
-  private[oracle] val defaultNamespace: Array[String] = Array(dsKey.userName)
+  private[oracle] lazy val namespaces =
+    namespacesMap.values.map(ns => Array(ns)).toArray
 
-  private[oracle] val tableMap: Map[String, Set[String]] = {
+  private[oracle] def namespaceExists(ns: String): Boolean = namespacesMap.contains(ns)
+
+  private[oracle] val defaultNamespace: String = dsKey.userName
+
+  private[oracle] val tableMap: CaseInsensitiveMap[Set[String]] = {
     val tListBytes = cache.get(OracleMetadata.TABLE_LIST_CACHE_KEY)
 
     val tablMap: Map[String, Array[String]] = if (tListBytes != null) {
@@ -90,7 +96,7 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
         Serialization.serialize[Map[String, Array[String]]](tblMap))
       tblMap
     }
-    tablMap.mapValues(_.toSet)
+    CaseInsensitiveMap(tablMap.mapValues(_.toSet))
   }
 
   private[oracle] def oraTable(schema: String, table: String): OraTable = {

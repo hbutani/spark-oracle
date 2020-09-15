@@ -55,33 +55,55 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
 
   override def name(): String = _name
 
+  override def defaultNamespace: Array[String] = Array(metadataManager.defaultNamespace)
+
   override def setDelegateCatalog(delegate: CatalogPlugin): Unit = ???
 
-  override def listNamespaces(): Array[Array[String]] = {
-    metadataManager.namespaces.map(ns => Array(ns)).toArray
-  }
+  override def listNamespaces(): Array[Array[String]] = metadataManager.namespaces
 
   override def listNamespaces(namespace: Array[String]): Array[Array[String]] = {
-    Array.empty
+    if (namespace.isEmpty) {
+      listNamespaces()
+    } else {
+      Array.empty
+    }
   }
 
-  override def loadNamespaceMetadata(namespace: Array[String]): util.Map[String, String] =
-    Map.empty[String, String].asJava
+  override def namespaceExists(namespace: Array[String]): Boolean = {
+    if (namespace.size == 1) {
+      metadataManager.namespaceExists(namespace.head)
+    } else {
+      super.namespaceExists(namespace)
+    }
+  }
+
+  override def loadNamespaceMetadata(namespace: Array[String]): util.Map[String, String] = {
+    Map(
+      SupportsNamespaces.PROP_OWNER -> metadataManager.dsKey.userName,
+      SupportsNamespaces.PROP_LOCATION -> metadataManager.dsKey.connectionURL).asJava
+  }
 
   override def createNamespace(
       namespace: Array[String],
-      metadata: util.Map[String, String]): Unit = ???
+      metadata: util.Map[String, String]): Unit = {
+    OracleMetadata.unsupportedAction(s"create namespace", Some("create schema using Oracle DDL"))
+  }
 
-  override def alterNamespace(namespace: Array[String], changes: NamespaceChange*): Unit = ???
+  override def alterNamespace(namespace: Array[String], changes: NamespaceChange*): Unit = {
+    OracleMetadata.unsupportedAction(
+      s"alter namespace: " +
+        s"${changes.map(_.getClass.getSimpleName).mkString("[", ", ", "]")}")
+  }
 
-  override def dropNamespace(namespace: Array[String]): Boolean = ???
+  override def dropNamespace(namespace: Array[String]): Boolean = {
+    OracleMetadata.unsupportedAction(s"drop namespace", Some("drop schema using Oracle DDL"))
+  }
 
   override def listTables(namespace: Array[String]): Array[Identifier] = {
-    val ns = if (namespace.isEmpty) metadataManager.defaultNamespace else namespace
     metadataManager.tableMap
-      .get(ns.head)
+      .get(namespace.head)
       .map {
-        case tSet => tSet.map(OraIdentifier(ns, _): Identifier).toArray
+        case tSet => tSet.map(OraIdentifier(namespace, _): Identifier).toArray
       }
       .getOrElse(Array.empty)
   }
