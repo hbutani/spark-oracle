@@ -30,7 +30,8 @@ case class OracleCatalogOptions(
     isChunkSplitter: Boolean,
     chunkSQL: Option[String],
     use_metadata_cache: Boolean,
-    metadataCacheLoc: Option[String])
+    metadataCacheLoc: Option[String],
+    oci_credential_name: Option[String])
 
 object OracleCatalogOptions {
 
@@ -65,6 +66,7 @@ object OracleCatalogOptions {
   val ORACLE_PARALLELISM = newOption("useOracleParallelism")
   val ORACLE_USE_METADATA_CACHE = newOption("use_metadata_cache")
   val ORACLE_METADATA_CACHE = newOption("metadata_cache_loc")
+  val ORACLE_OCI_CREDENTIAL_NAME = newOption("oci_credential_name")
 
   val DEFAULT_MAX_SPLITS = 1
 
@@ -80,7 +82,8 @@ object OracleCatalogOptions {
       parameters.getOrElse(ORACLE_JDBC_IS_CHUNK_SPLITTER, "true").toBoolean,
       parameters.get(ORACLE_CUSTOM_CHUNK_SQL),
       parameters.get(ORACLE_USE_METADATA_CACHE).map(_.toBoolean).getOrElse(false),
-      parameters.get(ORACLE_METADATA_CACHE))
+      parameters.get(ORACLE_METADATA_CACHE),
+      parameters.get(ORACLE_OCI_CREDENTIAL_NAME))
   }
 
 }

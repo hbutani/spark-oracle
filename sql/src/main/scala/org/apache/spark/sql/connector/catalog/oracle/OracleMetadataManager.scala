@@ -34,12 +34,12 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
   val connInfo = OracleCatalogOptions.connectionInfo(cMap)
   val catalogOptions = OracleCatalogOptions.catalogOptions(cMap)
 
-  val dsKey: DataSourceKey = if (!catalogOptions.use_metadata_cache) {
+  val (dsKey: DataSourceKey, cache_only: Boolean) = if (!catalogOptions.use_metadata_cache) {
     val dsKey = ConnectionManagement.registerDataSource(connInfo)
     ORAMetadataSQLs.validateConnection(dsKey)
-    dsKey
+    (dsKey, false)
   } else {
-    connInfo
+    (connInfo: DataSourceKey, true)
   }
 
   private val cacheLoc: File =
@@ -120,8 +120,14 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
   }
 
   private def oraTableFromDB(schema: String, table: String): OraTable = {
-    val (xml, sxml) = ORAMetadataSQLs.tableMetadata(dsKey, schema, table)
-    XMLReader.parseTable(xml, sxml)
+    if (!cache_only) {
+      val (xml, sxml) = ORAMetadataSQLs.tableMetadata(dsKey, schema, table)
+      XMLReader.parseTable(xml, sxml)
+    } else {
+      OracleMetadata.unsupportedAction(
+        "retrieve db info in 'cache_ony' mode",
+        Some("set 'spark.sql.catalog.oracle.use_metadata_cache' to false"))
+    }
   }
 
 }

@@ -43,7 +43,11 @@ import org.apache.spark.sql.util.CaseInsensitiveStringMap
  * `spark.sql.catalog.oracle.kerbCallback,spark.sql.catalog.oracle.java.security.krb5.conf,`
  * `spark.sql.catalog.oracle.net.tns_admin,spark.sql.catalog.oracle.authMethod`
  */
-class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTableCatalog {
+class OracleCatalog
+    extends CatalogPlugin
+    with CatalogExtension
+    with StagingTableCatalog
+    with OraExternalTableDDLSupport {
 
   private var _name: String = _
   private var metadataManager: OracleMetadataManager = _
@@ -158,13 +162,42 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
       ident: Identifier,
       schema: StructType,
       partitions: Array[Transform],
-      properties: util.Map[String, String]): Table = ???
+      properties: util.Map[String, String]): Table = {
 
-  override def alterTable(ident: Identifier, changes: TableChange*): Table = ???
+    val ddlBuilder = new OraCreateDDLBuilder(ident, schema, partitions, properties)
 
-  override def dropTable(ident: Identifier): Boolean = ???
+    if (!ddlBuilder.isSupported) {
+      OracleMetadata.unsupportedAction(
+        s"Cannot create table",
+        Some("""Currently only object store resident tables of parquet format can be created
+            | via Spark SQL. For other cases, create table using Oracle DDL""".stripMargin))
+    } else {
+      OracleMetadata.unsupportedAction(
+        s"Cannot create table",
+        Some("""Method is supported but hasn't been implemented yet""".stripMargin))
+    }
+  }
 
-  override def renameTable(oldIdent: Identifier, newIdent: Identifier): Unit = ???
+  override def alterTable(ident: Identifier, changes: TableChange*): Table = {
+    OracleMetadata.unsupportedAction(
+      "rename table",
+      Some("""For Oracle managed tables issue Oracle DDL
+          |For External tables: Currently you have to drop and recreate table""".stripMargin))
+  }
+
+  override def dropTable(ident: Identifier): Boolean = {
+    OracleMetadata.unsupportedAction(
+      "drop table",
+      Some("""For Oracle managed tables issue Oracle drop table DDL
+          |For External tables: currently you have to issue Oracle drop table DDL""".stripMargin))
+  }
+
+  override def renameTable(oldIdent: Identifier, newIdent: Identifier): Unit = {
+    OracleMetadata.unsupportedAction(
+      "rename table",
+      Some("""For Oracle managed tables issue Oracle DDL
+          |For External tables: Currently you have to drop and recreate table""".stripMargin))
+  }
 
   override def stageCreate(
       ident: Identifier,

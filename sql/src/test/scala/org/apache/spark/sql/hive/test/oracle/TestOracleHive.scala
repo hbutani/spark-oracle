@@ -102,6 +102,7 @@ object OracleTestConf {
       .set(
         "spark.sql.catalog.oracle.net.tns_admin",
         System.getProperty(SPARK_ORACLE_DB_WALLET_LOC))
+      .set("spark.sql.catalog.oracle.oci_credential_name", "OS_EXT_OCI")
 
   def testMaster: String = "local[*]"
 
