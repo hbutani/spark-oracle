@@ -17,9 +17,6 @@
 
 package org.apache.spark.sql.connector.catalog.oracle
 
-import java.util
-
-import scala.jdk.CollectionConverters.mapAsJavaMapConverter
 import scala.xml.{Node, NodeSeq}
 
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{
@@ -181,25 +178,26 @@ trait TableSXMLParsing { self: XMLReader.type =>
       var extProp: Map[String, String] = Map()
 
       if ((externalNd \ "ACCESS_DRIVER_TYPE").nonEmpty) {
-        extProp += ("ACCESS_DRIVER_TYPE" -> (nd \ "ACCESS_DRIVER_TYPE").text)
+        extProp += ("ACCESS_DRIVER_TYPE" -> (externalNd \ "ACCESS_DRIVER_TYPE").text)
       }
       if ((externalNd \ "DEFAULT_DIRECTORY").nonEmpty) {
-        extProp += ("DEFAULT_DIRECTORY" -> (nd \ "DEFAULT_DIRECTORY").text)
+        extProp += ("DEFAULT_DIRECTORY" -> (externalNd \ "DEFAULT_DIRECTORY").text)
       }
       if ((externalNd \ "ACCESS_PARAMETERS").nonEmpty) {
-        extProp += ("ACCESS_PARAMETERS" -> (nd \ "ACCESS_PARAMETERS").text)
+        extProp += ("ACCESS_PARAMETERS" -> (externalNd \ "ACCESS_PARAMETERS").text)
       }
       if ((externalNd \ "LOCATION").nonEmpty) {
-        val locList = (nd \ "LOCATION" \ "LOCATION_ITEM" \ NAME_TAG).map(_.text).mkString(" : ")
+        val locList =
+          (externalNd \ "LOCATION" \ "LOCATION_ITEM" \ NAME_TAG).map(_.text).mkString(" : ")
         extProp += ("LOCATION" -> locList)
       }
       if ((externalNd \ "REJECT_LIMIT").nonEmpty) {
-        extProp += ("REJECT_LIMIT" -> (nd \ "REJECT_LIMIT").text)
+        extProp += ("REJECT_LIMIT" -> (externalNd \ "REJECT_LIMIT").text)
       }
       extProp
     }
 
-    lazy val propertiesMap: util.Map[String, String] = extTableProps.asJava
+    lazy val propertiesMap: Map[String, String] = extTableProps
   }
 }
 
@@ -225,7 +223,7 @@ object XMLReader extends PartitionParsing with TableSXMLParsing with TableXMLPar
   import scala.xml.XML._
 
   val NAME_TAG = "NAME"
-  val SCHEMA_TAG = "NAME"
+  val SCHEMA_TAG = "SCHEMA"
 
   private[oracle] def textValue(nd: NodeSeq): Option[String] = {
     if (nd.nonEmpty) Some(nd.text) else None
@@ -251,6 +249,9 @@ object XMLReader extends PartitionParsing with TableSXMLParsing with TableXMLPar
   def parseTable(xml: String, sxml: String): OraTable = {
     val tbl_sxml = table_sxml(loadString(sxml))
 
+    val tblProps = tbl_sxml.propertiesMap
+    val tblStats = table_xml(loadString(xml)).tStats
+
     OraTable(
       tbl_sxml.schema,
       tbl_sxml.name,
@@ -260,7 +261,7 @@ object XMLReader extends PartitionParsing with TableSXMLParsing with TableXMLPar
       tbl_sxml.primaryKey,
       tbl_sxml.foreignKeys,
       tbl_sxml.isExternal,
-      table_xml(loadString(xml)).tStats,
-      tbl_sxml.propertiesMap)
+      tblStats,
+      tblProps)
   }
 }

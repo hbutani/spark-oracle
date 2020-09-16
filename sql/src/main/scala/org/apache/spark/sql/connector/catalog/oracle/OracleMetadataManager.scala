@@ -26,7 +26,6 @@ import org.iq80.leveldb.{DB, Options}
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
-import org.apache.spark.sql.connector.catalog.Identifier
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{OraIdentifier, OraTable}
 import org.apache.spark.util.{ShutdownHookManager, Utils}
 
@@ -101,26 +100,26 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
 
   private[oracle] def oraTable(schema: String, table: String): OraTable = {
 
-    val tblNm = if (tableMap(schema).contains(table)) {
+    val oraSchema = namespacesMap(schema)
+    val oraTblNm = if (tableMap(oraSchema).contains(table)) {
       table
     } else table.toUpperCase(Locale.ROOT)
 
-    val tblId = OraIdentifier(Array(schema), tblNm)
+    val tblId = OraIdentifier(Array(oraSchema), oraTblNm)
     val tblIdKey = Serialization.serialize(tblId)
     val tblMetadataBytes = cache.get(tblIdKey)
 
     if (tblMetadataBytes != null) {
       Serialization.deserialize[OraTable](tblMetadataBytes)
     } else {
-      val oraTbl = oraTableFromDB(tblId)
+      val oraTbl = oraTableFromDB(oraSchema, oraTblNm)
       val tblMetadatBytes = Serialization.serialize(oraTbl)
       cache.put(tblIdKey, tblMetadatBytes)
       oraTbl
     }
   }
 
-  private def oraTableFromDB(tblId: Identifier): OraTable = {
-    val (schema, table) = (tblId.namespace().head, tblId.name())
+  private def oraTableFromDB(schema: String, table: String): OraTable = {
     val (xml, sxml) = ORAMetadataSQLs.tableMetadata(dsKey, schema, table)
     XMLReader.parseTable(xml, sxml)
   }

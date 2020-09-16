@@ -20,10 +20,12 @@ package org.apache.spark.sql.connector.catalog.oracle
 import java.util
 
 import scala.jdk.CollectionConverters.mapAsJavaMapConverter
+import scala.util.Try
 
+import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog._
-import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraIdentifier
+import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{OraIdentifier, OraTable}
 import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
@@ -61,10 +63,17 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
 
   override def listNamespaces(): Array[Array[String]] = metadataManager.namespaces
 
+  private def checkNamespace(namespace: Array[String]): Unit = {
+    if (namespace.length != 1 || !metadataManager.namespaceExists(namespace.head)) {
+      throw new NoSuchNamespaceException(s"Unknown Oracle schema ${namespace.mkString(".")}")
+    }
+  }
+
   override def listNamespaces(namespace: Array[String]): Array[Array[String]] = {
     if (namespace.isEmpty) {
       listNamespaces()
     } else {
+      checkNamespace(namespace)
       Array.empty
     }
   }
@@ -78,6 +87,7 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
   }
 
   override def loadNamespaceMetadata(namespace: Array[String]): util.Map[String, String] = {
+    checkNamespace(namespace)
     Map(
       SupportsNamespaces.PROP_OWNER -> metadataManager.dsKey.userName,
       SupportsNamespaces.PROP_LOCATION -> metadataManager.dsKey.connectionURL).asJava
@@ -90,16 +100,19 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
   }
 
   override def alterNamespace(namespace: Array[String], changes: NamespaceChange*): Unit = {
+    checkNamespace(namespace)
     OracleMetadata.unsupportedAction(
       s"alter namespace: " +
         s"${changes.map(_.getClass.getSimpleName).mkString("[", ", ", "]")}")
   }
 
   override def dropNamespace(namespace: Array[String]): Boolean = {
+    checkNamespace(namespace)
     OracleMetadata.unsupportedAction(s"drop namespace", Some("drop schema using Oracle DDL"))
   }
 
   override def listTables(namespace: Array[String]): Array[Identifier] = {
+    checkNamespace(namespace)
     metadataManager.tableMap
       .get(namespace.head)
       .map {
@@ -108,7 +121,38 @@ class OracleCatalog extends CatalogPlugin with CatalogExtension with StagingTabl
       .getOrElse(Array.empty)
   }
 
-  override def loadTable(ident: Identifier): Table = ???
+  private def _oraTable(ident: Identifier): OraTable = {
+    checkNamespace(ident.namespace())
+    try {
+      metadataManager.oraTable(ident.namespace().head, ident.name())
+    } catch {
+      case ex: Exception =>
+        throw new NoSuchTableException(
+          s"Failed to introspect Oracle table ${ident.toString}, " +
+            s"error: ${ex.getMessage}")
+    }
+  }
+
+  override def loadTable(ident: Identifier): Table = {
+    checkNamespace(ident.namespace())
+
+    val oTbl = _oraTable(ident)
+    val tblProps = Map(
+      "connURL" -> metadataManager.dsKey.connectionURL,
+      "userName" -> metadataManager.dsKey.userName,
+      "isExternal" -> oTbl.is_external.toString)
+    OracleTable(metadataManager.dsKey, oTbl, (tblProps ++ oTbl.properties).asJava)
+  }
+
+  override def invalidateTable(ident: Identifier): Unit = ???
+
+  override def tableExists(ident: Identifier): Boolean = {
+    checkNamespace(ident.namespace())
+    Try {
+      metadataManager.oraTable(ident.namespace().head, ident.name())
+      true
+    }.getOrElse(false)
+  }
 
   override def createTable(
       ident: Identifier,

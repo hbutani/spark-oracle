@@ -18,10 +18,11 @@
 package org.apache.spark.sql.oracle
 
 import org.apache.spark.SparkException
+import org.apache.spark.sql.catalyst.analysis.NoSuchNamespaceException
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.UnsupportedAction
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 
-class CatalogTest extends AbstractTest {
+class SupportsNamespacesTest extends AbstractTest {
 
   test("showNS") { td =>
     TestOracleHive.sql("show namespaces").show()
@@ -29,7 +30,7 @@ class CatalogTest extends AbstractTest {
   }
 
   test("descNS") { td =>
-    intercept[NoSuchElementException] {
+    intercept[NoSuchNamespaceException] {
       TestOracleHive.sql("describe namespace extended oracle").show()
     }
 

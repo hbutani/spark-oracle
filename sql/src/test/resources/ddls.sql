@@ -291,3 +291,17 @@ CREATE TABLE MIXED_CASE_NAME(
     name varchar2(100)
 );
 grant all privileges on MIXED_CASE_NAME to public;
+
+-- create an external table
+BEGIN
+    DBMS_CLOUD.CREATE_EXTERNAL_TABLE(
+            table_name      =>'SPARK_TEST_T1',
+            credential_name =>'OS_EXT_OCI',
+            file_uri_list   =>'https://objectstorage.us-ashburn-1.oraclecloud.com/n/idlxex3qf8sf/b/SparkTest/o/t1.parquet',
+            format          => json_object('type' value 'parquet', 'schema' value 'first'),
+            column_list     => 'name VARCHAR2(4000),
+                        age NUMBER(10)');
+END;
+/
+grant all privileges on SPARK_TEST_T1 to public;
+

@@ -18,11 +18,14 @@
 package org.apache.spark.sql.connector.catalog.oracle
 
 import java.nio.charset.StandardCharsets.UTF_8
-import java.util
+
+import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.connector.catalog.Identifier
+import org.apache.spark.sql.connector.expressions.{LogicalExpressions, Transform}
 import org.apache.spark.sql.oracle.OraSparkUtils
+import org.apache.spark.sql.types.{StructField, StructType}
 
 object OracleMetadata {
 
@@ -107,6 +110,7 @@ object OracleMetadata {
       idx: Int,
       values: String,
       subPartitions: Array[OraTablePartition]) {
+
     def dump(buf: StringBuilder): Unit = {
       buf.append(s"  Partition: name=${name}, values=${values}\n")
       for (sP <- subPartitions) {
@@ -128,6 +132,20 @@ object OracleMetadata {
           s"  Sub-Partition Scheme: type=${sP.partType}, " +
             s"columns=[${sP.columns.mkString(",")}]\n")
       }
+    }
+
+    lazy val transforms: Array[Transform] = {
+      import LogicalExpressions._
+      val arr = ArrayBuffer[Transform]()
+
+      def addTransforms(columns: Array[String]) =
+        columns.foreach(c => arr += identity(parseReference(c)))
+
+      addTransforms(columns)
+      if (subPartitionScheme.isDefined) {
+        addTransforms(subPartitionScheme.get.columns)
+      }
+      arr.toArray
     }
   }
 
@@ -165,7 +183,8 @@ object OracleMetadata {
       foreignKeys: Array[OraForeignKey],
       is_external: Boolean,
       tabStats: TableStats,
-      properties: util.Map[String, String]) {
+      properties: Map[String, String]) {
+
     def dump(buf: StringBuilder): Unit = {
       buf.append(s"Table: schema=${schema}, name=${name}, isExternal=${is_external}\n")
       for (c <- columns) {
@@ -186,18 +205,13 @@ object OracleMetadata {
       tabStats.dump(buf)
       buf.append(s"  Properties: ${properties}")
     }
-  }
 
-  /*
-   * backed by a LevelDB
-   * key is (schema, tblNm); value is OracleTableMetadata
-   *
-   */
+    @transient lazy val catalystSchema: StructType =
+      StructType(columns.map(c => StructField(c.name, c.dataType.catalystType, !c.isNotNull)))
+  }
 
   private[oracle] val NAMESPACES_CACHE_KEY = "__namespaces__".getBytes(UTF_8)
   private[oracle] val TABLE_LIST_CACHE_KEY = "__tables_list__".getBytes(UTF_8)
-
-  // https://medium.com/@wishmithasmendis/leveldb-from-scratch-in-java-c300e21c7445
 
   /*
  * Todo

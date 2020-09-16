@@ -19,31 +19,39 @@ package org.apache.spark.sql.connector.catalog.oracle
 
 import java.util
 
-import org.apache.spark.sql.connector.catalog.{
-  StagedTable,
-  SupportsDelete,
-  SupportsRead,
-  SupportsWrite,
-  Table,
-  TableCapability
-}
+import scala.collection.JavaConverters._
+
+import oracle.spark.DataSourceKey
+
+import org.apache.spark.sql.connector.catalog._
+import org.apache.spark.sql.connector.catalog.TableCapability._
+import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
+import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.sources.Filter
-import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 
-case class OracleTable(oraTable: Table)
+case class OracleTable(
+    dsKey: DataSourceKey,
+    oraTable: OraTable,
+    override val properties: util.Map[String, String])
     extends StagedTable
     with SupportsRead
     with SupportsWrite
     with SupportsDelete {
 
-  override def name(): String = ???
+  lazy val tableId = Identifier.of(Array(oraTable.schema), oraTable.name)
 
-  override def schema(): StructType = ???
+  lazy val name = tableId.toString
 
-  override def capabilities(): util.Set[TableCapability] = ???
+  lazy val schema = oraTable.catalystSchema
+
+  override def capabilities(): util.Set[TableCapability] =
+    Set(BATCH_READ, BATCH_WRITE, TRUNCATE, OVERWRITE_BY_FILTER, OVERWRITE_DYNAMIC).asJava
+
+  override lazy val partitioning: Array[Transform] =
+    oraTable.partitionScheme.map(_.transforms).getOrElse(Array.empty)
 
   override def commitStagedChanges(): Unit = ???
 

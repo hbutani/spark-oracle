@@ -15,30 +15,17 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.connector.catalog.oracle
+package org.apache.spark.sql.oracle
 
-import org.apache.spark.sql.oracle.AbstractTest
+import org.apache.spark.sql.connector.catalog.oracle.OraMetadataMgrInternalTest
+import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 
-/*
-Use to populate the cache for test env
-run with params:
--Dspark.oracle.test.db_instance=mammoth_medium
--Dspark.oracle.test.db_wallet_loc=/Users/hbutani/oracle/wallet_mammoth
+class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
 
-Set Conf
-.set("spark.sql.catalog.oracle.use_metadata_cache", "false")
-
-Delete the contents of the metadata_cache folder
- */
-class LoadMetadataCache extends AbstractTest with OraMetadataMgrInternalTest {
-
-  test("populateMetadataCache") { td =>
+  test("describeTables") { td =>
     for ((ns, tbls) <- catalogTableMap;
          tbl <- tbls) {
-      // scalastyle:off println
-      val bldr = new StringBuilder
-      mdMgr.oraTable(ns, tbl).dump(bldr)
-      println(bldr)
+      TestOracleHive.sql(s"describe extended ${ns}.${tbl}").show(1000, false)
     }
   }
 

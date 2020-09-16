@@ -17,29 +17,18 @@
 
 package org.apache.spark.sql.connector.catalog.oracle
 
+import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
+import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.AbstractTest
 
-/*
-Use to populate the cache for test env
-run with params:
--Dspark.oracle.test.db_instance=mammoth_medium
--Dspark.oracle.test.db_wallet_loc=/Users/hbutani/oracle/wallet_mammoth
+trait OraMetadataMgrInternalTest { self: AbstractTest =>
 
-Set Conf
-.set("spark.sql.catalog.oracle.use_metadata_cache", "false")
-
-Delete the contents of the metadata_cache folder
- */
-class LoadMetadataCache extends AbstractTest with OraMetadataMgrInternalTest {
-
-  test("populateMetadataCache") { td =>
-    for ((ns, tbls) <- catalogTableMap;
-         tbl <- tbls) {
-      // scalastyle:off println
-      val bldr = new StringBuilder
-      mdMgr.oraTable(ns, tbl).dump(bldr)
-      println(bldr)
-    }
+  lazy val mdMgr = {
+    val catMgr = TestOracleHive.sparkSession.sessionState.analyzer.catalogManager
+    val oraCat = catMgr.catalog("oracle").asInstanceOf[OracleCatalog]
+    oraCat.getMetadataManager
   }
+
+  def catalogTableMap: CaseInsensitiveMap[Set[String]] = mdMgr.tableMap
 
 }
