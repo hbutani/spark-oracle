@@ -112,9 +112,9 @@ object OracleMetadata {
       subPartitions: Array[OraTablePartition]) {
 
     def dump(buf: StringBuilder): Unit = {
-      buf.append(s"  Partition: name=${name}, values=${values}\n")
+      buf.append(s"Partition: name=${name}, values=${values}\n")
       for (sP <- subPartitions) {
-        buf.append(s"    Sub-Partition: name=${sP.name}, values=${sP.values}\n")
+        buf.append(s"Sub-Partition: name=${sP.name}, values=${sP.values}\n")
       }
     }
   }
@@ -125,11 +125,11 @@ object OracleMetadata {
       subPartitionScheme: Option[TablePartitionScheme]) {
 
     def dump(buf: StringBuilder): Unit = {
-      buf.append(s"  Partition Scheme: type=${partType}, columns=[${columns.mkString(",")}]\n")
+      buf.append(s"Partition Scheme: type=${partType}, columns=[${columns.mkString(",")}]\n")
       if (subPartitionScheme.isDefined) {
         val sP = subPartitionScheme.get
         buf.append(
-          s"  Sub-Partition Scheme: type=${sP.partType}, " +
+          s"Sub-Partition Scheme: type=${sP.partType}, " +
             s"columns=[${sP.columns.mkString(",")}]\n")
       }
     }
