@@ -44,26 +44,32 @@ import org.apache.spark.sql.types.{
 trait OraDataType {
   def sqlType: Int
   def catalystType: DataType
+
+  def oraTypeString: String
 }
 
 case class OraChar(size: Int, inChars: Boolean) extends OraDataType {
-  override def sqlType: Int = Types.CHAR
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val sqlType: Int = Types.CHAR
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String = s"CHAR(${size}${if (!inChars) "BYTE" else ""})"
 }
 
 case class OraVarchar2(size: Int, inChars: Boolean) extends OraDataType {
-  override def sqlType: Int = Types.VARCHAR
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val sqlType: Int = Types.VARCHAR
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String = s"VARCHAR(${size}${if (!inChars) "BYTE" else ""})"
 }
 
 case class OraNChar(size: Int) extends OraDataType {
-  override def sqlType: Int = Types.NCHAR
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val sqlType: Int = Types.NCHAR
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String = s"NCHAR(${size})"
 }
 
 case class OraNVarchar2(size: Int) extends OraDataType {
-  override def sqlType: Int = Types.NVARCHAR
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val sqlType: Int = Types.NVARCHAR
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String = s"NVARCHAR(${size})"
 }
 
 case class OraNumber(precision: Option[Int], scale: Option[Int]) extends OraDataType {
@@ -83,7 +89,7 @@ case class OraNumber(precision: Option[Int], scale: Option[Int]) extends OraData
       Types.BIGINT
     }
 
-  override def sqlType: Int = ((precision, scale): @unchecked) match {
+  @transient lazy val sqlType: Int = ((precision, scale): @unchecked) match {
     case (Some(p), Some(0)) => precisionToSQLType(p)
     case (Some(p), None) => precisionToSQLType(p)
     case (Some(_), _) => Types.NUMERIC
@@ -91,7 +97,10 @@ case class OraNumber(precision: Option[Int], scale: Option[Int]) extends OraData
     case (None, None) => Types.NUMERIC
   }
 
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType, precision, scale)
+  @transient lazy val catalystType: DataType =
+    OraDataType.toCatalystType(sqlType, precision, scale)
+
+  @transient lazy val oraTypeString: String = OraNumber.toOraTypeNm(precision, scale)
 }
 
 object OraNumber {
@@ -104,16 +113,6 @@ object OraNumber {
       case (Some(p), None) => s"NUMBER(${p})"
       case (Some(p), Some(s)) => if (s > 0) s"NUMBER(${p}, ${s})" else (s"NUMBER(${p})")
     }
-  /*
-=======
-  def toOraTypeNm(precision: Option[Int], scale: Option[Int]): String = (precision, scale) match {
-    case (None, None) => "NUMBER"
-    case (Some(p), None) => s"NUMBER(${p})"
-    case (None, Some(s)) => "NUMBER"
-    case (Some(p), Some(s)) => s"NUMBER(${p}, ${s})"
-  }
->>>>>>> 1f96e8f... XMLReader Modified
-   */
 
   // Precision Defined && Scale Defined -> Check if Scale is smaller that precision.
   // Precision Not Defined && Scale Not Defined -> Allowed (NUMBER)
@@ -140,61 +139,67 @@ object OraNumber {
 }
 
 case class OraFloat(precision: Option[Int]) extends OraDataType {
-  override def sqlType: Int = Types.FLOAT
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType, precision)
+  @transient lazy val sqlType: Int = precision match {
+    case None => Types.NUMERIC
+    case Some(p) if p <= 7 => Types.FLOAT
+    case Some(p) if p <= 15 => Types.DOUBLE
+    case _ => Types.NUMERIC
+  }
+
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType, precision)
+  @transient lazy val oraTypeString: String =
+    s"FLOAT${if (precision.isDefined) "(" + precision.get + ")" else ""}"
 }
 
 case object OraLong extends OraDataType {
-  override def sqlType: Int = Types.LONGNVARCHAR
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val sqlType: Int = Types.LONGNVARCHAR
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String = "LONG"
 }
 
 case object OraBinaryFloat extends OraDataType {
-  override def sqlType: Int = Types.FLOAT
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val sqlType: Int = Types.FLOAT
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String = "BINARY_FLOAT"
 }
 
 case object OraBinaryDouble extends OraDataType {
-  override def sqlType: Int = Types.DOUBLE
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val sqlType: Int = Types.DOUBLE
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String = "BINARY_DOUBLE"
 }
 
 case object OraDate extends OraDataType {
-  override def sqlType: Int = Types.DATE
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val sqlType: Int = Types.DATE
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String = "DATE"
 }
 
 trait OraTimestampTypes extends OraDataType {
   def frac_secs_prec: Option[Int]
 }
-case class OraTimestamp(frac_secs_precision: Option[Int]) extends OraTimestampTypes {
-  override def sqlType: Int = Types.TIMESTAMP
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
-  override def frac_secs_prec: Option[Int] = frac_secs_precision
+
+case class OraTimestamp(frac_secs_prec: Option[Int]) extends OraTimestampTypes {
+  @transient lazy val sqlType: Int = Types.TIMESTAMP
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String =
+    s"TIMESTAMP${if (frac_secs_prec.isDefined) "(" + frac_secs_prec.get + ")" else ""}"
 }
 
-case class OraTimestampWithTZ(frac_secs_precision: Option[Int]) extends OraTimestampTypes {
-  override def sqlType: Int = Types.TIMESTAMP_WITH_TIMEZONE
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
-  override def frac_secs_prec: Option[Int] = frac_secs_precision
+case class OraTimestampWithTZ(frac_secs_prec: Option[Int]) extends OraTimestampTypes {
+  @transient lazy val sqlType: Int = Types.TIMESTAMP_WITH_TIMEZONE
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String =
+    s"TIMESTAMP${if (frac_secs_prec.isDefined) "(" + frac_secs_prec.get + ")" else ""}" +
+      s"WITH TIME ZONE"
 }
 
-case class OraTimestampWithLocalTZ(frac_secs_precision: Option[Int]) extends OraTimestampTypes {
-  override def sqlType: Int = Types.TIMESTAMP_WITH_TIMEZONE
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
-  override def frac_secs_prec: Option[Int] = frac_secs_precision
-}
-
-case class OraIntervalYearToMonth(pres: Option[Int], scale : Option[Int]) extends OraDataType {
-  // TODO have to find the Types.
-  override def sqlType: Int = Types.TIMESTAMP_WITH_TIMEZONE
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
-}
-
-case class OraIntervalDayToSec(pres: Option[Int], scale : Option[Int]) extends OraDataType {
-  // TODO have to find the Types.
-  override def sqlType: Int = Types.TIMESTAMP_WITH_TIMEZONE
-  override def catalystType: DataType = OraDataType.toCatalystType(sqlType)
+case class OraTimestampWithLocalTZ(frac_secs_prec: Option[Int]) extends OraTimestampTypes {
+  @transient lazy val sqlType: Int = Types.TIMESTAMP_WITH_TIMEZONE
+  @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
+  @transient lazy val oraTypeString: String =
+    s"TIMESTAMP${if (frac_secs_prec.isDefined) "(" + frac_secs_prec.get + ")" else ""}" +
+      s"WITH LOCAL TIME ZONE"
 }
 
 object OraDataType {
@@ -248,52 +253,34 @@ object OraDataType {
       case ("DATE", None, None, None) => OraDate
       // case ("TIMESTAMP", p, None) => OraTimestamp(p)
       case ("TIMESTAMP", None, None, s) => OraTimestamp(s)
-      case ("TIMESTAMP_WITH_TIMEZONE", None, None, s) => OraTimestampWithTZ(s)
-      case ("TIMESTAMP_WITH_LOCAL_TIMEZONE", None, None, s) => OraTimestampWithLocalTZ(s)
-      case ("INTERVAL_YEAR_TO_MONTH", None, p, s) => OraIntervalYearToMonth(p, s)
-      case ("INTERVAL_DAY_TO_SECOND", None, p, s) => OraIntervalDayToSec(p, s)
+      // TODO TIMESTAMP WITH TZ, TIMESTAMP WITh LOCAL TZ
       case _ => OracleMetadata.unsupportedOraDataType(typeString(s, length, precision, scale))
     }
-
-    def toOracleType(oraDataType: OraDataType) : String = {
-      oraDataType match {
-        case OraChar(l, _) => s"CHAR(${l})"
-        case OraVarchar2(l, _) => s"VARCHAR($l)"
-        case OraNChar(l) => s"NCHAR($l)"
-        case OraNChar(l) => s"NVARCHAR($l)"
-        case OraNumber(p, s) => OraNumber.toOraTypeNm(p, s)
-        case OraDate => s"DATE"
-        case OraFloat(Some(p)) => s"Float($p)"
-        case OraTimestamp(Some(s)) => s"TIMESTAMP(${s})"
-        case _ => s"UNKNOWN"
-      }
- }
 
   def toCatalystType(
       sqlType: Int,
       precision: Option[Int] = None,
       scale: Option[Int] = None): DataType = (sqlType, precision, scale) match {
-      case (Types.CHAR, _, _) => StringType
-      case (Types.VARCHAR, _, _) => StringType
-      case (Types.NCHAR, _, _) => StringType
-      case (Types.NVARCHAR, _, _) => StringType
-      case (Types.TINYINT, _, _) => ByteType
-      case (Types.SMALLINT, _, _) => ShortType
-      case (Types.INTEGER, _, _) => IntegerType
-      case (Types.BIGINT, Some(p), _) if p <= 18 => LongType
-      case (Types.BIGINT, Some(p), _) => DecimalType(p, 0)
-      case (Types.NUMERIC, Some(p), Some(s)) if p < DecimalType.MAX_PRECISION => DecimalType(p, s)
-      case (Types.NUMERIC, None, None) => IntegerType
-      case (Types.NUMERIC, _, _) => DecimalType.SYSTEM_DEFAULT
-      case (Types.FLOAT, _, _) => FloatType
-      case (Types.DOUBLE, _, _) => DoubleType
-      case (Types.LONGNVARCHAR, _, _) => StringType
-      case (Types.DATE, _, _) => DateType
-      case (Types.TIMESTAMP, _, _) => TimestampType
-      case (Types.TIMESTAMP_WITH_TIMEZONE, _, _) => TimestampType
-      case _ =>
-        OraSparkUtils.throwAnalysisException(
-          s"Unsupported SqlType: " +
-            s"${JDBCType.valueOf(sqlType).getName}")
-    }
+    case (Types.CHAR, _, _) => StringType
+    case (Types.VARCHAR, _, _) => StringType
+    case (Types.NCHAR, _, _) => StringType
+    case (Types.NVARCHAR, _, _) => StringType
+    case (Types.TINYINT, _, _) => ByteType
+    case (Types.SMALLINT, _, _) => ShortType
+    case (Types.INTEGER, _, _) => IntegerType
+    case (Types.BIGINT, Some(p), _) if p <= 18 => LongType
+    case (Types.BIGINT, Some(p), _) => DecimalType(p, 0)
+    case (Types.NUMERIC, Some(p), Some(s)) if p < DecimalType.MAX_PRECISION => DecimalType(p, s)
+    case (Types.NUMERIC, _, _) => DecimalType.SYSTEM_DEFAULT
+    case (Types.FLOAT, _, _) => FloatType
+    case (Types.DOUBLE, _, _) => DoubleType
+    case (Types.LONGNVARCHAR, _, _) => StringType
+    case (Types.DATE, _, _) => DateType
+    case (Types.TIMESTAMP, _, _) => TimestampType
+    case (Types.TIMESTAMP_WITH_TIMEZONE, _, _) => TimestampType
+    case _ =>
+      OraSparkUtils.throwAnalysisException(
+        s"Unsupported SqlType: " +
+          s"${JDBCType.valueOf(sqlType).getName}")
+  }
 }

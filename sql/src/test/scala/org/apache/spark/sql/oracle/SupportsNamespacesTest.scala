@@ -34,7 +34,7 @@ class SupportsNamespacesTest extends AbstractTest {
       TestOracleHive.sql("describe namespace extended oracle").show()
     }
 
-    TestOracleHive.sql("describe namespace extended oracle.tpcds").show()
+    TestOracleHive.sql("describe namespace extended oracle.tpcds").show(1000, false)
 
     TestOracleHive.sql("describe namespace extended oracle.sparktest").show()
 
@@ -92,11 +92,11 @@ class SupportsNamespacesTest extends AbstractTest {
 
     TestOracleHive.sql("use tpcds")
     TestOracleHive.sql("show current namespace").show()
-    TestOracleHive.sql("show tables").show()
+    TestOracleHive.sql("show tables").show(1000, false)
 
     TestOracleHive.sql("use SPARKTEST")
     TestOracleHive.sql("show current namespace").show()
-    TestOracleHive.sql("show tables").show()
+    TestOracleHive.sql("show tables").show(1000, false)
 
     TestOracleHive.sql("use mikev")
     TestOracleHive.sql("show current namespace").show()

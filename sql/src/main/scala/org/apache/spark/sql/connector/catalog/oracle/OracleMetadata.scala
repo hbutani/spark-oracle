@@ -71,7 +71,7 @@ object OracleMetadata {
     }
   }
 
-  case class OraIdentifier(namespace: Array[String], name: String) extends Identifier
+  case class OraIdentifier(namespace: Seq[String], name: String)
 
   case class OraColumn(
       name: String,

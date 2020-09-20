@@ -30,14 +30,21 @@ Set Conf
 
 Delete the contents of the metadata_cache folder
  */
-class LoadMetadataCache extends AbstractTest with OraMetadataMgrInternalTest {
+class LoadMetadataCache
+    extends AbstractTest
+    with OraMetadataMgrInternalTest
+    with TestMetadataValidation {
 
   test("populateMetadataCache") { td =>
     for ((ns, tbls) <- catalogTableMap;
          tbl <- tbls) {
       // scalastyle:off println
       val bldr = new StringBuilder
-      mdMgr.oraTable(ns, tbl).dump(bldr)
+      val oTbl = mdMgr.oraTable(ns, tbl)
+      if (mdMgr.cache_only) {
+        validate(oTbl)
+      }
+      oTbl.dump(bldr)
       println(bldr)
     }
   }

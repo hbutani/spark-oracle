@@ -120,7 +120,7 @@ class OracleCatalog
     metadataManager.tableMap
       .get(namespace.head)
       .map {
-        case tSet => tSet.map(OraIdentifier(namespace, _): Identifier).toArray
+        case tSet => tSet.map(Identifier.of(namespace, _)).toArray
       }
       .getOrElse(Array.empty)
   }
