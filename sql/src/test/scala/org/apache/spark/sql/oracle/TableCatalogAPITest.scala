@@ -47,6 +47,7 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
     /*
      * 2. Valid table creation, but no yet implemented
      */
+    // scalastyle:off line.size.limit
     var ex = intercept[UnsupportedAction] {
       TestOracleHive.sql(s"""
            |create table t2(id long, p string) 
@@ -63,12 +64,14 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
     /*
      * 3. Valid table creation, but no yet implemented
      */
+
     ex = intercept[UnsupportedAction] {
       TestOracleHive.sql(s"""
                           |create table t2(id long, p string) 
                           |using parquet
                           |location "https://objectstorage.us-ashburn-1.oraclecloud.com/n/idlxex3qf8sf/b/SparkTest/o/t1"""".stripMargin)
     }
+    // scalastyle:on
 
     assert(
       ex.getMessage ==
@@ -94,12 +97,67 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
   }
 
   test("dropTable") { td =>
+    val ex = intercept[UnsupportedAction] {
+      TestOracleHive.sql(s"""
+                            |drop table tpcds.CALL_CENTER""".stripMargin)
     }
+
+    assert(
+      ex.getMessage ==
+        """Unsupported Action on Oracle Catalog: drop table
+          | For Oracle managed tables issue Oracle drop table DDL
+          |For External tables: currently you have to issue Oracle drop table DDL;""".stripMargin)
+
+  }
 
   test("alterTable") { td =>
+    val stats = Seq(
+      s"""
+       |alter table tpcds.store_sales
+       |add columns
+       | x int, y long""".stripMargin,
+      s"""
+       |alter table tpcds.store_sales
+       |drop columns
+       | ss_quantity""".stripMargin,
+      s"""
+         |alter table tpcds.store_sales
+         |rename column
+         |ss_quantity to ss_qty""".stripMargin,
+      s"""
+         |alter table tpcds.store_sales
+         |SET TBLPROPERTIES
+         | (a 'a')""".stripMargin,
+      s"""
+         |alter table tpcds.CALL_CENTER
+         |change column
+         | CC_TAX_PERCENTAGE type decimal(8,4)""".stripMargin)
+
+    var ex: Exception = null
+
+    for (stat <- stats) {
+      ex = intercept[UnsupportedAction](TestOracleHive.sql(stat))
+      assert(
+        ex.getMessage ==
+          """Unsupported Action on Oracle Catalog: alter table
+            | For Oracle managed tables issue Oracle DDL
+            |For External tables: Currently you have to drop and recreate table;""".stripMargin)
     }
+  }
 
   test("renameTable") { td =>
+    val ex = intercept[UnsupportedAction] {
+      TestOracleHive.sql(s"""
+                            |alter table tpcds.CALL_CENTER
+                            |rename to
+                            | calling_center""".stripMargin)
     }
+
+    assert(
+      ex.getMessage ==
+        """Unsupported Action on Oracle Catalog: rename table
+          | For Oracle managed tables issue Oracle DDL
+          |For External tables: Currently you have to drop and recreate table;""".stripMargin)
+  }
 
 }

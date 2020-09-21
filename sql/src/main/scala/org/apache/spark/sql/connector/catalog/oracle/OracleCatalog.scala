@@ -148,7 +148,10 @@ class OracleCatalog
     OracleTable(metadataManager.dsKey, oTbl, (tblProps ++ oTbl.properties).asJava)
   }
 
-  override def invalidateTable(ident: Identifier): Unit = ???
+  override def invalidateTable(ident: Identifier): Unit = {
+    checkNamespace(ident.namespace())
+    metadataManager.invalidateTable(ident.namespace().head, ident.name())
+  }
 
   override def tableExists(ident: Identifier): Boolean = {
     checkNamespace(ident.namespace())
@@ -180,7 +183,7 @@ class OracleCatalog
 
   override def alterTable(ident: Identifier, changes: TableChange*): Table = {
     OracleMetadata.unsupportedAction(
-      "rename table",
+      "alter table",
       Some("""For Oracle managed tables issue Oracle DDL
           |For External tables: Currently you have to drop and recreate table""".stripMargin))
   }

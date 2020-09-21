@@ -98,8 +98,7 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
     CaseInsensitiveMap(tablMap.mapValues(_.toSet))
   }
 
-  private[oracle] def oraTable(schema: String, table: String): OraTable = {
-
+  private def tableKey(schema: String, table: String): (String, String, Array[Byte]) = {
     val oraSchema = namespacesMap(schema)
     val oraTblNm = if (tableMap(oraSchema).contains(table)) {
       table
@@ -107,6 +106,12 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
 
     val tblId = OraIdentifier(Array(oraSchema), oraTblNm)
     val tblIdKey = Serialization.serialize(tblId)
+    (oraSchema, oraTblNm, tblIdKey)
+  }
+
+  private[oracle] def oraTable(schema: String, table: String): OraTable = {
+
+    val (oraSchema, oraTblNm, tblIdKey) = tableKey(schema, table)
     val tblMetadataBytes = cache.get(tblIdKey)
 
     if (tblMetadataBytes != null) {
@@ -127,6 +132,13 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
       OracleMetadata.unsupportedAction(
         "retrieve db info in 'cache_ony' mode",
         Some("set 'spark.sql.catalog.oracle.use_metadata_cache' to false"))
+    }
+  }
+
+  private[oracle] def invalidateTable(schema: String, table: String): Unit = {
+    if (!cache_only) {
+      val (_, _, tblIdKey) = tableKey(schema, table)
+      cache.delete(tblIdKey)
     }
   }
 
