@@ -22,7 +22,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import scala.collection.mutable.ArrayBuffer
 
 import org.apache.spark.sql.AnalysisException
-import org.apache.spark.sql.connector.catalog.Identifier
+import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.expressions.{LogicalExpressions, Transform}
 import org.apache.spark.sql.oracle.OraSparkUtils
 import org.apache.spark.sql.types.{StructField, StructType}
@@ -206,8 +206,20 @@ object OracleMetadata {
       buf.append(s"  Properties: ${properties}")
     }
 
+    @transient lazy val columnNameMap: CaseInsensitiveMap[String] =
+      CaseInsensitiveMap(columns.map(c => c.name -> c.name).toMap)
+
     @transient lazy val catalystSchema: StructType =
       StructType(columns.map(c => StructField(c.name, c.dataType.catalystType, !c.isNotNull)))
+
+    def isPartitioned: Boolean = partitionScheme.isDefined
+
+    @transient lazy val (dataSchema: StructType, partitionSchema: StructType) = {
+      val partCols = partitionScheme.map(_.columns.toSet).getOrElse(Set.empty)
+      (
+        StructType(catalystSchema.fields.filterNot(f => partCols.contains(f.name))),
+        StructType(catalystSchema.fields.filter(f => partCols.contains(f.name))))
+    }
   }
 
   private[oracle] val NAMESPACES_CACHE_KEY = "__namespaces__".getBytes(UTF_8)
