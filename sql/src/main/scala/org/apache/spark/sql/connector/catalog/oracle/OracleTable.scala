@@ -19,15 +19,16 @@ package org.apache.spark.sql.connector.catalog.oracle
 
 import java.util
 
+import oracle.spark.DataSourceKey
 import scala.collection.JavaConverters._
 
-import oracle.spark.DataSourceKey
-
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.connector.catalog._
 import org.apache.spark.sql.connector.catalog.TableCapability._
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
 import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.connector.read.ScanBuilder
+import org.apache.spark.sql.connector.read.oracle.OraScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.sources.Filter
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
@@ -57,7 +58,9 @@ case class OracleTable(
 
   override def abortStagedChanges(): Unit = ???
 
-  override def newScanBuilder(options: CaseInsensitiveStringMap): ScanBuilder = ???
+  override def newScanBuilder(options: CaseInsensitiveStringMap): ScanBuilder = {
+    OraScanBuilder(SparkSession.active, dsKey, tableId, oraTable, options)
+  }
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = ???
 
