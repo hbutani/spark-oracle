@@ -30,6 +30,12 @@ import org.apache.spark.sql.connector.expressions.Transform
 import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.read.oracle.OraScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
+import org.apache.spark.sql.connector.write.oracle.{
+  OraSourceUpdateSpec,
+  OraWriteBuilder,
+  OraWriteKind,
+  OraWriteSpec
+}
 import org.apache.spark.sql.sources.Filter
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 
@@ -62,8 +68,27 @@ case class OracleTable(
     OraScanBuilder(SparkSession.active, dsKey, tableId, oraTable, options)
   }
 
-  override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = ???
+  override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
 
+    // TODO
+    // check info.schema() matches oraTable.catalystSchema
+    // add casts if needed? or is this handled by Logical Optimizer.
+
+    OraWriteBuilder(
+      OraWriteSpec(
+        dsKey,
+        oraTable,
+        info.schema(),
+        info.queryId(),
+        OraWriteKind.APPEND,
+        OraSourceUpdateSpec()))
+  }
+
+  /*
+   * TODO
+   *  this represents delete dml
+   *  encapsulates delete handling in a OraDelete class
+   */
   override def deleteWhere(filters: Array[Filter]): Unit = ???
 
 }

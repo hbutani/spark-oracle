@@ -26,29 +26,31 @@ package org.apache.spark.sql.connector.read
  * '''Read Execution:'''
  * <img src="doc-files/readExecution.png" />
  *
- * [[OraScanBuilder]] :
- * - responsible for setting up an [[OraScan]]
- * - for an [[OracleTable]] with optional filter pushdowns and {{{requiredSchema}}}
- *   it sets up a [[OraPlan]], that is passed to the [[OraScan]].
- *   - it is not required for the [[OraPlan]] to apply all filters, as these are applied on
- *     top of the [[org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation]]
- *     Ensuring these can be pushed to Oracle will be done in the ''Oracle pushdown rules''.
+ * [[OraScanBuilder]]:
+ *
+ *  - responsible for setting up an [[OraScan]]
+ *  - for an [[OracleTable]] with optional filter pushdowns and `requiredSchema`
+ *    it sets up a [[OraPlan]], that is passed to the [[OraScan]].
+ *    - it is not required for the [[OraPlan]] to apply all filters, as these are applied on
+ *      top of the [[org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation]]
+ *      Ensuring these can be pushed to Oracle will be done in the ''Oracle pushdown rules''.
  *
  * [[OraScan]] :
- * - acts like a [[FileScan]], so the
- *  [[org.apache.spark.sql.execution.datasources.PruneFileSourcePartitions]]
- *   rule can apply on this scan, and ''partition'' and ''data'' filter
- *   expressions can be pushed to it.
- * - but implementation behavior is completely overridden.
- * - it has an empty {{{fileIndex}}}
- * - it reports {{{partitionFilters}}} and {{{dataFilters}}} to be empty.
- *   The filters pushed into the [[OraPlan]] are reapplied on top of the
- *   [[org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation]]
- * - For physical planning:
- *   - it uses [[OraQuerySplitting]] to infer how to parallelize the [[OraPlan]]
- *   - each [[OracleDBSplit]] has an enhanced [[OraPlan]].
- *   - An [[OraPartition]] is setup for each Split with its oracle query, bind values and
+ *
+ *  - acts like a [[FileScan]], so the
+ *   [[org.apache.spark.sql.execution.datasources.PruneFileSourcePartitions]]
+ *    rule can apply on this scan, and ''partition'' and ''data'' filter
+ *    expressions can be pushed to it.
+ *  - but implementation behavior is completely overridden.
+ *  - it has an empty `fileIndex`
+ *  - it reports `partitionFilters` and `dataFilters` to be empty.
+ *    The filters pushed into the [[OraPlan]] are reapplied on top of the
+ *    [[org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation]]
+ *  - For physical planning:
+ *    - it uses [[OraQuerySplitting]] to infer how to parallelize the [[OraPlan]]
+ *    - each [[OracleDBSplit]] has an enhanced [[OraPlan]].
+ *    - An [[OraPartition]] is setup for each Split with its oracle query, bind values and
  *     preferred locations.
- * - stats estimation: try to use a table's stats otherwise estimate as unknown
+ *  - stats estimation: try to use a table's stats otherwise estimate as unknown
  */
 package object oracle {}
