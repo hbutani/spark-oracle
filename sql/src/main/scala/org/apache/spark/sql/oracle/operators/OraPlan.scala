@@ -19,7 +19,8 @@ package org.apache.spark.sql.oracle.operators
 
 import scala.collection.mutable.ArrayBuffer
 
-import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.{AttributeSet, Expression}
+import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
@@ -40,7 +41,7 @@ import org.apache.spark.sql.types.StructType
  * [[org.apache.spark.sql.connector.read.oracle.OraScan]] needs a [[LogicalPlan]].
  *
  */
-abstract class OraPlan extends TreeNode[OraPlan] {
+abstract class OraPlan extends TreeNode[OraPlan] with PlanHelper with ScanBuilder {
 
   /*
    * Notes:
@@ -57,12 +58,24 @@ abstract class OraPlan extends TreeNode[OraPlan] {
 
   def catalystOp: Option[LogicalPlan]
 
+  def catalystOutputSchema: AttributeSet
+
   /**
    * generate a parameterized query; convert literals in query into bind values.
    * @param sqlBldr
    * @param params
    */
   def genOraSQL(sqlBldr: StringBuilder, params: ArrayBuffer[Any]): Unit
+
+  override def simpleStringWithNodeId(): String = {
+    val operatorId = catalystOp
+      .flatMap(_.getTagValue(QueryPlan.OP_ID_TAG))
+      .map(id => s"$id")
+      .getOrElse("unknown")
+    s"$nodeName ($operatorId)".trim
+  }
+
+  override def verboseString(maxFields: Int): String = simpleString(maxFields)
 
 }
 
@@ -79,19 +92,41 @@ object OraPlan {
       oraPlan: OraPlan,
       partitionFilters: Seq[Expression],
       dataFilters: Seq[Expression]): OraPlan = {
-    // TODO
-    oraPlan
+
+    var plan = oraPlan
+
+    if (dataFilters.nonEmpty) {
+      val datFils = OraExpression.convert(dataFilters, oraPlan.catalystOutputSchema)
+      plan = plan.filter(datFils, false)
+    }
+
+    if (partitionFilters.nonEmpty) {
+      val partFils = OraExpression.convert(partitionFilters, oraPlan.catalystOutputSchema)
+      plan = plan.filter(partFils, true)
+    }
+    plan
   }
 
   def buildOraPlan(
       table: OraTable,
-      readSchema: StructType,
-      partitionSchema: StructType,
+      requiredSchema: StructType,
       pushedFilters: Array[Filter]): OraPlan = {
-    // TODO
+
+    // TODO and oraExpressions
     val pushedOraExpressions: Array[OraExpression] =
       pushedFilters.flatMap(OraExpression.convert(_, table).toSeq)
-    ???
+
+    val attrs = requiredSchema.toAttributes
+    val attrSet = AttributeSet(attrs)
+    val oraProjs = attrs.map(OraExpression.convert(_, attrSet))
+
+    OraTableScan(
+      table,
+      None,
+      attrSet,
+      oraProjs,
+      if (pushedOraExpressions.nonEmpty) Some(pushedOraExpressions.head) else None,
+      None)
   }
 
   /**

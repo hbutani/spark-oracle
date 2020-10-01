@@ -50,6 +50,14 @@ object OracleTestConf {
     .set(
       "spark.kryo.registrator",
       "org.apache.spark.sql.connector.catalog.oracle.OraKryoRegistrator")
+    /*
+    Uncomment to see Plan rewrites
+    .set("spark.sql.planChangeLog.level", "ERROR")
+    .set(
+      "spark.sql.planChangeLog.rules",
+      "org.apache.spark.sql.execution.datasources.PruneFileSourcePartitions," +
+        "org.apache.spark.sql.execution.datasources.v2.V2ScanRelationPushDown")
+     */
     .set(
       "spark.sql.catalog.oracle",
       "org.apache.spark.sql.connector.catalog.oracle.OracleCatalog")

@@ -56,16 +56,18 @@ case class OraScanBuilder(
     val readSchema = readDataSchema()
     val partitionSchema = readPartitionSchema()
 
-    val oraPlan = OraPlan.buildOraPlan(table, readSchema, partitionSchema, pushedFilters())
+    val oraPlan = OraPlan.buildOraPlan(table, requiredSchema, pushedFilters())
 
-    OraScan(
+    OraFileScan(
       sparkSession,
       table.catalystSchema,
       readSchema,
       partitionSchema,
       dsKey,
-      oraPlan: OraPlan,
-      options)
+      oraPlan,
+      options,
+      Seq.empty,
+      Seq.empty)
   }
 
   private var requiredSchema = table.catalystSchema

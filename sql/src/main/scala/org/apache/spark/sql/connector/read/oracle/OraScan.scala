@@ -26,10 +26,13 @@ import scala.collection.JavaConverters._
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.connector.read.{
+  Batch,
   InputPartition,
   PartitionReaderFactory,
+  Scan,
   Statistics,
-  SupportsReportPartitioning
+  SupportsReportPartitioning,
+  SupportsReportStatistics
 }
 import org.apache.spark.sql.connector.read.partitioning.Partitioning
 import org.apache.spark.sql.execution.datasources.{
@@ -38,45 +41,25 @@ import org.apache.spark.sql.execution.datasources.{
   PartitioningAwareFileIndex
 }
 import org.apache.spark.sql.execution.datasources.v2.FileScan
+import org.apache.spark.sql.internal.connector.SupportsMetadata
 import org.apache.spark.sql.oracle.operators.OraPlan
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 
-case class OraScan(
-    sparkSession: SparkSession,
-    dataSchema: StructType,
-    readDataSchema: StructType,
-    readPartitionSchema: StructType,
-    dsKey: DataSourceKey,
-    oraPlan: OraPlan,
-    options: CaseInsensitiveStringMap)
-    extends FileScan
-    with SupportsReportPartitioning {
+trait OraScan {
+  // scalastyle:off line.size.limit
+  self: Scan
+    with Batch
+    with SupportsReportStatistics
+    with SupportsMetadata
+    with SupportsReportPartitioning =>
+  // scalastyle:on
 
-  lazy val fileIndex: PartitioningAwareFileIndex = {
-    new InMemoryFileIndex(
-      sparkSession,
-      Seq.empty,
-      options.asCaseSensitiveMap.asScala.toMap,
-      Some(dataSchema))
-  }
+  def sparkSession: SparkSession
+  def dsKey: DataSourceKey
+  def oraPlan: OraPlan
 
-  /*
-   * partitionFilters + dataFilters
-   * encapsulated in OraPlan
-   */
-  override def partitionFilters: Seq[Expression] = Seq.empty
-
-  override def dataFilters: Seq[Expression] = Seq.empty
-
-  override def withFilters(
-      partitionFilters: Seq[Expression],
-      dataFilters: Seq[Expression]): FileScan = {
-    val oraPlanWithFilters = OraPlan.filter(oraPlan, partitionFilters, dataFilters)
-    this.copy(oraPlan = oraPlanWithFilters)
-  }
-
-  @transient private lazy val (dbSplits: Array[OracleDBSplit], partitioning: Partitioning) =
+  @transient protected lazy val (dbSplits: Array[OracleDBSplit], partitioning: Partitioning) =
     OraQuerySplitting.generateSplits(dsKey, oraPlan)
 
   override def planInputPartitions(): Array[InputPartition] = {
@@ -124,10 +107,61 @@ case class OraScan(
       .getOrElse(OraScan.UNKNOWN_ORA_STATS)
   }
 
+}
+
+case class OraFileScan(
+    sparkSession: SparkSession,
+    dataSchema: StructType,
+    readDataSchema: StructType,
+    readPartitionSchema: StructType,
+    dsKey: DataSourceKey,
+    oraPlan: OraPlan,
+    options: CaseInsensitiveStringMap,
+    partitionFilters: Seq[Expression],
+    dataFilters: Seq[Expression])
+    extends FileScan
+    with SupportsReportPartitioning
+    with OraScan {
+
+  lazy val fileIndex: PartitioningAwareFileIndex = {
+    new InMemoryFileIndex(
+      sparkSession,
+      Seq.empty,
+      options.asCaseSensitiveMap.asScala.toMap,
+      Some(dataSchema))
+  }
+
+  /**
+   * Why the tracking of pushed `partitionFilters` and `dataFilters`?
+   * [[PruneFileSourcePartitions]] converts a
+   * [[org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation]]
+   * by calling this method and then since it does a `transformDown` rewrite
+   * it turns around and calls the rewrite on the new Plan. This
+   * plan has a [[org.apache.spark.sql.catalyst.plans.logical.Filter]]
+   * on top of a new `DataSourceV2ScanRelation` with the original
+   * predicates, which causes a recrusive invocation on the same filters
+   * on top of a `DataSourceV2ScanRelation`, this keeps going for ever...
+   * causing a StackOverflowError.
+   *
+   * @param pFilters
+   * @param dFilters
+   * @return
+   */
+  override def withFilters(pFilters: Seq[Expression], dFilters: Seq[Expression]): FileScan = {
+    val newPFilters = pFilters != partitionFilters
+    val newDFilters = dFilters != dataFilters
+    if (newPFilters || newDFilters) {
+      val oraPlanWithFilters = OraPlan.filter(oraPlan, pFilters, dFilters)
+      this.copy(oraPlan = oraPlanWithFilters, partitionFilters = pFilters, dataFilters = dFilters)
+    } else {
+      this
+    }
+  }
+
   override def hashCode(): Int = oraPlan.hashCode()
 
   override def equals(obj: Any): Boolean = obj match {
-    case o: OraScan =>
+    case o: OraFileScan =>
       readSchema == o.readSchema && oraPlan == o.oraPlan
     case _ => false
   }
@@ -138,6 +172,7 @@ case class OraScan(
     Map(
       "Format" -> s"${this.getClass.getSimpleName.replace("Scan", "").toLowerCase(Locale.ROOT)}",
       "ReadSchema" -> readDataSchema.catalogString,
+      "PartitionSchema" -> readPartitionSchema.catalogString,
       "dsKey" -> dsKey.toString,
       "OraPlan" -> oraPlan.numberedTreeString)
   }
@@ -148,6 +183,30 @@ case class OraScan(
       "request to build file partitions shouldn't be called in an OraScan object")
   }
 
+}
+
+case class OraPushdownScan(sparkSession: SparkSession, dsKey: DataSourceKey, oraPlan: OraPlan)
+    extends Scan
+    with Batch
+    with SupportsReportStatistics
+    with SupportsMetadata
+    with SupportsReportPartitioning
+    with OraScan {
+
+  lazy val readSchema = StructType.fromAttributes(oraPlan.catalystOutputSchema.toSeq)
+
+  override def hashCode(): Int = oraPlan.hashCode()
+
+  override def equals(obj: Any): Boolean = obj match {
+    case o: OraPushdownScan => oraPlan == o.oraPlan
+    case _ => false
+  }
+
+  override def description(): String = super.description()
+
+  override def getMetaData(): Map[String, String] = {
+    Map("dsKey" -> dsKey.toString, "OraPlan" -> oraPlan.numberedTreeString)
+  }
 }
 
 object OraScan {
