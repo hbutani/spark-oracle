@@ -114,7 +114,7 @@ trait TableSXMLParsing { self: XMLReader.type =>
       val tc = TableSchema(nd)
       OraColumn(
         tc.name,
-        OraDataType.unapply(tc.datatype, tc.length, tc.precision, tc.scale),
+        OraDataType.create(tc.datatype, tc.length, tc.precision, tc.scale),
         tc.collateName,
         tc.notNULL)
     }

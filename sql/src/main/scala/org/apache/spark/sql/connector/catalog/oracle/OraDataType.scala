@@ -30,6 +30,7 @@ import org.apache.spark.sql.types.{
   FloatType,
   IntegerType,
   LongType,
+  NumericType,
   ShortType,
   StringType,
   TimestampType
@@ -233,7 +234,7 @@ object OraDataType {
     r
   }
 
-  def unapply(
+  def create(
       s: String,
       length: Option[Int],
       precision: Option[Int],

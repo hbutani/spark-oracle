@@ -17,18 +17,17 @@
 
 package org.apache.spark.sql.oracle.expressions
 
-import scala.collection.mutable.ArrayBuffer
-
 import org.apache.spark.sql.catalyst.expressions.{And, AttributeSet, Expression, Literal}
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
+import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet}
 import org.apache.spark.sql.sources.Filter
 
-abstract class OraExpression extends TreeNode[OraExpression] {
+abstract class OraExpression extends TreeNode[OraExpression] with OraSQLImplicits {
 
   def catalystExpr: Expression
 
-  def genOraSQL(sqlBldr: StringBuilder, params: ArrayBuffer[Any]): Unit
+  def orasql: SQLSnippet
 
   final override def verboseString(maxFields: Int): String = simpleString(maxFields)
 
@@ -41,7 +40,7 @@ abstract class OraExpression extends TreeNode[OraExpression] {
 object OraExpression {
 
   case class DummyOraExpression private (catalystExpr: Expression) extends OraExpression {
-    def genOraSQL(sqlBldr: StringBuilder, params: ArrayBuffer[Any]): Unit = ()
+    val orasql = osql"${catalystExpr.sql}"
 
     val children: Seq[OraExpression] = Seq.empty
   }
@@ -51,7 +50,8 @@ object OraExpression {
       right: OraExpression,
       catalystExpr: Expression)
       extends OraExpression {
-    def genOraSQL(sqlBldr: StringBuilder, params: ArrayBuffer[Any]): Unit = ()
+
+    val orasql = osql"${left} and ${right}"
 
     val children: Seq[OraExpression] = Seq(left, right)
   }

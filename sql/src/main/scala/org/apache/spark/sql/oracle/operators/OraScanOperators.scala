@@ -41,7 +41,7 @@ trait ScanBuilder { self: OraPlan =>
         // TODO and oFil and filter
         setFil(os, filter)
       case _ =>
-        illegalPlanBuild(
+        illegal(
           "filter",
           self,
           "on a OraPlan that is not a scan, provide associated catalyst filter op")

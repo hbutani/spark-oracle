@@ -17,11 +17,18 @@
 
 package org.apache.spark.sql.oracle
 
-package object operators {
+import scala.collection.JavaConverters._
 
-  trait PlanHelper extends UnSupportedActionHelper[OraPlan] { self: OraPlan =>
-    lazy val unsupportVerb = "Illegal"
-    lazy val actionKind: String = "OraPlan build action"
+package object util {
+
+  /*
+   * Convert mutable collections to immutable Lists here to avoid
+   * mutation from another thread
+   */
+  def makeImmutable(v: Any): Any = v match {
+    case t: Traversable[_] => t.toList
+    case c: java.util.Collection[_] => c.asScala.toList
+    case other => other
   }
 
 }
