@@ -17,94 +17,131 @@
 
 package org.apache.spark.sql.oracle
 
-import org.apache.spark.sql.connector.catalog.oracle.OraMetadataMgrInternalTest
-import org.apache.spark.sql.hive.test.oracle.TestOracleHive
+import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.oracle.operators.OraTableScanValidator.ScanDetails
+import org.apache.spark.sql.types.Decimal
 
 // scalastyle:off println
-class BasicReadTest extends AbstractTest with OraMetadataMgrInternalTest {
+// scalastyle:off line.size.limit
+class BasicReadTest extends AbstractTest with PlanTestHelpers {
 
-  def showPlan(sqlStat: String): Unit = {
-    println("regular explain:")
-    TestOracleHive.sql(s"explain ${sqlStat}").show(false)
-
-    if (false) { // logical plan throws unsupported parse in spark
-      println("logical explain:")
-      TestOracleHive.sql(s"explain logical ${sqlStat}")
-    }
-
-    /*
-     * Reading the formatted output of BatchScan:
-     * (1) BatchScan
-     *    Output [3]     :  for example => [SS_SOLD_TIME_SK#45, SS_ITEM_SK#46, SS_SOLD_DATE_SK#44]
-     *    Format         : orafile
-     *    OraPlan        : 00 OraTableScan toString on OraTable (see below for example)
-     *    PartitionSchema: struct<SS_SOLD_DATE_SK:decimal(38,18)>
-     *    ReadSchema     : for example => struct<SS_SOLD_TIME_SK:decimal(38,18),SS_ITEM_SK:decimal(38,18)>
-     *    dsKey          : for example => DataSourceKey(jdbc:oracle:thin:@mammoth_medium,tpcds)
-     *
-     * OraPlan output:
-     * - based on oraPlan.numberedTreeString call
-     * - so OraTableScan operator outputs args that are not None
-     *   - oraTable, catalystOp, catalystOutputSchema, projections, filter, partitionFilter
-     * - Example:
-     *    OraTable(TPCDS,STORE_SALES,[Lorg.apache.spark.sql.connector.catalog.oracle.OracleMetadata$OraColumn;@60660d21,Some(TablePartitionScheme([Ljava.lang.String;@2898c70d,RANGE,None)),[Lorg.apache.spark.sql.connector.catalog.oracle.OracleMetadata$OraTablePartition;@ec67be1,None,[Lorg.apache.spark.sql.connector.catalog.oracle.OracleMetadata$OraForeignKey;@64a00fe0,false,TableStats(Some(1573492),Some(8192),Some(287997024),Some(102.0)),Map()), {SS_SOLD_DATE_SK#67, SS_SOLD_TIME_SK#68, SS_ITEM_SK#69},
-     *     [DummyOraExpression SS_SOLD_DATE_SK#67: decimal(38,18)01 , DummyOraExpression SS_SOLD_TIME_SK#68: decimal(38,18)2 , DummyOraExpression SS_ITEM_SK#69: decimal(38,18)3 ]
-     */
-    println("formatted explain:")
-    TestOracleHive.sql(s"explain formatted ${sqlStat}").show(false)
-
-    println("extended explain:")
-    TestOracleHive.sql(s"explain extended ${sqlStat}").show(false)
-
-    /*
-    Other explain forms available in Spark:
-
-    println("codegen explain:")
-    TestOracleHive.sql(s"explain codegen ${sqlStat}").show(false)
-
-    println("cost explain:")
-    TestOracleHive.sql(s"explain cost ${sqlStat}").show(false)
+  /**
+   * Notes:
+   * - use [[PlanTestHelpers.showOraScans]] to get code for ScanDetails construction.
    */
+  private def validateAndExplain(qry: String, planScans: Map[String, ScanDetails]): Unit = {
+    validateOraScans(qry, planScans)
+    showPlan(qry)
+  }
+
+  private def dumpScanDetails(qry: String): Unit = {
+    showOraScans(qry, System.out)
+  }
+
+  private def runQry(qry: String, planScans: Map[String, ScanDetails]): Unit = {
+    if (planScans.isEmpty) {
+      dumpScanDetails(qry)
+    } else {
+      validateAndExplain(qry, planScans)
+    }
   }
 
   test("select") { td =>
-    showPlan("""
+    runQry(
+      """
         |select SS_SOLD_DATE_SK, SS_SOLD_TIME_SK, SS_ITEM_SK
-        |from store_sales""".stripMargin)
+        |from store_sales""".stripMargin,
+      Map(
+        "TPCDS.STORE_SALES" -> ScanDetails(
+          List("SS_ITEM_SK", "SS_SOLD_DATE_SK", "SS_SOLD_TIME_SK"),
+          None,
+          List(),
+          None,
+          List())))
   }
 
   test("partFilter") { td =>
-    showPlan("""
+    runQry(
+      """
         |select SS_SOLD_DATE_SK, SS_SOLD_TIME_SK, SS_ITEM_SK * 5 - 50
         |from store_sales
         |where SS_SOLD_DATE_SK > 2451058
-        |""".stripMargin)
+        |""".stripMargin,
+      Map(
+        "TPCDS.STORE_SALES" -> ScanDetails(
+          List("SS_ITEM_SK", "SS_SOLD_DATE_SK", "SS_SOLD_TIME_SK"),
+          None,
+          List(),
+          Some("(SS_SOLD_DATE_SK IS NOT NULL AND (SS_SOLD_DATE_SK > ?))"),
+          List(Literal(Decimal(2451058.000000000000000000, 38, 18))))))
   }
 
   test("dataFilter") { td =>
-    showPlan("""
+    runQry(
+      """
         |select SS_SOLD_DATE_SK, SS_SOLD_TIME_SK, SS_ITEM_SK * 5 - 50
         |from store_sales
-        |where SS_SOLD_DATE_SK > 2451058
-        |""".stripMargin)
+        |where SS_LIST_PRICE > 0
+        |""".stripMargin,
+      Map(
+        "TPCDS.STORE_SALES" -> ScanDetails(
+          List("SS_ITEM_SK", "SS_LIST_PRICE", "SS_SOLD_DATE_SK", "SS_SOLD_TIME_SK"),
+          Some("(SS_LIST_PRICE IS NOT NULL AND (SS_LIST_PRICE > ?))"),
+          List(Literal(Decimal(0E-18, 38, 18))),
+          None,
+          List())))
   }
 
   test("partAndDataFilter") { td =>
-    showPlan("""
-        |select SS_SOLD_DATE_SK, SS_SOLD_TIME_SK, SS_ITEM_SK * 5 - 50
-        |from store_sales
-        |where SS_LIST_PRICE > 0 and  SS_QUANTITY > 0 and SS_SOLD_DATE_SK > 2451058
-        |""".stripMargin)
+    runQry(
+      """
+              |select SS_SOLD_DATE_SK, SS_SOLD_TIME_SK, SS_ITEM_SK * 5 - 50
+              |from store_sales
+              |where SS_LIST_PRICE > 0 and  SS_QUANTITY > 0 and SS_SOLD_DATE_SK > 2451058
+              |""".stripMargin,
+      Map(
+        "TPCDS.STORE_SALES" -> ScanDetails(
+          List(
+            "SS_ITEM_SK",
+            "SS_LIST_PRICE",
+            "SS_QUANTITY",
+            "SS_SOLD_DATE_SK",
+            "SS_SOLD_TIME_SK"),
+          Some("(((SS_LIST_PRICE IS NOT NULL AND SS_QUANTITY IS NOT NULL) AND (SS_LIST_PRICE > ?)) AND (SS_QUANTITY > ?))"),
+          List(Literal(Decimal(0E-18, 38, 18)), Literal(Decimal(0E-18, 38, 18))),
+          Some("(SS_SOLD_DATE_SK IS NOT NULL AND (SS_SOLD_DATE_SK > ?))"),
+          List(Literal(Decimal(2451058.000000000000000000, 38, 18))))))
   }
 
   test("join") { td =>
-    showPlan("""
+    runQry(
+      """
                |select SS_SOLD_DATE_SK, SS_SOLD_TIME_SK, SS_ITEM_SK * 5 - 50, C_FIRST_NAME
                |from store_sales, customer
                |where SS_LIST_PRICE > 0 and  SS_QUANTITY > 0 and SS_SOLD_DATE_SK > 2451058
                |      and SS_CUSTOMER_SK = C_CUSTOMER_SK
                |      and C_BIRTH_YEAR > 2000
-               |""".stripMargin)
+               |""".stripMargin,
+      Map(
+        "TPCDS.STORE_SALES" -> ScanDetails(
+          List(
+            "SS_CUSTOMER_SK",
+            "SS_ITEM_SK",
+            "SS_LIST_PRICE",
+            "SS_QUANTITY",
+            "SS_SOLD_DATE_SK",
+            "SS_SOLD_TIME_SK"),
+          Some(
+            "((((SS_LIST_PRICE IS NOT NULL AND SS_QUANTITY IS NOT NULL) AND (SS_LIST_PRICE > ?)) AND (SS_QUANTITY > ?)) AND SS_CUSTOMER_SK IS NOT NULL)"),
+          List(Literal(Decimal(0E-18, 38, 18)), Literal(Decimal(0E-18, 38, 18))),
+          Some("(SS_SOLD_DATE_SK IS NOT NULL AND (SS_SOLD_DATE_SK > ?))"),
+          List(Literal(Decimal(2451058.000000000000000000, 38, 18)))),
+        "TPCDS.CUSTOMER" -> ScanDetails(
+          List("C_BIRTH_YEAR", "C_CUSTOMER_SK", "C_FIRST_NAME"),
+          Some("(C_BIRTH_YEAR IS NOT NULL AND (C_BIRTH_YEAR > ?))"),
+          List(Literal(Decimal(2000.000000000000000000, 38, 18))),
+          None,
+          List())))
   }
 
 }

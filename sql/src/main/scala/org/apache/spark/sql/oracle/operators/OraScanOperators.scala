@@ -22,49 +22,67 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan, Project}
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
-import org.apache.spark.sql.oracle.expressions.OraExpression
+import org.apache.spark.sql.oracle.expressions
+import org.apache.spark.sql.oracle.expressions.{
+  OraBinaryOpExpression,
+  OraExpression,
+  OraExpressions
+}
 
 trait ScanBuilder { self: OraPlan =>
 
-  def filter(filter: OraExpression, isPartFilter: Boolean): OraPlan = {
+  def filter(oFil: OraExpression, isPartFilter: Boolean): OraPlan = {
 
-    def setFil(os: OraTableScan, fil: OraExpression) =
-      if (!isPartFilter) {
-        os.copy(filter = Some(fil))
+    def setFil(os: OraTableScan) = {
+      val currFilt = if (!isPartFilter) {
+        os.filter
       } else {
-        os.copy(partitionFilter = Some(fil))
+        os.partitionFilter
       }
 
+      val newFil = if (currFilt.isDefined) {
+        val fil = currFilt.get
+        OraBinaryOpExpression(expressions.AND, fil.catalystExpr, fil, oFil)
+      } else oFil
+
+      if (!isPartFilter) {
+        os.copy(filter = Some(newFil))
+      } else {
+        os.copy(partitionFilter = Some(newFil))
+      }
+    }
+
     self match {
-      case os @ OraTableScan(_, _, _, _, None, _) => setFil(os, filter)
-      case os @ OraTableScan(_, _, _, _, Some(oFil), _) =>
-        // TODO and oFil and filter
-        setFil(os, filter)
+      case os: OraTableScan => setFil(os)
       case _ =>
-        illegal(
+        IllegalAction(
           "filter",
           self,
           "on a OraPlan that is not a scan, provide associated catalyst filter op")
     }
   }
 
-  def filter(catalystFil: Filter): OraPlan = {
+  def filter(catalystFil: Filter): Option[OraPlan] = {
     val oraFilExpr = OraExpression.convert(catalystFil.condition, catalystFil.inputSet)
-    self match {
-      case os: OraTableScan => filter(oraFilExpr, false)
-      case _ => OraFilter(self, oraFilExpr, catalystFil)
+    (self, oraFilExpr) match {
+      case (_, None) => None
+      case (_: OraTableScan, Some(oraFilExpr)) => Some(filter(oraFilExpr, false))
+      case (_, Some(oraFilExpr)) => Some(OraFilter(self, oraFilExpr, catalystFil))
     }
   }
 
-  def project(catalystProj: Project): OraPlan = {
-    val oraProjs = catalystProj.projectList.map(OraExpression.convert(_, catalystProj.inputSet))
-    self match {
-      case os: OraTableScan =>
-        os.copy(
-          projections = oraProjs,
-          catalystOp = Some(catalystProj),
-          catalystOutputSchema = catalystProj.outputSet)
-      case _ => OraProject(self, oraProjs, catalystProj)
+  def project(catalystProj: Project): Option[OraPlan] = {
+    val oraProjs = OraExpressions.unapplySeq(catalystProj.projectList)
+
+    (self, oraProjs) match {
+      case (_, None) => None
+      case (os: OraTableScan, Some(oraProjs)) =>
+        Some(
+          os.copy(
+            projections = oraProjs,
+            catalystOp = Some(catalystProj),
+            catalystOutputSchema = catalystProj.outputSet))
+      case (_, Some(oraProjs)) => Some(OraProject(self, oraProjs, catalystProj))
     }
   }
 

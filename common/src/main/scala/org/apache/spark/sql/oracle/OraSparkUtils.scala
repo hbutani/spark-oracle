@@ -92,7 +92,7 @@ object OraSparkUtils {
   def sequence[A](a: Seq[Option[A]]): Option[Seq[A]] =
     a match {
       case Nil => Some(Nil)
-      case h :: t => h flatMap (hh => sequence(t) map (hh +: _))
+      case s => s.head flatMap (hh => sequence(s.tail) map (hh +: _))
     }
 
   def crossProduct[T](seqs: Seq[Seq[T]]): Iterator[Seq[T]] = {

@@ -33,22 +33,21 @@ package object oracle {
      */
     def actionKind: String
 
-    def illegal(action: String, node: T, reason: Option[String] = None): Nothing = {
+    def apply(action: String, node: T, reason: Option[String] = None): Nothing = {
       val reasonStr = if (reason.isDefined) {
-        s"\n  ${reason}\n"
+        s"\n  reason: ${reason.get}\n"
       } else ""
 
-      val nodeStr = if (node == null) {
-        "<null node>"
-      } else node.simpleStringWithNodeId()
+      val nodeStr = if (node != null) {
+        s" on\n  node: ${node}"
+      } else ""
 
       throw new UnsupportedOperationException(
-        s"${unsupportVerb} ${actionKind}: ${action} on " +
-          s"${nodeStr}${reasonStr}")
+        s"${unsupportVerb} ${actionKind}: ${action}${nodeStr}${reasonStr}")
     }
 
-    def illegal(action: String, node: T, reason: String): Nothing =
-      illegal(action, node, Some(reason))
+    def apply(action: String, node: T, reason: String): Nothing =
+      apply(action, node, Some(reason))
 
   }
 }

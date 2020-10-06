@@ -15,25 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.oracle
+package org.apache.spark.sql.oracle.expressions
 
-package object expressions {
+import org.apache.spark.sql.catalyst.expressions.{Expression, IsNotNull, IsNull}
 
-  private[expressions] val MINUS = "-"
-  private[expressions] val PLUS = "+"
-  private[expressions] val MULTIPLY = "*"
-  private[expressions] val DIVIDE = "/"
-  private[expressions] val ABS = "ABS"
-  private[expressions] val TRUNC = "TRUNC"
-  private[expressions] val REMAINDER = "REMAINDER"
-  private[expressions] val LEAST = "LEAST"
-  private[expressions] val GREATEST = "GREATEST"
-  private[expressions] val MOD = "MOD"
-  private[expressions] val NOT = "NOT"
-  private[oracle] val AND = "AND"
-  private[expressions] val OR = "OR"
-  private[expressions] val DECODE = "DECODE"
-  private[expressions] val EQ = "="
-  private[expressions] val ISNULL = "IS NULL"
-  private[expressions] val ISNOTNULL = "IS NOT NULL"
+/**
+ * Conversions for expressions in ''nullExpressions.scala''
+ */
+object Nulls {
+
+  def unapply(e: Expression): Option[OraExpression] =
+    Option(e match {
+      case cE @ IsNull(OraExpression(child)) => OraPostfixUnaryOpExpression(ISNULL, cE, child)
+      case cE @ IsNotNull(OraExpression(child)) =>
+        OraPostfixUnaryOpExpression(ISNOTNULL, cE, child)
+      case _ => null
+    })
+
 }

@@ -196,6 +196,12 @@ object SQLSnippet {
     val opSnip = literalSnippet(op)
     osql"${opSnip}${child}"
   }
+
+  def postfixUnaryOp(op: String, child: SQLSnippet): SQLSnippet = {
+    val opSnip = literalSnippet(op)
+    osql"${child} ${opSnip}"
+  }
+
   def call(fn: String, args: SQLSnippet*): SQLSnippet = {
     val fnSnip = literalSnippet(fn)
     osql"$fnSnip(${join(args, comma, true)})"
@@ -257,8 +263,20 @@ object SQLSnippet {
 
   def csv(parts: SQLSnippet*): SQLSnippet = join(parts, comma, false)
 
-  def qualifiedId(parts: Seq[String]): SQLSnippet =
-    join(parts.map(apply(_, Seq.empty)), dot, false)
+  /*
+   * Shouldn't need this.
+   * If we do there are problems:
+   * - append, join are loose about adding spaces between snippets; so careful here
+   * - optimize for case where parts.size = 1
+   */
+  private def qualifiedId(parts: Seq[String]): SQLSnippet = {
+    val nms = parts.map(apply(_, Seq.empty))
+    (nms.init.map(nm => osql"${nm}${dot}") :+ nms.last).foldLeft(empty)((r, o) => osql"${r}${o}")
+  }
+
+  def colRef(nm: String): SQLSnippet = {
+    apply(nm, Seq.empty)
+  }
 
   /**
    * A [[SQLSnippet]] generator build from a scala String Interpolation
@@ -297,7 +315,7 @@ object SQLSnippet {
 
       for ((qp, param) <- s.parts.zipAll(params, "", LastParam)) {
         sb ++= qp
-        addPlaceholder(sb, param)
+        addPlaceholder(param)
       }
       sb.result()
     }

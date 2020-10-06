@@ -73,10 +73,7 @@ object OraSQLLiteralBuilder {
   implicit object SQLSnippetLit extends OraSQLLiteralBuilder[SQLSnippet] {
     override def apply(v: SQLSnippet): Literal = {
       // this should never be called
-      UNSUPPORTED_ACTION.illegal(
-        "literal conversion",
-        null,
-        s"literal conversion of a SQLSnippet ${v}")
+      UNSUPPORTED_ACTION("literal conversion", null, s"literal conversion of a SQLSnippet ${v}")
     }
   }
 
@@ -91,12 +88,12 @@ object OraSQLLiteralBuilder {
 
   def literalOf(v: Any): Literal = {
     if (v == null) {
-      UNSUPPORTED_ACTION.illegal("literal conversion", null, s"null value")
+      UNSUPPORTED_ACTION("literal conversion", null, s"null value")
     } else {
       v match {
         case l: Literal =>
           if (!isSupportedForBind(l.dataType)) {
-            UNSUPPORTED_ACTION.illegal(
+            UNSUPPORTED_ACTION(
               "literal conversion",
               l,
               s"unsupported datatype: ${l.dataType.toString}")
@@ -120,7 +117,7 @@ object OraSQLLiteralBuilder {
         case v: String => toLiteral(v)
         case v: Date => toLiteral(v)
         case _ =>
-          UNSUPPORTED_ACTION.illegal(
+          UNSUPPORTED_ACTION(
             "literal conversion",
             null,
             s"unsupported literal value type: ${v.getClass.getName}")

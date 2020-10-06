@@ -24,7 +24,7 @@ import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
-import org.apache.spark.sql.oracle.expressions.OraExpression
+import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions}
 import org.apache.spark.sql.sources.Filter
 import org.apache.spark.sql.types.StructType
 
@@ -41,7 +41,7 @@ import org.apache.spark.sql.types.StructType
  * [[org.apache.spark.sql.connector.read.oracle.OraScan]] needs a [[LogicalPlan]].
  *
  */
-abstract class OraPlan extends TreeNode[OraPlan] with PlanHelper with ScanBuilder {
+abstract class OraPlan extends TreeNode[OraPlan] with ScanBuilder {
 
   /*
    * Notes:
@@ -96,13 +96,27 @@ object OraPlan {
     var plan = oraPlan
 
     if (dataFilters.nonEmpty) {
-      val datFils = OraExpression.convert(dataFilters, oraPlan.catalystOutputSchema)
-      plan = plan.filter(datFils, false)
+      for (datFil <- OraExpression.convert(dataFilters, oraPlan.catalystOutputSchema)) {
+        plan = plan.filter(datFil, false)
+      }
     }
 
     if (partitionFilters.nonEmpty) {
-      val partFils = OraExpression.convert(partitionFilters, oraPlan.catalystOutputSchema)
-      plan = plan.filter(partFils, true)
+      val partFil = OraExpression.convert(partitionFilters, oraPlan.catalystOutputSchema)
+
+      /*
+       * Why must be throw exception here?
+       * because [[PruneFileSourcePartitions]] doesn't apply pushed down partition
+       * filters on top of new Scan.
+       */
+      if (!partFil.isDefined) {
+        InternalFailure(
+          "push partition filters",
+          oraPlan,
+          s"failed to create ora expression for partition filter:" +
+            s" ${partitionFilters.mkString(",")}")
+      }
+      plan = plan.filter(partFil.get, true)
     }
     plan
   }
@@ -118,15 +132,23 @@ object OraPlan {
 
     val attrs = requiredSchema.toAttributes
     val attrSet = AttributeSet(attrs)
-    val oraProjs = attrs.map(OraExpression.convert(_, attrSet))
+    val oraProjs = OraExpressions.unapplySeq(attrSet.toSeq)
 
-    OraTableScan(
-      table,
-      None,
-      attrSet,
-      oraProjs,
-      if (pushedOraExpressions.nonEmpty) Some(pushedOraExpressions.head) else None,
-      None)
+    if (!oraProjs.isDefined) {
+      InternalFailure(
+        "build project list",
+        null,
+        s"failed create ora expressions for projectList: ${attrSet.mkString(",")}")
+    } else {
+
+      OraTableScan(
+        table,
+        None,
+        attrSet,
+        oraProjs.get,
+        if (pushedOraExpressions.nonEmpty) Some(pushedOraExpressions.head) else None,
+        None)
+    }
   }
 
   /**

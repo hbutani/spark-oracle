@@ -18,7 +18,6 @@
 package org.apache.spark.sql.oracle
 
 import java.io.File
-
 import org.scalatest.{BeforeAndAfterAll, fixture}
 
 import org.apache.spark.internal.Logging
@@ -48,6 +47,10 @@ abstract class AbstractTest
 
     TestOracleHive.sql("use oracle")
 
+  }
+
+  override def afterAll(): Unit = {
+    TestOracleHive.sql("use tpcds")
   }
 
   def result(df: DataFrame): Array[Row] = {

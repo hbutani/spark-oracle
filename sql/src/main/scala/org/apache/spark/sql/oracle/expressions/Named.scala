@@ -33,8 +33,7 @@ object Named {
   case class OraColumnRef(catalystExpr: AttributeReference)
       extends OraExpression
       with OraLeafExpression {
-    lazy val orasql: SQLSnippet =
-      SQLSnippet.qualifiedId(catalystExpr.qualifier :+ catalystExpr.name)
+    lazy val orasql: SQLSnippet = SQLSnippet.colRef(catalystExpr.name)
   }
 
   def unapply(e: Expression): Option[OraExpression] =

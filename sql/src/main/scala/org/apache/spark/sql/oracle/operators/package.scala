@@ -19,8 +19,13 @@ package org.apache.spark.sql.oracle
 
 package object operators {
 
-  trait PlanHelper extends UnSupportedActionHelper[OraPlan] { self: OraPlan =>
+  object IllegalAction extends UnSupportedActionHelper[OraPlan] { self: OraPlan =>
     lazy val unsupportVerb = "Illegal"
+    lazy val actionKind: String = "OraPlan build action"
+  }
+
+  object InternalFailure extends UnSupportedActionHelper[OraPlan] { self: OraPlan =>
+    lazy val unsupportVerb = "Internal Failure"
     lazy val actionKind: String = "OraPlan build action"
   }
 
