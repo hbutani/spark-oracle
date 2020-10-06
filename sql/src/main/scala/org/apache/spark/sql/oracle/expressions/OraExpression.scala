@@ -20,7 +20,7 @@ package org.apache.spark.sql.oracle.expressions
 import org.apache.spark.sql.catalyst.expressions.{And, AttributeSet, Expression, Literal}
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
-import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet}
+import org.apache.spark.sql.oracle.{OraSparkUtils, OraSQLImplicits, SQLSnippet}
 import org.apache.spark.sql.sources.Filter
 
 abstract class OraExpression extends TreeNode[OraExpression] with OraSQLImplicits {
@@ -37,7 +37,58 @@ abstract class OraExpression extends TreeNode[OraExpression] with OraSQLImplicit
   }
 }
 
+trait OraLeafExpression { self: OraExpression =>
+  val children: Seq[OraExpression] = Seq.empty
+}
+
+case class OraUnaryOpExpression(op: String, catalystExpr: Expression, child: OraExpression)
+    extends OraExpression {
+  val children: Seq[OraExpression] = Seq(child)
+  override def orasql: SQLSnippet = SQLSnippet.unaryOp(op, child.orasql)
+}
+
+case class OraUnaryFnExpression(fn: String, catalystExpr: Expression, child: OraExpression)
+    extends OraExpression {
+  val children: Seq[OraExpression] = Seq(child)
+  override def orasql: SQLSnippet = SQLSnippet.call(fn, child.orasql)
+}
+
+case class OraBinaryOpExpression(
+    op: String,
+    catalystExpr: Expression,
+    left: OraExpression,
+    right: OraExpression)
+    extends OraExpression {
+  val children: Seq[OraExpression] = Seq(left, right)
+  override def orasql: SQLSnippet = SQLSnippet.operator(op, left.orasql, right.orasql)
+}
+
+case class OraBinaryFnExpression(
+    fn: String,
+    catalystExpr: Expression,
+    left: OraExpression,
+    right: OraExpression)
+    extends OraExpression {
+  val children: Seq[OraExpression] = Seq(left, right)
+  override def orasql: SQLSnippet = SQLSnippet.operator(fn, left.orasql, right.orasql)
+}
+
+case class OraFnExpression(fn: String, catalystExpr: Expression, children: Seq[OraExpression])
+    extends OraExpression {
+  val cSnips = children.map(_.orasql)
+  override def orasql: SQLSnippet = SQLSnippet.call(fn, cSnips: _*)
+}
+
 object OraExpression {
+
+  def unapply(e: Expression): Option[OraExpression] =
+    Option(e match {
+      case OraLiterals(oE) => oE
+      case Arithmetic(oE) => oE
+      case Conditional(oE) => oE
+      case Named(oE) => oE
+      case _ => null
+    })
 
   case class DummyOraExpression private (catalystExpr: Expression) extends OraExpression {
     val orasql = osql"${catalystExpr.sql}"
@@ -91,4 +142,10 @@ object OraExpression {
   def convert(exprs: Seq[Expression], inputAttributeSet: AttributeSet): OraExpression = {
     todoConvert(exprs)
   }
+}
+
+object OraExpressions {
+  def unapplySeq(eS: Seq[Expression]): Option[Seq[OraExpression]] =
+    OraSparkUtils.sequence(eS.map(OraExpression.unapply(_)))
+
 }

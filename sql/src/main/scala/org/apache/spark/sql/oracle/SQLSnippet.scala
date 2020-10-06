@@ -21,6 +21,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
 
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
+import org.apache.spark.sql.types.StringType
 
 /**
  * Represents a sql string with bind values.
@@ -50,6 +51,7 @@ class SQLSnippet private (val sql: String, val params: Seq[Literal]) {
 
   def append(syntax: SQLSnippet): SQLSnippet = osql"${this} ${syntax}"
   def +(syntax: SQLSnippet): SQLSnippet = this.append(syntax)
+  def ++(snips: Seq[SQLSnippet]): SQLSnippet = snips.foldLeft(this)(_ + _)
 
   def groupBy(columns: SQLSnippet*): SQLSnippet =
     if (columns.isEmpty) this else osql"${this} group by ${csv(columns: _*)}"
@@ -126,6 +128,7 @@ class SQLSnippet private (val sql: String, val params: Seq[Literal]) {
     osql"${this} not in (${inlist})"
   }
 
+  def as(alias: String): SQLSnippet = this + AS + literalSnippet(alias)
 }
 
 /**
@@ -170,6 +173,58 @@ object SQLSnippet {
 
   val empty: SQLSnippet = osql""
   val comma: SQLSnippet = osql","
+  val dot: SQLSnippet = osql"."
+  val CASE: SQLSnippet = osql"CASE"
+  val WHEN: SQLSnippet = osql"WHEN"
+  val THEN: SQLSnippet = osql"THEN"
+  val ELSE: SQLSnippet = osql"ELSE"
+  val END: SQLSnippet = osql"END"
+  val AS: SQLSnippet = osql"AS"
+  val IN: SQLSnippet = osql"IN"
+  val LPAREN: SQLSnippet = osql"("
+  val RPAREN: SQLSnippet = osql")"
+
+  def literalSnippet(s: String): SQLSnippet =
+    SQLSnippet(s, Seq.empty)
+
+  def literalSnippet(s: Literal): SQLSnippet = {
+    assert(s.dataType == StringType)
+    SQLSnippet(s.value.toString, Seq.empty)
+  }
+
+  def unaryOp(op: String, child: SQLSnippet): SQLSnippet = {
+    val opSnip = literalSnippet(op)
+    osql"${opSnip}${child}"
+  }
+  def call(fn: String, args: SQLSnippet*): SQLSnippet = {
+    val fnSnip = literalSnippet(fn)
+    osql"$fnSnip(${join(args, comma, true)})"
+  }
+  def operator(op: String, args: SQLSnippet*): SQLSnippet = {
+    val opSnip = literalSnippet(op)
+    osql"(${join(args, opSnip, true)})"
+  }
+
+  def simpleCase(
+      cond: SQLSnippet,
+      cases: Seq[(SQLSnippet, SQLSnippet)],
+      elseCase: Option[SQLSnippet]): SQLSnippet = {
+    val caseSnips = for ((caseCond, caseValue) <- cases) yield {
+      WHEN + caseCond + THEN + caseValue
+    }
+    val elseSnip = elseCase.map(ELSE + _).getOrElse(empty)
+    CASE + cond ++ caseSnips + elseSnip + END
+  }
+
+  def searchedCase(
+      cases: Seq[(SQLSnippet, SQLSnippet)],
+      elseCase: Option[SQLSnippet]): SQLSnippet = {
+    val caseSnips = for ((caseCond, caseValue) <- cases) yield {
+      WHEN + caseCond + THEN + caseValue
+    }
+    val elseSnip = elseCase.map(ELSE + _).getOrElse(empty)
+    CASE ++ caseSnips + elseSnip + END
+  }
 
   def unapply(snippet: SQLSnippet): Option[(String, Seq[Literal])] =
     Some((snippet.sql, snippet.params))
@@ -200,7 +255,10 @@ object SQLSnippet {
     apply(value, parameters)
   }
 
-  def csv(parts: SQLSnippet*): SQLSnippet = join(parts, osql",", false)
+  def csv(parts: SQLSnippet*): SQLSnippet = join(parts, comma, false)
+
+  def qualifiedId(parts: Seq[String]): SQLSnippet =
+    join(parts.map(apply(_, Seq.empty)), dot, false)
 
   /**
    * A [[SQLSnippet]] generator build from a scala String Interpolation
