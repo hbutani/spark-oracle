@@ -36,12 +36,13 @@ object Dependencies {
       "org.apache.spark" %% "spark-hive" % sparkVersion % "test" classifier "tests",
       "org.apache.spark" %% "spark-hive-thriftserver" % sparkVersion % "provided",
       "org.apache.spark" %% "spark-repl" % sparkVersion % "provided",
-      "org.apache.spark" %% "spark-unsafe" % sparkVersion % "provided")
+      "org.apache.spark" %% "spark-unsafe" % sparkVersion % "provided",
+      "com.fasterxml.jackson.core" % "jackson-databind" % fasterxmlVersion)
   }
 
   object utils {
     val dependencies = Seq(
-      "org.json4s" %% "json4s-jackson" % json4sVersion % "provided",
+      "com.fasterxml.jackson.core" % "jackson-databind" % fasterxmlVersion,
       "org.slf4j" % "slf4j-api" % slf4jVersion % "provided",
       "org.slf4j" % "slf4j-log4j12" % slf4jVersion % "provided",
       "org.slf4j" % "jul-to-slf4j" % slf4jVersion % "provided",

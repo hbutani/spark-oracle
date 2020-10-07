@@ -18,13 +18,20 @@
 package org.apache.spark.sql.oracle.operators
 
 import java.io.PrintStream
+import java.sql.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Date
 
+import collection.mutable.{HashMap, MultiMap, Set}
 import scala.collection.mutable.ArrayBuffer
-
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.util.{DateTimeUtils, LegacyDateFormats, TimestampFormatter}
 import org.apache.spark.sql.connector.read.oracle.OraFileScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
+import org.apache.spark.sql.types.{DateType, Decimal, DecimalType, StringType}
+
+import scala.collection.mutable
 
 /**
  * Utility class that provides and can check
@@ -55,25 +62,28 @@ case class OraTableScanValidator(plan: LogicalPlan) {
 
     for ((tbl, scanD) <- scanDetails) {
       // scalastyle:off println
-      out.println(s"Table ${tbl} : ${scanD.code}")
+      out.println(s"""("${tbl}" -> ${scanD.code}),""")
       // scalastyle:on println
     }
   }
 
   def validateScans(reqdScans: Map[String, ScanDetails]): Unit = {
 
-    val planScans = scanDetails.toMap
+    var planScans = new mutable.HashMap[String, mutable.Set[ScanDetails]]
+      with mutable.MultiMap[String, ScanDetails]
 
-    val errorReqdScans = ArrayBuffer[(String, ScanDetails, ScanDetails)]()
-    val missingReqdScans = ArrayBuffer[(String, ScanDetails)]()
+    scanDetails.foreach{c => planScans.addBinding(c._1, c._2)}
+
+    val errorReqdScans = ArrayBuffer[(String, ScanDetails, List[ScanDetails])]()
+    val missingReqdScans = ArrayBuffer[(String, List[ScanDetails])]()
     val missingPlanScans = ArrayBuffer[(String, ScanDetails)]()
 
     for ((tNm, reqdScan) <- reqdScans) {
       val planScan = planScans.get(tNm)
       (reqdScan, planScan) match {
         case (rP, None) => missingPlanScans += ((tNm, rP))
-        case (rP, Some(sP)) if rP != sP =>
-          errorReqdScans += ((tNm, rP, sP))
+        case (rP, Some(sP)) if !sP.toList.contains(rP) =>
+          errorReqdScans += ((tNm, rP, sP.toList))
         case _ => ()
       }
     }
@@ -81,7 +91,7 @@ case class OraTableScanValidator(plan: LogicalPlan) {
     for ((tNm, planScan) <- planScans) {
       val reqdScan = reqdScans.get(tNm)
       (reqdScan, planScan) match {
-        case (None, sP) => missingReqdScans += ((tNm, sP))
+        case (None, sP) => missingReqdScans += ((tNm, sP.toList))
         case _ => ()
       }
     }
@@ -142,7 +152,20 @@ object OraTableScanValidator {
 
     lazy val code: String = {
 
-      def literalCode(l: Literal) = s"Literal(${l})"
+      def formatDate(date: Int): String = {
+        val d = new Timestamp(DateTimeUtils.toJavaDate(date).getTime)
+        new SimpleDateFormat("yyyy-MM-dd").format(d)
+      }
+
+      def literalCode(l: Literal) = {
+        l.dataType match {
+          case d : DecimalType => s"Literal(Decimal(${l}, ${d.precision}, ${d.scale}))"
+          case s : StringType => s"""Literal("${l}")"""
+          case t : DateType =>
+            s"""Literal(Date.valueOf("${formatDate(l.value.asInstanceOf[Int])}"))"""
+          case _ => s"Literal(${l})"
+        }
+      }
 
       val projCode = s"""List(${projections.map(p => s""""${p}"""").mkString(", ")})"""
       val filCode = filter.map(f => s"""Some("$f")""").getOrElse("None")
