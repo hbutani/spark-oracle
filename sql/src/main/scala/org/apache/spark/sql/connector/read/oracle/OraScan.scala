@@ -76,9 +76,8 @@ trait OraScan {
 
     for ((dbSplit, i) <- dbSplits.zipWithIndex) yield {
       val splitOraPlan = OraQuerySplitting.applySplit(oraPlan, dbSplit)
-      val (oraSQL, bindValues) = OraPlan.generateOraSQL(splitOraPlan)
       val prefLocs = OraQuerySplitting.preferedLocations(dbSplit)
-      OraPartition(i, dsKey, oraSQL, bindValues, prefLocs)
+      OraPartition(dsKey, i, splitOraPlan, prefLocs)
     }
   }
 

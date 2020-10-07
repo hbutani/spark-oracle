@@ -20,22 +20,23 @@ package org.apache.spark.sql.connector.catalog.oracle
 import java.io.File
 import java.util.Locale
 
-import oracle.spark.{ConnectionManagement, DataSourceKey, ORAMetadataSQLs}
+import oracle.spark.{ConnectionInfo, ConnectionManagement, DataSourceKey, ORAMetadataSQLs}
 import org.fusesource.leveldbjni.JniDBFactory
 import org.iq80.leveldb.{DB, Options}
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{OraIdentifier, OraTable}
+import org.apache.spark.sql.oracle.OracleCatalogOptions
 import org.apache.spark.util.{ShutdownHookManager, Utils}
 
 private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) extends Logging {
 
-  val connInfo = OracleCatalogOptions.connectionInfo(cMap)
+  val connInfo = ConnectionInfo.connectionInfo(cMap)
   val catalogOptions = OracleCatalogOptions.catalogOptions(cMap)
 
   val (dsKey: DataSourceKey, cache_only: Boolean) = if (!catalogOptions.use_metadata_cache) {
-    val dsKey = ConnectionManagement.registerDataSource(connInfo)
+    val dsKey = ConnectionManagement.registerDataSource(connInfo, catalogOptions)
     ORAMetadataSQLs.validateConnection(dsKey)
     (dsKey, false)
   } else {

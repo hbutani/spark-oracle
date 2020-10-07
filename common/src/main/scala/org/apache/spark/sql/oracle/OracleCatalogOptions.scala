@@ -15,11 +15,9 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.connector.catalog.oracle
+package org.apache.spark.sql.oracle
 
 import java.util.Locale
-
-import oracle.spark.ConnectionInfo
 
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 
@@ -34,22 +32,6 @@ case class OracleCatalogOptions(
     oci_credential_name: Option[String])
 
 object OracleCatalogOptions {
-
-  import ConnectionInfo._
-  private[oracle] def connectionInfo(parameters: CaseInsensitiveMap[String]): ConnectionInfo = {
-    require(parameters.isDefinedAt(ORACLE_URL), s"Option '$ORACLE_URL' is required.")
-    require(parameters.isDefinedAt(ORACLE_JDBC_USER), s"Option '$ORACLE_URL' is required.")
-
-    ConnectionInfo(
-      parameters(ORACLE_URL),
-      parameters(ORACLE_JDBC_USER),
-      parameters.get(ORACLE_JDBC_PASSWORD),
-      parameters.get(SUN_SECURITY_KRB5_PRINCIPAL),
-      parameters.get(KERB_AUTH_CALLBACK),
-      parameters.get(JAVA_SECURITY_KRB5_CONF),
-      parameters.get(ORACLE_NET_TNS_ADMIN),
-      parameters.get(ORACLE_JDBC_AUTH_METHOD))
-  }
 
   private val catalogOptionNames = collection.mutable.Set[String]()
 
@@ -70,10 +52,7 @@ object OracleCatalogOptions {
 
   val DEFAULT_MAX_SPLITS = 1
 
-  private[oracle] def catalogOptions(
-      parameters: CaseInsensitiveMap[String]): OracleCatalogOptions = {
-    require(parameters.isDefinedAt(ORACLE_URL), s"Option '$ORACLE_URL' is required.")
-    require(parameters.isDefinedAt(ORACLE_JDBC_USER), s"Option '$ORACLE_URL' is required.")
+  def catalogOptions(parameters: CaseInsensitiveMap[String]): OracleCatalogOptions = {
 
     OracleCatalogOptions(
       parameters.getOrElse(ORACLE_JDBC_MAX_PARTITIONS, "1").toInt,

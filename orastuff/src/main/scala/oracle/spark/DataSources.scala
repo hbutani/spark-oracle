@@ -20,12 +20,12 @@ package oracle.spark
 import java.sql.Connection
 import java.util.concurrent.{ConcurrentHashMap => CMap}
 
-import scala.language.implicitConversions
-
 import oracle.hcat.db.conn.OracleDBConnectionCacheUtil
 import oracle.spark.ORASQLUtils._
+import scala.language.implicitConversions
 
 import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.oracle.OracleCatalogOptions
 
 case class DataSourceKey(connectionURL: String, userName: String)
 
@@ -34,17 +34,24 @@ object DataSourceKey {
     DataSourceKey(connInfo.url, connInfo.username)
 }
 
-case class DataSourceInfo(key: DataSourceKey, connInfo: ConnectionInfo, isSharded: Boolean)
+case class DataSourceInfo(
+    key: DataSourceKey,
+    connInfo: ConnectionInfo,
+    catalogOptions: OracleCatalogOptions,
+    isSharded: Boolean)
 
 trait DataSources {
 
   private val dsMap = new CMap[DataSourceKey, DataSourceInfo]()
 
-  private[oracle] def registerDataSource(dsKey: DataSourceKey, connInfo: ConnectionInfo): Unit = {
+  private[oracle] def registerDataSource(
+      dsKey: DataSourceKey,
+      connInfo: ConnectionInfo,
+      catalogOptions: OracleCatalogOptions): Unit = {
     val createDSI = new java.util.function.Function[DataSourceKey, DataSourceInfo] {
       override def apply(t: DataSourceKey): DataSourceInfo = {
         val isSharded = setupConnectionPool(dsKey, connInfo)
-        DataSourceInfo(dsKey, connInfo, isSharded)
+        DataSourceInfo(dsKey, connInfo, catalogOptions, isSharded)
       }
     }
     val dsInfo = dsMap.computeIfAbsent(dsKey, createDSI)
@@ -60,13 +67,15 @@ trait DataSources {
     }
   }
 
-  def registerDataSource(connInfo: ConnectionInfo): DataSourceKey = {
+  def registerDataSource(
+      connInfo: ConnectionInfo,
+      catalogOptions: OracleCatalogOptions): DataSourceKey = {
     val dsKey: DataSourceKey = connInfo
-    registerDataSource(dsKey, connInfo)
+    registerDataSource(dsKey, connInfo, catalogOptions)
     dsKey
   }
 
-  private[oracle] def info(dsKey: DataSourceKey): DataSourceInfo = {
+  def info(dsKey: DataSourceKey): DataSourceInfo = {
     import scala.collection.JavaConverters._
     dsMap.asScala.getOrElse(
       dsKey,

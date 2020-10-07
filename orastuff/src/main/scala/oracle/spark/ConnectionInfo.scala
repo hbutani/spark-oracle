@@ -19,6 +19,8 @@ package oracle.spark
 
 import java.util.{Locale, Properties}
 
+import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
+
 case class ConnectionInfo(
     url: String,
     username: String,
@@ -104,4 +106,19 @@ object ConnectionInfo {
     ORACLE_JDBC_AUTH_METHOD -> "oracle.hcat.osh.authentication")
 
   val DEFAULT_MAX_SPLITS = 1
+
+  def connectionInfo(parameters: CaseInsensitiveMap[String]): ConnectionInfo = {
+    require(parameters.isDefinedAt(ORACLE_URL), s"Option '$ORACLE_URL' is required.")
+    require(parameters.isDefinedAt(ORACLE_JDBC_USER), s"Option '$ORACLE_URL' is required.")
+
+    ConnectionInfo(
+      parameters(ORACLE_URL),
+      parameters(ORACLE_JDBC_USER),
+      parameters.get(ORACLE_JDBC_PASSWORD),
+      parameters.get(SUN_SECURITY_KRB5_PRINCIPAL),
+      parameters.get(KERB_AUTH_CALLBACK),
+      parameters.get(JAVA_SECURITY_KRB5_CONF),
+      parameters.get(ORACLE_NET_TNS_ADMIN),
+      parameters.get(ORACLE_JDBC_AUTH_METHOD))
+  }
 }

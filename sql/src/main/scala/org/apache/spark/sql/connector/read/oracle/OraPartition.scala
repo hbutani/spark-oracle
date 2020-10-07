@@ -17,10 +17,11 @@
 
 package org.apache.spark.sql.connector.read.oracle
 
-import oracle.spark.DataSourceKey
+import oracle.spark.{ConnectionManagement, DataSourceInfo, DataSourceKey}
 
 import org.apache.spark.Partition
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.AttributeSet
 import org.apache.spark.sql.connector.read.{
   InputPartition,
   PartitionReader,
@@ -31,7 +32,8 @@ import org.apache.spark.sql.oracle.operators.OraPlan
 
 case class OraPartition(
     index: Int,
-    dsKey: DataSourceKey,
+    dsInfo: DataSourceInfo,
+    outputSchema: AttributeSet,
     oraSQL: String,
     bindValues: Array[Any],
     override val preferredLocations: Array[String])
@@ -46,7 +48,14 @@ object OraPartition {
       oraPlan: OraPlan,
       preferredLocations: Array[String]): OraPartition = {
     val (oraQry, bindValues) = OraPlan.generateOraSQL(oraPlan)
-    new OraPartition(index, dsKey, oraQry, bindValues, preferredLocations)
+    val dsInfo = ConnectionManagement.info(dsKey)
+    new OraPartition(
+      index,
+      dsInfo,
+      oraPlan.catalystOutputSchema,
+      oraQry,
+      bindValues,
+      preferredLocations)
   }
 
 }
