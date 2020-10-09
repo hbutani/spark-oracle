@@ -8,7 +8,6 @@ object Versions {
   val json4sVersion = "3.6.6"
   val scalaXMLVersion = "1.2.0"
   val scalaParseCombVersion = "1.1.2"
-  val fasterxmlVersion = "2.10.5"
 
   val scalatestVersion = "3.0.8"
   val hadoopVersion = "3.2.0"

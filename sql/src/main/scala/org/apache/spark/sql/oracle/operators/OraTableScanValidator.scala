@@ -20,18 +20,16 @@ package org.apache.spark.sql.oracle.operators
 import java.io.PrintStream
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import java.util.Date
-
-import collection.mutable.{HashMap, MultiMap, Set}
-import scala.collection.mutable.ArrayBuffer
-import org.apache.spark.sql.catalyst.expressions.Literal
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.catalyst.util.{DateTimeUtils, LegacyDateFormats, TimestampFormatter}
-import org.apache.spark.sql.connector.read.oracle.OraFileScan
-import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
-import org.apache.spark.sql.types.{DateType, Decimal, DecimalType, StringType}
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+
+import org.apache.spark.sql.catalyst.expressions.Literal
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.util.DateTimeUtils
+import org.apache.spark.sql.connector.read.oracle.OraFileScan
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
+import org.apache.spark.sql.types.{DateType, DecimalType, StringType}
 
 /**
  * Utility class that provides and can check
@@ -69,10 +67,12 @@ case class OraTableScanValidator(plan: LogicalPlan) {
 
   def validateScans(reqdScans: Map[String, ScanDetails]): Unit = {
 
-    var planScans = new mutable.HashMap[String, mutable.Set[ScanDetails]]
-      with mutable.MultiMap[String, ScanDetails]
+    val planScans = new mutable.HashMap[String, mutable.Set[ScanDetails]]
+    with mutable.MultiMap[String, ScanDetails]
 
-    scanDetails.foreach{c => planScans.addBinding(c._1, c._2)}
+    scanDetails.foreach { c =>
+      planScans.addBinding(c._1, c._2)
+    }
 
     val errorReqdScans = ArrayBuffer[(String, ScanDetails, List[ScanDetails])]()
     val missingReqdScans = ArrayBuffer[(String, List[ScanDetails])]()
@@ -159,9 +159,9 @@ object OraTableScanValidator {
 
       def literalCode(l: Literal) = {
         l.dataType match {
-          case d : DecimalType => s"Literal(Decimal(${l}, ${d.precision}, ${d.scale}))"
-          case s : StringType => s"""Literal("${l}")"""
-          case t : DateType =>
+          case d: DecimalType => s"Literal(Decimal(${l}, ${d.precision}, ${d.scale}))"
+          case s: StringType => s"""Literal("${l}")"""
+          case t: DateType =>
             s"""Literal(Date.valueOf("${formatDate(l.value.asInstanceOf[Int])}"))"""
           case _ => s"Literal(${l})"
         }
