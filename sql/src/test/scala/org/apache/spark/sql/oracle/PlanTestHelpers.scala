@@ -75,7 +75,8 @@ trait PlanTestHelpers {
    * Build the `reqdScans` for the [[validateOraScans]] method from this output.
    *
    * [[Literal]] values in the output have to be fixed.
-   * For example convert: `Literal(2451058.000000000000000000)` to `Literal(Decimal(0E-18, 38, 18)`
+   * For example convert: `Literal(2451058.000000000000000000)` to
+   * `Literal(Decimal(2451058.000000000000000000, 38, 18))`
    *
    * @param sqlStat
    * @param out

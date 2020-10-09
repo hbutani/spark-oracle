@@ -25,6 +25,7 @@ import org.apache.spark.sql.catalyst.util.DateTimeUtils.getZoneId
 import org.apache.spark.sql.oracle.{OraSQLLiteralBuilder, SQLSnippet}
 import org.apache.spark.sql.types.{
   DateType,
+  Decimal,
   DecimalType,
   DoubleType,
   FloatType,
@@ -35,11 +36,18 @@ import org.apache.spark.sql.types.{
 
 case class OraLiteral(catalystExpr: Literal) extends OraExpression with OraLeafExpression {
   override def orasql: SQLSnippet = osql"${catalystExpr}"
+
+  def toLiteralSql: OraLiteralSql =
+    new OraLiteralSql(OraLiterals.toOraLiteralSql(catalystExpr).get)
+
 }
 
 case class OraLiteralSql(catalystExpr: Literal) extends OraExpression with OraLeafExpression {
+  assert(catalystExpr.dataType == StringType)
   override def orasql: SQLSnippet =
     SQLSnippet.literalSnippet(catalystExpr)
+
+  def this(s: String) = this(Literal(s, StringType))
 }
 
 /**
@@ -59,8 +67,8 @@ object OraLiterals {
       case _ => null
     })
 
-  def toOraLiteralSql(l: Literal): Option[OraExpression] =
-    ORA_LITERAL_CONV.ora_literal(l).map(s => OraLiteralSql(Literal(s, StringType)))
+  def toOraLiteralSql(l: Literal): Option[String] =
+    ORA_LITERAL_CONV.ora_literal(l)
 
   /*
    * Based on https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Literals.html#GUID-192417E8-A79D-4A1D-9879-68272D925707
@@ -113,15 +121,26 @@ object OraLiterals {
       s"'${r}''"
     }
 
+    /**
+     * The [[Decimal]] value is converted to [[java.math.BigDecimal]]
+     * Then [[java.math.BigDecimal:toString]] method is called.
+     * This returns a string representation based on Decimal's precision and scale.
+     *
+     * @param d
+     * @return
+     */
+    def to_decimal_literal(d: Decimal): String = d.toString
+
     def ora_literal(l: Literal): Option[String] =
       Option(l match {
+        case Literal(null, _) => "null" // TODO: does this work in all cases?
         case Literal(s, StringType) => ORA_LITERAL_CONV.to_string_literal(s.toString)
         case Literal(d, DateType) => ORA_LITERAL_CONV.to_ora_dt_literal(d.asInstanceOf[Int])
         case Literal(t, TimestampType) => ORA_LITERAL_CONV.to_ora_ts_literal(t.asInstanceOf[Long])
         case Literal(n, _: IntegralType) => n.toString
         case Literal(f, FloatType) => s"${f}f"
         case Literal(f, DoubleType) => s"${f}d"
-        case Literal(d, dt: DecimalType) => d.toString
+        case Literal(d: Decimal, dt: DecimalType) => to_decimal_literal(d)
         case _ => null
       })
   }

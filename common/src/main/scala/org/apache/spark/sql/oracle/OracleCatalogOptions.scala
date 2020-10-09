@@ -19,6 +19,9 @@ package org.apache.spark.sql.oracle
 
 import java.util.Locale
 
+import scala.language.implicitConversions
+import scala.util.Try
+
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 
 case class OracleCatalogOptions(
@@ -29,7 +32,8 @@ case class OracleCatalogOptions(
     chunkSQL: Option[String],
     use_metadata_cache: Boolean,
     metadataCacheLoc: Option[String],
-    oci_credential_name: Option[String])
+    oci_credential_name: Option[String],
+    logSQLBehavior: LoggingAndTimingSQL)
 
 object OracleCatalogOptions {
 
@@ -62,7 +66,55 @@ object OracleCatalogOptions {
       parameters.get(ORACLE_CUSTOM_CHUNK_SQL),
       parameters.get(ORACLE_USE_METADATA_CACHE).map(_.toBoolean).getOrElse(false),
       parameters.get(ORACLE_METADATA_CACHE),
-      parameters.get(ORACLE_OCI_CREDENTIAL_NAME))
+      parameters.get(ORACLE_OCI_CREDENTIAL_NAME),
+      LoggingAndTimingSQL.fromOptions(parameters))
   }
 
+}
+
+/**
+ * based on [[LoggingSQLAndTimeSettings]] from scalikejdbc library.
+ */
+case class LoggingAndTimingSQL(
+    enabled: Boolean,
+    logLevel: Int,
+    stackTraceDepth: Int,
+    enableSlowSqlWarn: Boolean,
+    slowSqlThreshold: Long,
+    slowSqlLogLevel: Int)
+
+object LoggingAndTimingSQL {
+
+  object LogLevel extends Enumeration {
+    val INFO, DEBUG, WARNING, ERROR, TRACE = Value
+
+    implicit def fromString(s: String): LogLevel.Value =
+      Try {
+        withName(s.toUpperCase(Locale.ROOT))
+      }.getOrElse(WARNING)
+  }
+
+  private val optionNames = collection.mutable.Set[String]()
+
+  private def newOption(name: String): String = {
+    optionNames += name.toLowerCase(Locale.ROOT)
+    name
+  }
+
+  val ENABLED = newOption("log_and_time_sql.enabled")
+  val LOG_LEVEL = newOption("log_and_time_sql.log_level")
+  val STACK_TRACE_DEPTH = newOption("log_and_time_sql.stacktrace_depth")
+  val ENABLE_SLOWSQL_WARNING = newOption("log_and_time_sql.warn_slow_sql")
+  val SLOWSQL_THRESHOLD = newOption("log_and_time_sql.slow_sql_threshold_millis")
+  val SLOWSQL_LOGLEVEL = newOption("log_and_time_sql.slow_sql_log_level")
+
+  def fromOptions(parameters: CaseInsensitiveMap[String]): LoggingAndTimingSQL = {
+    LoggingAndTimingSQL(
+      parameters.getOrElse(ENABLED, "false").toBoolean,
+      LogLevel.fromString(parameters.getOrElse(LOG_LEVEL, "WARNING")).id,
+      parameters.getOrElse(STACK_TRACE_DEPTH, "10").asInstanceOf[String].toInt,
+      parameters.getOrElse(ENABLE_SLOWSQL_WARNING, "true").toBoolean,
+      parameters.getOrElse(SLOWSQL_THRESHOLD, "10000").toLong,
+      LogLevel.fromString(parameters.getOrElse(LOG_LEVEL, "WARNING")).id)
+  }
 }

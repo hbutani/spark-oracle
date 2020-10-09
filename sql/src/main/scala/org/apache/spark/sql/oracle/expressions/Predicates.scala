@@ -82,8 +82,12 @@ object Predicates {
           OraFnExpression(
             DECODE,
             cE,
-            Seq(left, right, OraLiteralSql(Literal(0)), OraLiteralSql(Literal(1)))),
-          OraLiteralSql(Literal(0)))
+            Seq(
+              left,
+              right,
+              OraLiteral(Literal(0)).toLiteralSql,
+              OraLiteral(Literal(1)).toLiteralSql)),
+          OraLiteral(Literal(0)).toLiteralSql)
       case cE @ BinaryComparison(OraExpression(left), OraExpression(right)) =>
         OraBinaryOpExpression(cE.symbol, cE, left, right)
       case _ => null
