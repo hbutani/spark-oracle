@@ -17,12 +17,10 @@
 
 package org.apache.spark.sql.oracle.operators
 
-import scala.collection.mutable.ArrayBuffer
-
-import org.apache.spark.sql.catalyst.expressions.AttributeSet
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeSet}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan, Project}
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
-import org.apache.spark.sql.oracle.expressions
+import org.apache.spark.sql.oracle.{expressions, SQLSnippet}
 import org.apache.spark.sql.oracle.expressions.{
   OraBinaryOpExpression,
   OraExpression,
@@ -91,6 +89,7 @@ trait ScanBuilder { self: OraPlan =>
 case class OraTableScan(
     oraTable: OraTable,
     catalystOp: Option[LogicalPlan],
+    catalystOutput: Seq[Attribute],
     catalystOutputSchema: AttributeSet,
     projections: Seq[OraExpression],
     filter: Option[OraExpression],
@@ -99,7 +98,7 @@ case class OraTableScan(
 
   val children: Seq[OraPlan] = Seq.empty
 
-  override def genOraSQL(sqlBldr: StringBuilder, params: ArrayBuffer[Any]): Unit = {
+  override def orasql: SQLSnippet = {
     // TODO
     ???
   }
@@ -109,9 +108,10 @@ case class OraFilter(child: OraPlan, filter: OraExpression, catalystFil: Filter)
 
   val children: Seq[OraPlan] = Seq(child)
   val catalystOp: Option[LogicalPlan] = Some(catalystFil)
+  val catalystOutput = catalystFil.output
   val catalystOutputSchema: AttributeSet = catalystFil.outputSet
 
-  override def genOraSQL(sqlBldr: StringBuilder, params: ArrayBuffer[Any]): Unit = {
+  override def orasql: SQLSnippet = {
     // TODO
     ???
   }
@@ -122,9 +122,10 @@ case class OraProject(child: OraPlan, projections: Seq[OraExpression], catalystP
 
   val children: Seq[OraPlan] = Seq(child)
   val catalystOp: Option[LogicalPlan] = Some(catalystProj)
+  val catalystOutput = catalystProj.output
   val catalystOutputSchema: AttributeSet = catalystProj.outputSet
 
-  override def genOraSQL(sqlBldr: StringBuilder, params: ArrayBuffer[Any]): Unit = {
+  override def orasql: SQLSnippet = {
     // TODO
     ???
   }

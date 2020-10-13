@@ -40,9 +40,13 @@ docs/*.key
 docs/benchmark/*.html
 **/auto/
 docs/notes/*_ImplNotes.org
+docs/notes/mynotes
 snap-oracle-spark
 spark-oracle.wiki
+jdbc-examples
 
+# tests
+sql/src/test/scala/org/apache/spark/sql/oracle/experiments
 
 # docker
 docker/driver

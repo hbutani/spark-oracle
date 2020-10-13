@@ -17,13 +17,12 @@
 
 package org.apache.spark.sql.oracle.operators
 
-import scala.collection.mutable.ArrayBuffer
-
-import org.apache.spark.sql.catalyst.expressions.{AttributeSet, Expression}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeSet, Expression}
 import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
+import org.apache.spark.sql.oracle.{SQLSnippet, SQLSnippetProvider}
 import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions}
 import org.apache.spark.sql.sources.Filter
 import org.apache.spark.sql.types.StructType
@@ -41,7 +40,7 @@ import org.apache.spark.sql.types.StructType
  * [[org.apache.spark.sql.connector.read.oracle.OraScan]] needs a [[LogicalPlan]].
  *
  */
-abstract class OraPlan extends TreeNode[OraPlan] with ScanBuilder {
+abstract class OraPlan extends TreeNode[OraPlan] with ScanBuilder with SQLSnippetProvider {
 
   /*
    * Notes:
@@ -58,14 +57,10 @@ abstract class OraPlan extends TreeNode[OraPlan] with ScanBuilder {
 
   def catalystOp: Option[LogicalPlan]
 
+  def catalystOutput: Seq[Attribute]
   def catalystOutputSchema: AttributeSet
 
-  /**
-   * generate a parameterized query; convert literals in query into bind values.
-   * @param sqlBldr
-   * @param params
-   */
-  def genOraSQL(sqlBldr: StringBuilder, params: ArrayBuffer[Any]): Unit
+  def orasql: SQLSnippet
 
   override def simpleStringWithNodeId(): String = {
     val operatorId = catalystOp
@@ -80,13 +75,6 @@ abstract class OraPlan extends TreeNode[OraPlan] with ScanBuilder {
 }
 
 object OraPlan {
-
-  def generateOraSQL(oraPlan: OraPlan): (String, Array[Any]) = {
-    val sqlBldr = new StringBuilder
-    val params = ArrayBuffer[Any]()
-    oraPlan.genOraSQL(sqlBldr, params)
-    (sqlBldr.toString(), params.toArray)
-  }
 
   def filter(
       oraPlan: OraPlan,
@@ -144,6 +132,7 @@ object OraPlan {
       OraTableScan(
         table,
         None,
+        attrs,
         attrSet,
         oraProjs.get,
         if (pushedOraExpressions.nonEmpty) Some(pushedOraExpressions.head) else None,

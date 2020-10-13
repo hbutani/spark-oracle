@@ -84,7 +84,7 @@ trait OraScan {
   override def outputPartitioning(): Partitioning = partitioning
 
   override def createReaderFactory(): PartitionReaderFactory = {
-    OraPartitionReaderFactory(sparkSession.sessionState.conf)
+    OraPartitionReaderFactory(sparkSession, oraPlan.catalystOutput)
   }
 
   override def estimateStatistics(): Statistics = {

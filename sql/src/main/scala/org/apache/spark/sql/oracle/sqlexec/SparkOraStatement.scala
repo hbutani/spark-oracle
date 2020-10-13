@@ -22,6 +22,7 @@ import java.sql.PreparedStatement
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.oracle.{LoggingAndTimingSQL, OracleCatalogOptions}
+import org.apache.spark.util.DoubleAccumulator
 
 /**
  * Represent oracle jdbc statements issued from Spark Executors.
@@ -32,20 +33,55 @@ import org.apache.spark.sql.oracle.{LoggingAndTimingSQL, OracleCatalogOptions}
 trait SparkOraStatement extends Logging { self =>
   import SparkOraStatement._
 
-  val underlying: PreparedStatement
-  val sqlTemplate: String
-  val bindValues: Seq[Literal]
-  val catalogOptions: OracleCatalogOptions
+  def underlying: PreparedStatement
+  def sqlTemplate: String
+  def bindValues: Seq[Literal]
+  def catalogOptions: OracleCatalogOptions
+  def timeToExecute: DoubleAccumulator
 
   private[this] val statementExecute = new Do with LogSQLAndTiming with LogSQLFailure
 
-  def executeQuery(): java.sql.ResultSet = statementExecute(() => underlying.executeQuery())
+  def executeQuery(): java.sql.ResultSet =
+    statementExecute(() => {
+      val sTime = System.currentTimeMillis()
+      val rs = underlying.executeQuery()
+      val eTime = System.currentTimeMillis()
+      timeToExecute.add(eTime - sTime)
+      rs
+    })
 
   def executeUpdate(): Int = statementExecute(() => underlying.executeUpdate())
 
-  private[this] lazy val sqlString: String = ???
+  private[this] lazy val sqlString: String = {
+    try {
+      SQLTemplate.buildPrintableSQL(sqlTemplate, bindValues)
+    } catch {
+      case e: Exception =>
+        log.debug("Caught an exception when formatting SQL because of " + e.getMessage)
+        sqlTemplate
+    }
+  }
 
-  private[this] def stackTraceInformation: String = ???
+  private[this] def stackTraceInformation: String = {
+    val logBehavior = catalogOptions.logSQLBehavior
+
+    val stackTrace = Thread.currentThread.getStackTrace
+    val lines = ({
+      stackTrace.dropWhile { trace =>
+        val className = trace.getClassName
+        className != getClass.toString &&
+        (className.startsWith("java.lang.") || className.startsWith("scalikejdbc."))
+      }
+    }).take(logBehavior.stackTraceDepth).map { trace =>
+      "    " + trace.toString
+    }
+
+    s"""[Stack Trace]
+      |...
+      |$lines.mkString("\n")
+      |...
+      |""".stripMargin
+  }
 
   private trait LogSQLFailure extends Execute {
     abstract override def apply[A](fn: () => A): A =
