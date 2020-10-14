@@ -19,8 +19,8 @@ package org.apache.spark.sql.oracle
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
-
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
+import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
 import org.apache.spark.sql.types.StringType
 
 /**
@@ -66,8 +66,11 @@ class SQLSnippet private (val sql: String, val params: Seq[Literal]) {
   def limit(n: Int): SQLSnippet = osql"${this} limit ${n}"
   def offset(n: Int): SQLSnippet = osql"${this} offset ${n}"
 
+  def from(oraTbl: OraTable): SQLSnippet =
+    osql"${this}${nl}from ${literalSnippet(oraTbl.schema + "." + oraTbl.name)}"
+
   def where: SQLSnippet = osql"${this} where"
-  def where(where: SQLSnippet): SQLSnippet = osql"${this} where ${where}"
+  def where(where: SQLSnippet): SQLSnippet = osql"${this}${nl}where ${where}"
   def where(whereOpt: Option[SQLSnippet]): SQLSnippet = whereOpt.fold(this)(where(_))
 
   def and: SQLSnippet = osql"${this} and"
@@ -172,6 +175,7 @@ object SQLSnippet {
   import OraSQLImplicits._
 
   val empty: SQLSnippet = osql""
+  val nl: SQLSnippet = apply(System.lineSeparator(), Seq.empty)
   val comma: SQLSnippet = osql","
   val dot: SQLSnippet = osql"."
   val CASE: SQLSnippet = osql"CASE"
@@ -183,6 +187,7 @@ object SQLSnippet {
   val IN: SQLSnippet = osql"IN"
   val LPAREN: SQLSnippet = osql"("
   val RPAREN: SQLSnippet = osql")"
+  val AND: SQLSnippet = osql"and"
 
   def literalSnippet(s: String): SQLSnippet =
     SQLSnippet(s, Seq.empty)
@@ -262,6 +267,23 @@ object SQLSnippet {
   }
 
   def csv(parts: SQLSnippet*): SQLSnippet = join(parts, comma, false)
+
+  def select(projections: SQLSnippet*): SQLSnippet = osql"select ${csv(projections: _*)}"
+
+  def combine(op: SQLSnippet, snippets: Option[SQLSnippet]*): Option[SQLSnippet] = {
+    var isEmpty: Boolean = true
+    val res = snippets.foldLeft(empty) {
+      case (r, None) => r
+      case (r, Some(s)) =>
+        if (isEmpty) {
+          isEmpty = false
+          s
+        } else {
+          r + op + s
+        }
+    }
+    if (isEmpty) None else Some(res)
+  }
 
   /*
    * Shouldn't need this.

@@ -99,8 +99,10 @@ case class OraTableScan(
   val children: Seq[OraPlan] = Seq.empty
 
   override def orasql: SQLSnippet = {
-    // TODO
-    ???
+    val filOpt =
+      SQLSnippet.combine(SQLSnippet.AND, filter.map(_.orasql), partitionFilter.map(_.orasql))
+
+    SQLSnippet.select(projections.map(_.orasql): _*).from(oraTable).where(filOpt)
   }
 }
 

@@ -120,8 +120,8 @@ case class OraQueryStatement(oraPart: OraPartition, timeToExecute: DoubleAccumul
 
   lazy val conn = ConnectionManagement.getConnectionInExecutor(dsInfo)
 
-  lazy val sqlTemplate: String = sqlSnippet.sql
-  lazy val bindValues: Seq[Literal] = sqlSnippet.params
+  lazy val sqlTemplate: String = oraPartSQL
+  lazy val bindValues: Seq[Literal] = oraPartSQLParams
 
   lazy val underlying: PreparedStatement = {
     val ps =

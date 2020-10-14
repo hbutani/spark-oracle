@@ -111,16 +111,15 @@ object OraPlan {
 
   def buildOraPlan(
       table: OraTable,
-      requiredSchema: StructType,
+      requiredAttrs: Seq[Attribute],
       pushedFilters: Array[Filter]): OraPlan = {
 
     // TODO and oraExpressions
     val pushedOraExpressions: Array[OraExpression] =
       pushedFilters.flatMap(OraExpression.convert(_, table).toSeq)
 
-    val attrs = requiredSchema.toAttributes
-    val attrSet = AttributeSet(attrs)
-    val oraProjs = OraExpressions.unapplySeq(attrSet.toSeq)
+    val attrSet = AttributeSet(requiredAttrs)
+    val oraProjs = OraExpressions.unapplySeq(requiredAttrs)
 
     if (!oraProjs.isDefined) {
       InternalFailure(
@@ -132,7 +131,7 @@ object OraPlan {
       OraTableScan(
         table,
         None,
-        attrs,
+        requiredAttrs,
         attrSet,
         oraProjs.get,
         if (pushedOraExpressions.nonEmpty) Some(pushedOraExpressions.head) else None,

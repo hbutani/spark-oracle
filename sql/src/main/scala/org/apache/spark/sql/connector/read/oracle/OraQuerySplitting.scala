@@ -41,7 +41,7 @@ object OraQuerySplitting {
       dsKey: DataSourceKey,
       oraPlan: OraPlan): (Array[OracleDBSplit], Partitioning) = {
     // TODO
-    (Array.empty, OraUnknownDistribution(0))
+    (Array(null.asInstanceOf[OracleDBSplit]), OraUnknownDistribution(0))
   }
 
   /**

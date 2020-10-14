@@ -63,6 +63,8 @@ object OracleTestConf {
       "org.apache.spark.sql.connector.catalog.oracle.OracleCatalog")
     .set("spark.sql.catalog.oracle.use_metadata_cache", "true")
     .set("spark.sql.catalog.oracle.metadata_cache_loc", "sql/src/test/resources/metadata_cache")
+    .set("spark.sql.catalog.oracle.log_and_time_sql.enabled", "true")
+    .set("spark.sql.catalog.oracle.log_and_time_sql.log_level", "info")
 
   lazy val localConf: SparkConf = {
 

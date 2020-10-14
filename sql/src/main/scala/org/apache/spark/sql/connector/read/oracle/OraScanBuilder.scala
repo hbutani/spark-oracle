@@ -56,7 +56,10 @@ case class OraScanBuilder(
     val readSchema = readDataSchema()
     val partitionSchema = readPartitionSchema()
 
-    val oraPlan = OraPlan.buildOraPlan(table, requiredSchema, pushedFilters())
+    val oraPlan = OraPlan.buildOraPlan(
+      table,
+      readSchema.toAttributes ++ partitionSchema.toAttributes,
+      pushedFilters())
 
     OraFileScan(
       sparkSession,

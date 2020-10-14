@@ -41,7 +41,10 @@ abstract class AbstractTest
 
     new SparkSessionExtensions()(TestOracleHive.sparkSession.extensions)
 
-    TestOracleHive.sparkContext.setLogLevel("ERROR")
+    /*
+     * Try to configure using log4j.properties first.
+     */
+    // TestOracleHive.sparkContext.setLogLevel("ERROR")
     TestOracleHive.setConf("spark.sql.files.openCostInBytes", (128 * 1024 * 1024).toString)
     TestOracleHive.setConf("spark.sql.files.maxPartitionBytes", (16 * 1024 * 1024).toString)
 

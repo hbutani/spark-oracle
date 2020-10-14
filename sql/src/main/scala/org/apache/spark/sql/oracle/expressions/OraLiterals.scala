@@ -16,6 +16,8 @@
  */
 
 package org.apache.spark.sql.oracle.expressions
+
+import java.math.BigDecimal
 import java.sql._
 
 import org.apache.spark.sql.catalyst.InternalRow
@@ -110,7 +112,7 @@ object OraLiterals {
         case _ => fn(s)
       }
 
-      s"'${r}''"
+      s"'${r}'"
     }
 
     /**
@@ -143,15 +145,8 @@ object OraLiterals {
 
     protected def readResultSet(rs: ResultSet, pos: Int): T
     protected def setIRow(oRow: InternalRow, pos: Int, v: T): Unit
-
-    protected def readLiteral(l: Literal): T = {
-      val lV = l.value
-      if (lV != null) {
-        lV.asInstanceOf[T]
-      }
-      null.asInstanceOf[T]
-    }
     protected def readIRow(iRow: InternalRow, pos: Int): T
+    protected def readLiteral(lit: Literal): T
     protected def setPrepStat(ps: PreparedStatement, pos: Int, v: T): Unit
 
     /**
@@ -176,19 +171,19 @@ object OraLiterals {
      * @param pos
      */
     final def setValue(row: InternalRow, ps: PreparedStatement, pos: Int): Unit = {
-      val v: T = readIRow(row, pos)
-      if (v == null) {
+      if (row.isNullAt(pos)) {
         ps.setNull(pos + 1, sqlType)
       } else {
+        val v: T = readIRow(row, pos)
         setPrepStat(ps, pos + 1, v)
       }
     }
 
     final def setValue(lit: Literal, ps: PreparedStatement, pos: Int): Unit = {
-      val v: T = readLiteral(lit)
-      if (v == null) {
+      if (lit.value == null) {
         ps.setNull(pos + 1, sqlType)
       } else {
+        val v: T = readLiteral(lit)
         setPrepStat(ps, pos + 1, v)
       }
     }
@@ -197,127 +192,147 @@ object OraLiterals {
   private object StringGetSet extends JDBCGetSet[String] {
     override val sqlType: Int = Types.VARCHAR
 
-    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getString(pos + 1)
+    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getString(pos)
     @inline protected def setIRow(iRow: InternalRow, pos: Int, v: String) =
       iRow.update(pos, UTF8String.fromString(v))
 
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getString(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: String) =
-      ps.setString(pos + 1, v)
+      ps.setString(pos, v)
+
+    @inline override protected def readLiteral(lit: Literal): String =
+      lit.value.asInstanceOf[UTF8String].toString
   }
 
   private object ByteGetSet extends JDBCGetSet[Byte] {
     override val sqlType: Int = Types.TINYINT
 
-    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getByte(pos + 1)
+    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getByte(pos)
     @inline protected def setIRow(iRow: InternalRow, pos: Int, v: Byte) =
       iRow.setByte(pos, v)
 
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getByte(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Byte) =
-      ps.setByte(pos + 1, v)
+      ps.setByte(pos, v)
+    @inline override protected def readLiteral(lit: Literal): Byte =
+      lit.value.asInstanceOf[Byte]
   }
 
   private object ShortGetSet extends JDBCGetSet[Short] {
     override val sqlType: Int = Types.SMALLINT
 
-    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getShort(pos + 1)
+    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getShort(pos)
     @inline protected def setIRow(iRow: InternalRow, pos: Int, v: Short) =
       iRow.setShort(pos, v)
 
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getShort(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Short) =
-      ps.setShort(pos + 1, v)
+      ps.setShort(pos, v)
+    @inline override protected def readLiteral(lit: Literal): Short =
+      lit.value.asInstanceOf[Short]
   }
 
   private object IntGetSet extends JDBCGetSet[Int] {
     override val sqlType: Int = Types.INTEGER
 
-    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getInt(pos + 1)
+    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getInt(pos)
     @inline protected def setIRow(iRow: InternalRow, pos: Int, v: Int) =
       iRow.setInt(pos, v)
 
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getInt(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Int) =
-      ps.setInt(pos + 1, v)
+      ps.setInt(pos, v)
+    @inline override protected def readLiteral(lit: Literal): Int =
+      lit.value.asInstanceOf[Int]
   }
 
   private object LongGetSet extends JDBCGetSet[Long] {
     override val sqlType: Int = Types.BIGINT
 
-    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getLong(pos + 1)
+    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getLong(pos)
     @inline protected def setIRow(iRow: InternalRow, pos: Int, v: Long) =
       iRow.setLong(pos, v)
 
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getLong(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Long) =
-      ps.setLong(pos + 1, v)
+      ps.setLong(pos, v)
+    @inline override protected def readLiteral(lit: Literal): Long =
+      lit.value.asInstanceOf[Long]
   }
 
-  private class DecimalGetSet(val dt: DecimalType) extends JDBCGetSet[Decimal] {
+  private class DecimalGetSet(val dt: DecimalType) extends JDBCGetSet[BigDecimal] {
     override val sqlType: Int = Types.NUMERIC
 
-    @inline protected def readResultSet(rs: ResultSet, pos: Int) =
-      Decimal(rs.getBigDecimal(pos + 1), dt.precision, dt.scale)
+    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getBigDecimal(pos)
 
-    @inline protected def setIRow(iRow: InternalRow, pos: Int, v: Decimal) =
-      iRow.update(pos, v)
+    @inline protected def setIRow(iRow: InternalRow, pos: Int, v: BigDecimal) =
+      iRow.update(pos, Decimal(v, dt.precision, dt.scale))
 
     @inline protected def readIRow(iRow: InternalRow, pos: Int) =
-      iRow.getDecimal(pos, dt.precision, dt.scale)
+      iRow.getDecimal(pos, dt.precision, dt.scale).toJavaBigDecimal
 
-    @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Decimal) =
-      ps.setBigDecimal(pos + 1, v.toJavaBigDecimal)
+    @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: BigDecimal) =
+      ps.setBigDecimal(pos, v)
+    @inline override protected def readLiteral(lit: Literal): BigDecimal =
+      lit.value.asInstanceOf[Decimal].toJavaBigDecimal
   }
 
   private object FloatGetSet extends JDBCGetSet[Float] {
     override val sqlType: Int = Types.FLOAT
 
-    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getFloat(pos + 1)
+    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getFloat(pos)
     @inline protected def setIRow(iRow: InternalRow, pos: Int, v: Float) =
       iRow.setFloat(pos, v)
 
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getFloat(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Float) =
-      ps.setFloat(pos + 1, v)
+      ps.setFloat(pos, v)
+    @inline override protected def readLiteral(lit: Literal): Float =
+      lit.value.asInstanceOf[Float]
   }
 
   private object DoubleGetSet extends JDBCGetSet[Double] {
     override val sqlType: Int = Types.DOUBLE
 
-    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getDouble(pos + 1)
+    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getDouble(pos)
     @inline protected def setIRow(iRow: InternalRow, pos: Int, v: Double) =
       iRow.setDouble(pos, v)
 
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getDouble(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Double) =
-      ps.setDouble(pos + 1, v)
+      ps.setDouble(pos, v)
+    @inline override protected def readLiteral(lit: Literal): Double =
+      lit.value.asInstanceOf[Double]
   }
 
   private object DateGetSet extends JDBCGetSet[Date] {
     override val sqlType: Int = Types.DATE
 
-    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getDate(pos + 1)
+    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getDate(pos)
     @inline protected def setIRow(iRow: InternalRow, pos: Int, v: Date) =
       iRow.setInt(pos, DateTimeUtils.fromJavaDate(v))
 
     @inline protected def readIRow(iRow: InternalRow, pos: Int) =
       DateTimeUtils.toJavaDate(iRow.getInt(pos))
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Date) =
-      ps.setDate(pos + 1, v)
+      ps.setDate(pos, v)
+    @inline override protected def readLiteral(lit: Literal): Date =
+      DateTimeUtils.toJavaDate(lit.value.asInstanceOf[Int])
   }
 
   private object TimestampGetSet extends JDBCGetSet[Timestamp] {
     override val sqlType: Int = Types.TIMESTAMP
 
-    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getTimestamp(pos + 1)
+    @inline protected def readResultSet(rs: ResultSet, pos: Int) = rs.getTimestamp(pos)
     @inline protected def setIRow(iRow: InternalRow, pos: Int, v: Timestamp) =
       iRow.setLong(pos, DateTimeUtils.fromJavaTimestamp(v))
 
     @inline protected def readIRow(iRow: InternalRow, pos: Int) =
       DateTimeUtils.toJavaTimestamp(iRow.getLong(pos))
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Timestamp) =
-      ps.setTimestamp(pos + 1, v)
+      ps.setTimestamp(pos, v)
+    @inline override protected def readLiteral(lit: Literal): Timestamp =
+      DateTimeUtils.toJavaTimestamp(lit.value.asInstanceOf[Long])
   }
 
   def jdbcGetSet(dt: DataType): JDBCGetSet[_] = dt match {

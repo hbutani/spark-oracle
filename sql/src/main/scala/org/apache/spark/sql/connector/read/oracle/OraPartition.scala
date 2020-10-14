@@ -22,20 +22,21 @@ import oracle.spark.{ConnectionManagement, DataSourceInfo, DataSourceKey}
 import org.apache.spark.Partition
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.expressions.{Attribute, Literal}
 import org.apache.spark.sql.connector.read.{
   InputPartition,
   PartitionReader,
   PartitionReaderFactory
 }
-import org.apache.spark.sql.oracle.SQLSnippet
+import org.apache.spark.sql.connector.read.oracle.OraPartition.OraQueryAccumulators
 import org.apache.spark.sql.oracle.operators.OraPlan
 import org.apache.spark.util.{DoubleAccumulator, LongAccumulator}
 
 case class OraPartition(
     index: Int,
     dsInfo: DataSourceInfo,
-    sqlSnippet: SQLSnippet,
+    oraPartSQL: String,
+    oraPartSQLParams: Seq[Literal],
     override val preferredLocations: Array[String])
     extends Partition
     with InputPartition
@@ -48,7 +49,7 @@ object OraPartition {
       oraPlan: OraPlan,
       preferredLocations: Array[String]): OraPartition = {
     val dsInfo = ConnectionManagement.info(dsKey)
-    new OraPartition(index, dsInfo, oraPlan.orasql, preferredLocations)
+    new OraPartition(index, dsInfo, oraPlan.orasql.sql, oraPlan.orasql.params, preferredLocations)
   }
 
   case class OraQueryAccumulators(rowsRead: LongAccumulator, timeToFirstRow: DoubleAccumulator)
@@ -64,10 +65,10 @@ object OraPartition {
 
 }
 
-case class OraPartitionReaderFactory(sparkSession: SparkSession, catalystOutput: Seq[Attribute])
+case class OraPartitionReaderFactory(
+    catalystOutput: Seq[Attribute],
+    accumulators: OraQueryAccumulators)
     extends PartitionReaderFactory {
-
-  private lazy val accumulators = OraPartition.createAccumulators(sparkSession)
 
   override def createReader(partition: InputPartition): PartitionReader[InternalRow] = {
     assert(partition.isInstanceOf[OraPartition])
