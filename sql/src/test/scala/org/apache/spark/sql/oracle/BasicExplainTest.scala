@@ -38,7 +38,7 @@ class BasicExplainTest extends AbstractTest with PlanTestHelpers {
     showOraScans(qry, System.out)
   }
 
-  private def runQry(qry: String, planScans: Map[String, ScanDetails]): Unit = {
+  def runQry(qry: String, planScans: Map[String, ScanDetails]): Unit = {
     if (planScans.isEmpty) {
       dumpScanDetails(qry)
     } else {
@@ -51,13 +51,13 @@ class BasicExplainTest extends AbstractTest with PlanTestHelpers {
       """
         |select SS_SOLD_DATE_SK, SS_SOLD_TIME_SK, SS_ITEM_SK
         |from store_sales""".stripMargin,
-      Map(
-        "TPCDS.STORE_SALES" -> ScanDetails(
-          List("SS_SOLD_TIME_SK", "SS_ITEM_SK", "SS_SOLD_DATE_SK"),
-          None,
-          List(),
-          None,
-          List())))
+      Map(("TPCDS.STORE_SALES" -> ScanDetails(
+        List("SS_SOLD_TIME_SK", "SS_ITEM_SK", "SS_SOLD_DATE_SK"),
+        None,
+        List(),
+        None,
+        List()
+      ))))
   }
 
   test("partFilter") { td =>
@@ -67,13 +67,13 @@ class BasicExplainTest extends AbstractTest with PlanTestHelpers {
         |from store_sales
         |where SS_SOLD_DATE_SK > 2451058
         |""".stripMargin,
-      Map(
-        "TPCDS.STORE_SALES" -> ScanDetails(
-          List("SS_SOLD_TIME_SK", "SS_ITEM_SK", "SS_SOLD_DATE_SK"),
-          None,
-          List(),
-          Some("(SS_SOLD_DATE_SK IS NOT NULL AND (SS_SOLD_DATE_SK > ?))"),
-          List(Literal(Decimal(2451058.000000000000000000, 38, 18))))))
+      Map(("TPCDS.STORE_SALES" -> ScanDetails(
+        List("SS_SOLD_TIME_SK", "SS_ITEM_SK", "SS_SOLD_DATE_SK"),
+        None,
+        List(),
+        Some("(SS_SOLD_DATE_SK IS NOT NULL AND (SS_SOLD_DATE_SK > ?))"),
+        List(Literal(Decimal(2451058.000000000000000000, 38, 18)))
+      ))))
   }
 
   test("dataFilter") { td =>
@@ -83,13 +83,13 @@ class BasicExplainTest extends AbstractTest with PlanTestHelpers {
         |from store_sales
         |where SS_LIST_PRICE > 0
         |""".stripMargin,
-      Map(
-        "TPCDS.STORE_SALES" -> ScanDetails(
-          List("SS_SOLD_TIME_SK", "SS_ITEM_SK", "SS_LIST_PRICE", "SS_SOLD_DATE_SK"),
-          Some("(SS_LIST_PRICE IS NOT NULL AND (SS_LIST_PRICE > ?))"),
-          List(Literal(Decimal(0E-18, 38, 18))),
-          None,
-          List())))
+      Map(("TPCDS.STORE_SALES" -> ScanDetails(
+        List("SS_SOLD_TIME_SK", "SS_ITEM_SK", "SS_LIST_PRICE", "SS_SOLD_DATE_SK"),
+        Some("(SS_LIST_PRICE IS NOT NULL AND (SS_LIST_PRICE > ?))"),
+        List(Literal(Decimal(0E-18, 38, 18))),
+        None,
+        List()
+      ))))
   }
 
   test("partAndDataFilter") { td =>
@@ -99,18 +99,13 @@ class BasicExplainTest extends AbstractTest with PlanTestHelpers {
               |from store_sales
               |where SS_LIST_PRICE > 0 and  SS_QUANTITY > 0 and SS_SOLD_DATE_SK > 2451058
               |""".stripMargin,
-      Map(
-        "TPCDS.STORE_SALES" -> ScanDetails(
-          List(
-            "SS_SOLD_TIME_SK",
-            "SS_ITEM_SK",
-            "SS_QUANTITY",
-            "SS_LIST_PRICE",
-            "SS_SOLD_DATE_SK"),
-          Some("(((SS_LIST_PRICE IS NOT NULL AND SS_QUANTITY IS NOT NULL) AND (SS_LIST_PRICE > ?)) AND (SS_QUANTITY > ?))"),
-          List(Literal(Decimal(0E-18, 38, 18)), Literal(Decimal(0E-18, 38, 18))),
-          Some("(SS_SOLD_DATE_SK IS NOT NULL AND (SS_SOLD_DATE_SK > ?))"),
-          List(Literal(Decimal(2451058.000000000000000000, 38, 18))))))
+      Map(("TPCDS.STORE_SALES" -> ScanDetails(
+        List("SS_SOLD_TIME_SK", "SS_ITEM_SK", "SS_QUANTITY", "SS_LIST_PRICE", "SS_SOLD_DATE_SK"),
+        Some("(((SS_LIST_PRICE IS NOT NULL AND SS_QUANTITY IS NOT NULL) AND (SS_LIST_PRICE > ?)) AND (SS_QUANTITY > ?))"),
+        List(Literal(Decimal(0E-18, 38, 18)), Literal(Decimal(0E-18, 38, 18))),
+        Some("(SS_SOLD_DATE_SK IS NOT NULL AND (SS_SOLD_DATE_SK > ?))"),
+        List(Literal(Decimal(2451058.000000000000000000, 38, 18)))
+      ))))
   }
 
   test("join") { td =>
@@ -122,26 +117,19 @@ class BasicExplainTest extends AbstractTest with PlanTestHelpers {
                |      and SS_CUSTOMER_SK = C_CUSTOMER_SK
                |      and C_BIRTH_YEAR > 2000
                |""".stripMargin,
-      Map(
-        "TPCDS.STORE_SALES" -> ScanDetails(
-          List(
-            "SS_SOLD_TIME_SK",
-            "SS_ITEM_SK",
-            "SS_CUSTOMER_SK",
-            "SS_QUANTITY",
-            "SS_LIST_PRICE",
-            "SS_SOLD_DATE_SK"),
-          Some(
-            "((((SS_LIST_PRICE IS NOT NULL AND SS_QUANTITY IS NOT NULL) AND (SS_LIST_PRICE > ?)) AND (SS_QUANTITY > ?)) AND SS_CUSTOMER_SK IS NOT NULL)"),
-          List(Literal(Decimal(0E-18, 38, 18)), Literal(Decimal(0E-18, 38, 18))),
-          Some("(SS_SOLD_DATE_SK IS NOT NULL AND (SS_SOLD_DATE_SK > ?))"),
-          List(Literal(Decimal(2451058.000000000000000000, 38, 18)))),
-        "TPCDS.CUSTOMER" -> ScanDetails(
-          List("C_CUSTOMER_SK", "C_FIRST_NAME", "C_BIRTH_YEAR"),
-          Some("(C_BIRTH_YEAR IS NOT NULL AND (C_BIRTH_YEAR > ?))"),
-          List(Literal(Decimal(2000.000000000000000000, 38, 18))),
-          None,
-          List())))
+      Map(("TPCDS.STORE_SALES" -> ScanDetails(
+        List("SS_SOLD_TIME_SK", "SS_ITEM_SK", "SS_CUSTOMER_SK", "SS_QUANTITY", "SS_LIST_PRICE", "SS_SOLD_DATE_SK"),
+        Some("((((SS_LIST_PRICE IS NOT NULL AND SS_QUANTITY IS NOT NULL) AND (SS_LIST_PRICE > ?)) AND (SS_QUANTITY > ?)) AND SS_CUSTOMER_SK IS NOT NULL)"),
+        List(Literal(Decimal(0E-18, 38, 18)), Literal(Decimal(0E-18, 38, 18))),
+        Some("(SS_SOLD_DATE_SK IS NOT NULL AND (SS_SOLD_DATE_SK > ?))"),
+        List(Literal(Decimal(2451058.000000000000000000, 38, 18)))
+      )),("TPCDS.CUSTOMER" -> ScanDetails(
+        List("C_CUSTOMER_SK", "C_FIRST_NAME", "C_BIRTH_YEAR"),
+        Some("(C_BIRTH_YEAR IS NOT NULL AND (C_BIRTH_YEAR > ?))"),
+        List(Literal(Decimal(2000.000000000000000000, 38, 18))),
+        None,
+        List()
+      ))))
   }
 
 }

@@ -57,12 +57,17 @@ case class OraTableScanValidator(plan: LogicalPlan) {
     }
 
   def dumpTableScans(out: PrintStream): Unit = {
-
+    // scalastyle:off println
+    var addComma : Boolean = false
     for ((tbl, scanD) <- scanDetails) {
-      // scalastyle:off println
-      out.println(s"""("${tbl}" -> ${scanD.code}),""")
-      // scalastyle:on println
+      if (addComma) {
+        out.println(",")
+      }
+      out.print(s"""("${tbl}" -> ${scanD.code})""")
+      addComma = true
     }
+    out.println("")
+    // scalastyle:on println
   }
 
   def validateScans(reqdScans: Map[String, ScanDetails]): Unit = {
