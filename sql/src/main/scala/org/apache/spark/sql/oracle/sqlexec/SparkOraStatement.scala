@@ -17,7 +17,9 @@
 
 package org.apache.spark.sql.oracle.sqlexec
 
-import java.sql.PreparedStatement
+import java.sql.{PreparedStatement, ResultSet}
+
+import oracle.spark.DataSourceInfo
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.Literal
@@ -33,6 +35,7 @@ import org.apache.spark.util.DoubleAccumulator
 trait SparkOraStatement extends Logging { self =>
   import SparkOraStatement._
 
+  def datasourceInfo : DataSourceInfo
   def underlying: PreparedStatement
   def sqlTemplate: String
   def bindValues: Seq[Literal]
@@ -41,13 +44,27 @@ trait SparkOraStatement extends Logging { self =>
 
   private[this] val statementExecute = new Do with LogSQLAndTiming with LogSQLFailure
 
+  private def performQuery : ResultSet = {
+    val sTime = System.currentTimeMillis()
+    val rs = underlying.executeQuery()
+    val eTime = System.currentTimeMillis()
+    timeToExecute.add(eTime - sTime)
+    rs
+  }
+
   def executeQuery(): java.sql.ResultSet =
     statementExecute(() => {
-      val sTime = System.currentTimeMillis()
-      val rs = underlying.executeQuery()
-      val eTime = System.currentTimeMillis()
-      timeToExecute.add(eTime - sTime)
-      rs
+      if (!datasourceInfo.catalogOptions.use_resultset_cache) {
+        performQuery
+      } else {
+        val rsCacheIns = ResultSetCache.Instance(sqlString, datasourceInfo)
+        if (rsCacheIns.exists ) {
+          rsCacheIns.loadCachedResultSet
+        } else {
+          rsCacheIns.saveResultSet(performQuery)
+          rsCacheIns.loadCachedResultSet
+        }
+      }
     })
 
   def executeUpdate(): Int = statementExecute(() => underlying.executeUpdate())

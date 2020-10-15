@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<webRowSet xmlns="http://java.sun.com/xml/ns/jdbc"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://java.sun.com/xml/ns/jdbc http://java.sun.com/xml/ns/jdbc/webrowset.xsd">
+  <properties>
+    <command></command>
+    <concurrency>1007</concurrency>
+    <datasource></datasource>
+    <escape-processing>true</escape-processing>
+    <fetch-direction>1002</fetch-direction>
+    <fetch-size>10</fetch-size>
+    <isolation-level>2</isolation-level>
+    <key-columns>
+    </key-columns>
+    <map>
+    </map>
+    <max-field-size>0</max-field-size>
+    <max-rows>0</max-rows>
+    <query-timeout>0</query-timeout>
+    <read-only>false</read-only>
+    <rowset-type>1005</rowset-type>
+    <show-deleted>false</show-deleted>
+    <table-name></table-name>
+    <url>jdbc:oracle:thin:@mammoth_medium</url>
+    <sync-provider>
+      <sync-provider-name>com.sun.rowset.providers.RIOptimisticProvider</sync-provider-name>
+      <sync-provider-vendor>Oracle Corporation</sync-provider-vendor>
+      <sync-provider-version>1.0</sync-provider-version>
+      <sync-provider-grade>2</sync-provider-grade>
+      <data-source-lock>1</data-source-lock>
+    </sync-provider>
+  </properties>
+  <metadata>
+    <column-count>6</column-count>
+    <column-definition>
+      <column-index>1</column-index>
+      <auto-increment>false</auto-increment>
+      <case-sensitive>false</case-sensitive>
+      <currency>true</currency>
+      <nullable>0</nullable>
+      <signed>true</signed>
+      <searchable>true</searchable>
+      <column-display-size>39</column-display-size>
+      <column-label>SM_SHIP_MODE_SK</column-label>
+      <column-name>SM_SHIP_MODE_SK</column-name>
+      <schema-name></schema-name>
+      <column-precision>0</column-precision>
+      <column-scale>-127</column-scale>
+      <table-name></table-name>
+      <catalog-name></catalog-name>
+      <column-type>2</column-type>
+      <column-type-name>NUMBER</column-type-name>
+    </column-definition>
+    <column-definition>
+      <column-index>2</column-index>
+      <auto-increment>false</auto-increment>
+      <case-sensitive>true</case-sensitive>
+      <currency>false</currency>
+      <nullable>0</nullable>
+      <signed>true</signed>
+      <searchable>true</searchable>
+      <column-display-size>16</column-display-size>
+      <column-label>SM_SHIP_MODE_ID</column-label>
+      <column-name>SM_SHIP_MODE_ID</column-name>
+      <schema-name></schema-name>
+      <column-precision>0</column-precision>
+      <column-scale>0</column-scale>
+      <table-name></table-name>
+      <catalog-name></catalog-name>
+      <column-type>1</column-type>
+      <column-type-name>CHAR</column-type-name>
+    </column-definition>
+    <column-definition>
+      <column-index>3</column-index>
+      <auto-increment>false</auto-increment>
+      <case-sensitive>true</case-sensitive>
+      <currency>false</currency>
+      <nullable>1</nullable>
+      <signed>true</signed>
+      <searchable>true</searchable>
+      <column-display-size>30</column-display-size>
+      <column-label>SM_TYPE</column-label>
+      <column-name>SM_TYPE</column-name>
+      <schema-name></schema-name>
+      <column-precision>0</column-precision>
+      <column-scale>0</column-scale>
+      <table-name></table-name>
+      <catalog-name></catalog-name>
+      <column-type>1</column-type>
+      <column-type-name>CHAR</column-type-name>
+    </column-definition>
+    <column-definition>
+      <column-index>4</column-index>
+      <auto-increment>false</auto-increment>
+      <case-sensitive>true</case-sensitive>
+      <currency>false</currency>
+      <nullable>1</nullable>
+      <signed>true</signed>
+      <searchable>true</searchable>
+      <column-display-size>10</column-display-size>
+      <column-label>SM_CODE</column-label>
+      <column-name>SM_CODE</column-name>
+      <schema-name></schema-name>
+      <column-precision>0</column-precision>
+      <column-scale>0</column-scale>
+      <table-name></table-name>
+      <catalog-name></catalog-name>
+      <column-type>1</column-type>
+      <column-type-name>CHAR</column-type-name>
+    </column-definition>
+    <column-definition>
+      <column-index>5</column-index>
+      <auto-increment>false</auto-increment>
+      <case-sensitive>true</case-sensitive>
+      <currency>false</currency>
+      <nullable>1</nullable>
+      <signed>true</signed>
+      <searchable>true</searchable>
+      <column-display-size>20</column-display-size>
+      <column-label>SM_CARRIER</column-label>
+      <column-name>SM_CARRIER</column-name>
+      <schema-name></schema-name>
+      <column-precision>0</column-precision>
+      <column-scale>0</column-scale>
+      <table-name></table-name>
+      <catalog-name></catalog-name>
+      <column-type>1</column-type>
+      <column-type-name>CHAR</column-type-name>
+    </column-definition>
+    <column-definition>
+      <column-index>6</column-index>
+      <auto-increment>false</auto-increment>
+      <case-sensitive>true</case-sensitive>
+      <currency>false</currency>
+      <nullable>1</nullable>
+      <signed>true</signed>
+      <searchable>true</searchable>
+      <column-display-size>20</column-display-size>
+      <column-label>SM_CONTRACT</column-label>
+      <column-name>SM_CONTRACT</column-name>
+      <schema-name></schema-name>
+      <column-precision>0</column-precision>
+      <column-scale>0</column-scale>
+      <table-name></table-name>
+      <catalog-name></catalog-name>
+      <column-type>1</column-type>
+      <column-type-name>CHAR</column-type-name>
+    </column-definition>
+  </metadata>
+  <data>
+    <currentRow>
+      <columnValue>1</columnValue>
+      <columnValue>AAAAAAAABAAAAAAA</columnValue>
+      <columnValue>EXPRESS                       </columnValue>
+      <columnValue>AIR       </columnValue>
+      <columnValue>UPS                 </columnValue>
+      <columnValue>YvxVaJI10           </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>2</columnValue>
+      <columnValue>AAAAAAAACAAAAAAA</columnValue>
+      <columnValue>NEXT DAY                      </columnValue>
+      <columnValue>AIR       </columnValue>
+      <columnValue>FEDEX               </columnValue>
+      <columnValue>ldhM8IvpzHgdbBgDfI  </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>3</columnValue>
+      <columnValue>AAAAAAAADAAAAAAA</columnValue>
+      <columnValue>OVERNIGHT                     </columnValue>
+      <columnValue>AIR       </columnValue>
+      <columnValue>AIRBORNE            </columnValue>
+      <columnValue>6Hzzp4JkzjqD8MGXLCDa</columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>4</columnValue>
+      <columnValue>AAAAAAAAEAAAAAAA</columnValue>
+      <columnValue>TWO DAY                       </columnValue>
+      <columnValue>AIR       </columnValue>
+      <columnValue>USPS                </columnValue>
+      <columnValue>UaAJjKDnL4gTOqbpj   </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>5</columnValue>
+      <columnValue>AAAAAAAAFAAAAAAA</columnValue>
+      <columnValue>LIBRARY                       </columnValue>
+      <columnValue>AIR       </columnValue>
+      <columnValue>DHL                 </columnValue>
+      <columnValue>HVDFCcQ             </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>6</columnValue>
+      <columnValue>AAAAAAAAGAAAAAAA</columnValue>
+      <columnValue>REGULAR                       </columnValue>
+      <columnValue>SURFACE   </columnValue>
+      <columnValue>TBS                 </columnValue>
+      <columnValue>Ek                  </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>7</columnValue>
+      <columnValue>AAAAAAAAHAAAAAAA</columnValue>
+      <columnValue>EXPRESS                       </columnValue>
+      <columnValue>SURFACE   </columnValue>
+      <columnValue>ZHOU                </columnValue>
+      <columnValue>hGoF18SLDDPBj       </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>8</columnValue>
+      <columnValue>AAAAAAAAIAAAAAAA</columnValue>
+      <columnValue>NEXT DAY                      </columnValue>
+      <columnValue>SURFACE   </columnValue>
+      <columnValue>ZOUROS              </columnValue>
+      <columnValue>yVfotg7Tio3MVhBg6Bkn</columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>9</columnValue>
+      <columnValue>AAAAAAAAJAAAAAAA</columnValue>
+      <columnValue>OVERNIGHT                     </columnValue>
+      <columnValue>SURFACE   </columnValue>
+      <columnValue>MSC                 </columnValue>
+      <columnValue>Xjy3ZPuiDjzHlRx14Z3 </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>10</columnValue>
+      <columnValue>AAAAAAAAKAAAAAAA</columnValue>
+      <columnValue>TWO DAY                       </columnValue>
+      <columnValue>SURFACE   </columnValue>
+      <columnValue>LATVIAN             </columnValue>
+      <columnValue>P7FBIt8yd           </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>11</columnValue>
+      <columnValue>AAAAAAAALAAAAAAA</columnValue>
+      <columnValue>LIBRARY                       </columnValue>
+      <columnValue>SURFACE   </columnValue>
+      <columnValue>ALLIANCE            </columnValue>
+      <columnValue>OrDuVy2H            </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>12</columnValue>
+      <columnValue>AAAAAAAAMAAAAAAA</columnValue>
+      <columnValue>REGULAR                       </columnValue>
+      <columnValue>SEA       </columnValue>
+      <columnValue>ORIENTAL            </columnValue>
+      <columnValue>GNJr3g5i7oorKqtX    </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>13</columnValue>
+      <columnValue>AAAAAAAANAAAAAAA</columnValue>
+      <columnValue>EXPRESS                       </columnValue>
+      <columnValue>SEA       </columnValue>
+      <columnValue>BARIAN              </columnValue>
+      <columnValue>qENFQ               </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>14</columnValue>
+      <columnValue>AAAAAAAAOAAAAAAA</columnValue>
+      <columnValue>NEXT DAY                      </columnValue>
+      <columnValue>SEA       </columnValue>
+      <columnValue>BOXBUNDLES          </columnValue>
+      <columnValue>A5BYO1qH8HGTTN      </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>15</columnValue>
+      <columnValue>AAAAAAAAPAAAAAAA</columnValue>
+      <columnValue>OVERNIGHT                     </columnValue>
+      <columnValue>SEA       </columnValue>
+      <columnValue>GREAT EASTERN       </columnValue>
+      <columnValue>uukTktPYycct8       </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>16</columnValue>
+      <columnValue>AAAAAAAAABAAAAAA</columnValue>
+      <columnValue>TWO DAY                       </columnValue>
+      <columnValue>SEA       </columnValue>
+      <columnValue>DIAMOND             </columnValue>
+      <columnValue>2mM8l               </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>17</columnValue>
+      <columnValue>AAAAAAAABBAAAAAA</columnValue>
+      <columnValue>LIBRARY                       </columnValue>
+      <columnValue>SEA       </columnValue>
+      <columnValue>RUPEKSA             </columnValue>
+      <columnValue>5FKNB0j8aaqTB       </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>18</columnValue>
+      <columnValue>AAAAAAAACBAAAAAA</columnValue>
+      <columnValue>REGULAR                       </columnValue>
+      <columnValue>BIKE      </columnValue>
+      <columnValue>GERMA               </columnValue>
+      <columnValue>I3uCelXtjP          </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>19</columnValue>
+      <columnValue>AAAAAAAADBAAAAAA</columnValue>
+      <columnValue>EXPRESS                       </columnValue>
+      <columnValue>BIKE      </columnValue>
+      <columnValue>HARMSTORF           </columnValue>
+      <columnValue>fop0bcSd91J26IVpR   </columnValue>
+    </currentRow>
+    <currentRow>
+      <columnValue>20</columnValue>
+      <columnValue>AAAAAAAAEBAAAAAA</columnValue>
+      <columnValue>NEXT DAY                      </columnValue>
+      <columnValue>BIKE      </columnValue>
+      <columnValue>PRIVATECARRIER      </columnValue>
+      <columnValue>O9V6oF8RJnLMmZYd1   </columnValue>
+    </currentRow>
+  </data>
+</webRowSet>

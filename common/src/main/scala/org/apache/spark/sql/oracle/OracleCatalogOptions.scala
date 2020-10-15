@@ -24,15 +24,33 @@ import scala.util.Try
 
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 
+/**
+ *
+ * @param maxPartitions
+ * @param partitionerType
+ * @param fetchSize
+ * @param isChunkSplitter
+ * @param chunkSQL
+ * @param metadata_cache_only should [[OracleMetadataManager]] only serve requests
+ *                            from contents of the cache
+ * @param metadataCacheLoc location of Metadata cache; if not specifed a temporary folder is used.
+ * @param oci_credential_name
+ * @param use_resultset_cache  should [[OraQueryStatement]] try to use a [[ResultSetCache]]
+ * @param resultSetCacheLoc location of ResultSet cache; if not specified a temporary folder
+ *                          is used.
+ * @param logSQLBehavior
+ */
 case class OracleCatalogOptions(
     maxPartitions: Int,
     partitionerType: String,
     fetchSize: Int,
     isChunkSplitter: Boolean,
     chunkSQL: Option[String],
-    use_metadata_cache: Boolean,
+    metadata_cache_only : Boolean,
     metadataCacheLoc: Option[String],
     oci_credential_name: Option[String],
+    use_resultset_cache : Boolean,
+    resultSetCacheLoc: Option[String],
     logSQLBehavior: LoggingAndTimingSQL)
 
 object OracleCatalogOptions {
@@ -50,9 +68,11 @@ object OracleCatalogOptions {
   val ORACLE_JDBC_IS_CHUNK_SPLITTER = newOption("isChunkSplitter")
   val ORACLE_CUSTOM_CHUNK_SQL = newOption("customPartitionSQL")
   val ORACLE_PARALLELISM = newOption("useOracleParallelism")
-  val ORACLE_USE_METADATA_CACHE = newOption("use_metadata_cache")
+  val ORACLE_USE_METADATA_CACHE_ONLY = newOption("use_metadata_cache_only")
   val ORACLE_METADATA_CACHE = newOption("metadata_cache_loc")
   val ORACLE_OCI_CREDENTIAL_NAME = newOption("oci_credential_name")
+  val ORACLE_USE_RESULTSET_CACHE = newOption("use_resultset_cache")
+  val ORACLE_RESULTSET_CACHE = newOption("resultset_cache_loc")
 
   val DEFAULT_MAX_SPLITS = 1
 
@@ -64,9 +84,11 @@ object OracleCatalogOptions {
       parameters.getOrElse(ORACLE_FETCH_SIZE, "10").asInstanceOf[String].toInt,
       parameters.getOrElse(ORACLE_JDBC_IS_CHUNK_SPLITTER, "true").toBoolean,
       parameters.get(ORACLE_CUSTOM_CHUNK_SQL),
-      parameters.get(ORACLE_USE_METADATA_CACHE).map(_.toBoolean).getOrElse(false),
+      parameters.get(ORACLE_USE_METADATA_CACHE_ONLY).map(_.toBoolean).getOrElse(false),
       parameters.get(ORACLE_METADATA_CACHE),
       parameters.get(ORACLE_OCI_CREDENTIAL_NAME),
+      parameters.get(ORACLE_USE_RESULTSET_CACHE).map(_.toBoolean).getOrElse(false),
+      parameters.get(ORACLE_RESULTSET_CACHE),
       LoggingAndTimingSQL.fromOptions(parameters))
   }
 

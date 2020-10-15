@@ -30,18 +30,36 @@ import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{OraIdentifi
 import org.apache.spark.sql.oracle.OracleCatalogOptions
 import org.apache.spark.util.{ShutdownHookManager, Utils}
 
+/**
+ * Provides Oracle Metadata. Clients can ask for ''namespaces'',
+ * ''tables'' and table details as ''OraTable''.
+ *
+ * It can operate in ''cache_only'' mode where it servers request from information in the
+ * local cache. This should only be used for testing.
+ *
+ * @param cMap
+ */
 private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) extends Logging {
 
   val connInfo = ConnectionInfo.connectionInfo(cMap)
   val catalogOptions = OracleCatalogOptions.catalogOptions(cMap)
 
-  val (dsKey: DataSourceKey, cache_only: Boolean) = if (!catalogOptions.use_metadata_cache) {
-    val dsKey = ConnectionManagement.registerDataSource(connInfo, catalogOptions)
-    ORAMetadataSQLs.validateConnection(dsKey)
-    (dsKey, false)
-  } else {
-    (connInfo: DataSourceKey, true)
+  val cache_only = catalogOptions.metadata_cache_only
+
+  val dsKey: DataSourceKey = {
+
+    val setupPool = !catalogOptions.metadata_cache_only ||
+      !catalogOptions.use_resultset_cache
+
+    val dsKey = ConnectionManagement.registerDataSource(connInfo, catalogOptions, setupPool)
+
+    if (setupPool) {
+      ORAMetadataSQLs.validateConnection(dsKey)
+    }
+
+    dsKey
   }
+
 
   private val cacheLoc: File =
     catalogOptions.metadataCacheLoc.map(new File(_)).getOrElse(Utils.createTempDir())
@@ -127,8 +145,8 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
 
   private def oraTableFromDB(schema: String, table: String): OraTable = {
     if (!cache_only) {
-      val (xml, sxml) = ORAMetadataSQLs.tableMetadata(dsKey, schema, table)
-      XMLReader.parseTable(xml, sxml)
+    val (xml, sxml) = ORAMetadataSQLs.tableMetadata(dsKey, schema, table)
+    XMLReader.parseTable(xml, sxml)
     } else {
       OracleMetadata.unsupportedAction(
         "retrieve db info in 'cache_ony' mode",
@@ -138,9 +156,9 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
 
   private[oracle] def invalidateTable(schema: String, table: String): Unit = {
     if (!cache_only) {
-      val (_, _, tblIdKey) = tableKey(schema, table)
-      cache.delete(tblIdKey)
-    }
+    val (_, _, tblIdKey) = tableKey(schema, table)
+    cache.delete(tblIdKey)
+  }
   }
 
 }

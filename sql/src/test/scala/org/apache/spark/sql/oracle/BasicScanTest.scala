@@ -18,14 +18,10 @@
 package org.apache.spark.sql.oracle
 
 /**
- * This test depends on connecting to an instance with tpcds tables.
- * To run these tests:
- * - connect to an instance with tpcds tables, for example:
- *   -Dspark.oracle.test.db_instance=mammoth_medium
- * - in  [[TestOracleHive]] `.set("spark.sql.catalog.oracle.use_metadata_cache", "false")`
- *   so a [[Connection]] is setup to the instance.
+ * Running this test when on VPN is extremely slow.
+ * See issue described in [[oracle.jdbc.internal.ResultSetCache:ensureSAXParserFactorySet]]
  */
-abstract class BasicScanTest extends AbstractTest with PlanTestHelpers {
+class BasicScanTest extends AbstractTest with PlanTestHelpers {
 
   test(
     "ship_mode_scan",

@@ -47,10 +47,16 @@ trait DataSources {
   private[oracle] def registerDataSource(
       dsKey: DataSourceKey,
       connInfo: ConnectionInfo,
-      catalogOptions: OracleCatalogOptions): Unit = {
+      catalogOptions: OracleCatalogOptions,
+      setupPool : Boolean): Unit = {
     val createDSI = new java.util.function.Function[DataSourceKey, DataSourceInfo] {
       override def apply(t: DataSourceKey): DataSourceInfo = {
-        val isSharded = setupConnectionPool(dsKey, connInfo)
+        val isSharded = if (setupPool) {
+          setupConnectionPool(dsKey, connInfo)
+        } else {
+          // TODO some other way to infer whether connection is to a sharded instance.
+          false
+        }
         DataSourceInfo(dsKey, connInfo, catalogOptions, isSharded)
       }
     }
@@ -69,9 +75,10 @@ trait DataSources {
 
   def registerDataSource(
       connInfo: ConnectionInfo,
-      catalogOptions: OracleCatalogOptions): DataSourceKey = {
+      catalogOptions: OracleCatalogOptions,
+      setupPool : Boolean): DataSourceKey = {
     val dsKey: DataSourceKey = connInfo
-    registerDataSource(dsKey, connInfo, catalogOptions)
+    registerDataSource(dsKey, connInfo, catalogOptions, setupPool)
     dsKey
   }
 

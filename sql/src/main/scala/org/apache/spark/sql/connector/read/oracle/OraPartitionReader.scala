@@ -18,7 +18,7 @@ package org.apache.spark.sql.connector.read.oracle
 
 import java.sql.{PreparedStatement, ResultSet}
 
-import oracle.spark.ConnectionManagement
+import oracle.spark.{ConnectionManagement, DataSourceInfo}
 import scala.util.control.NonFatal
 
 import org.apache.spark.internal.Logging
@@ -122,6 +122,7 @@ case class OraQueryStatement(oraPart: OraPartition, timeToExecute: DoubleAccumul
 
   lazy val sqlTemplate: String = oraPartSQL
   lazy val bindValues: Seq[Literal] = oraPartSQLParams
+  lazy val datasourceInfo : DataSourceInfo = dsInfo
 
   lazy val underlying: PreparedStatement = {
     val ps =
