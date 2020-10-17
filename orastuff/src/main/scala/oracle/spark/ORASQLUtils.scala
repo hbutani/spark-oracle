@@ -20,9 +20,10 @@ package oracle.spark
 import java.sql.{CallableStatement, Connection, PreparedStatement, ResultSet, Statement}
 
 import scala.util.Try
-
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.oracle.OraSparkUtils
+
+import scala.collection.mutable.ArrayBuffer
 
 object ORASQLUtils extends Logging {
 
@@ -137,6 +138,44 @@ object ORASQLUtils extends Logging {
     }
   }
 
+  def performBatchDML[V](
+                     conn: Connection,
+                     stmt: => String,
+                     initPStmt : PreparedStatement => Unit,
+                     batchItr: Iterator[PreparedStatement => Unit],
+                     batchSize : Int): Array[Int] = {
+    var pStmt: PreparedStatement = null
+
+    try {
+      pStmt = conn.prepareStatement(stmt)
+      initPStmt(pStmt)
+      var rowCount = 0
+      val retCounts = ArrayBuffer[Int]()
+      while (batchItr.hasNext) {
+        batchItr.next()(pStmt)
+        pStmt.addBatch()
+        rowCount += 1
+        if (rowCount % batchSize == 0) {
+          retCounts ++= pStmt.executeBatch()
+          rowCount = 0
+        }
+      }
+      if (rowCount > 0) {
+        retCounts ++= pStmt.executeBatch()
+      }
+      retCounts.toArray
+    } finally {
+      performOrLogFailure(
+        {
+          if (pStmt != null) pStmt.close()
+          ()
+        },
+        s"""Failed to close statment:
+                ${stmt}
+          """.stripMargin)
+    }
+  }
+
   def performSQL(conn: Connection, sql: => String): Boolean = {
     var stmt: Statement = null
     try {
@@ -179,6 +218,27 @@ object ORASQLUtils extends Logging {
     }
   }
 
+  def performDDL[V](
+                     conn: Connection,
+                     stmt: => String
+                   ): Int = {
+    var pStmt: PreparedStatement = null
+
+    try {
+      pStmt = conn.prepareStatement(stmt)
+      pStmt.executeUpdate()
+    } finally {
+      performOrLogFailure(
+        {
+          if (pStmt != null) pStmt.close()
+          ()
+        },
+        s"""Failed to close statment:
+                ${stmt}
+          """.stripMargin)
+    }
+  }
+
   /**
    * Perform a Query on a DataSource, and invoke the callback function on the
    * [[ResultSet]]. Handle connection, statement and resultSet managment.
@@ -212,6 +272,19 @@ object ORASQLUtils extends Logging {
     }
   }
 
+  def performDSBatchDML(
+                    dsKey: DataSourceKey,
+                    stmt: => String,
+                    actionDetails: => String,
+                    initPStmt : PreparedStatement => Unit,
+                    batchItr: Iterator[PreparedStatement => Unit],
+                    batchSize : Int): Array[Int] = {
+    perform[Array[Int]](dsKey, s"Performing ${actionDetails} by executing Batch DML: '${stmt}") {
+      conn =>
+        performBatchDML(conn, stmt, initPStmt, batchItr, batchSize)
+    }
+  }
+
   def performDSCall(
       dsKey: DataSourceKey,
       stmt: => String,
@@ -220,6 +293,15 @@ object ORASQLUtils extends Logging {
       getOutParams: CallableStatement => Unit = cs => ()): Boolean = {
     perform[Boolean](dsKey, s"Performing ${actionDetails} by executing DML: '${stmt}") { conn =>
       performCall(conn, stmt, setInParams, getOutParams)
+    }
+  }
+
+  def performDSDDL(
+                    dsKey: DataSourceKey,
+                    stmt: => String,
+                    actionDetails: => String): Int = {
+    perform[Int](dsKey, s"Performing ${actionDetails} by executing DDL: '${stmt}") {
+      conn => performDDL(conn, stmt)
     }
   }
 

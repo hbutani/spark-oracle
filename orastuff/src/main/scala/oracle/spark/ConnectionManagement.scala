@@ -112,4 +112,13 @@ object ConnectionManagement extends DataSources with Logging {
     ConnectionManagement.getConnection(ds)
   }
 
+  /**
+   * Only use for tests
+   * @return
+   */
+  def getDSKeyInTestEnv : DataSourceKey = {
+    assert(pdsMap.size() == 1)
+    pdsMap.keys().nextElement()
+  }
+
 }

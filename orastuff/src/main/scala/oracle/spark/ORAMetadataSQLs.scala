@@ -63,21 +63,35 @@ object ORAMetadataSQLs {
     (xml, sxml)
   }
 
-  @throws[sql.SQLException]
-  def validateConnection(dsKey: DataSourceKey): Unit = {
-    perform[Unit](dsKey, "check instance is setup for spark-oracle") { conn =>
+  def tableExists(dsKey: DataSourceKey,
+                 schemaO : Option[String],
+                 table : String,
+                 actionDetails : => String = null.asInstanceOf[String]): Boolean = {
+    val schemaPrefix = schemaO.map(_ + ".").getOrElse("")
+    perform[Boolean](
+      dsKey,
+      Option(actionDetails).
+        getOrElse(s"check table(${schemaPrefix}${table}) exists")) { conn =>
       val meta = conn.getMetaData
       var res: ResultSet = null
       try {
-        res = meta.getTables(dsKey.userName, null, "PLAN_TABLE", null)
-        if (!res.next()) {
-          throw new SQLException(s"${dsKey} is not setup for spark-oracle: missing PLAN_TABLE")
-        }
+        res = meta.getTables(dsKey.userName, schemaO.orNull, table, null)
+        res.next()
       } finally {
         if (res != null) {
           res.close()
         }
       }
+    }
+  }
+
+  @throws[sql.SQLException]
+  def validateConnection(dsKey: DataSourceKey): Unit = {
+    val plan_table_exists : Boolean =
+    tableExists(dsKey, None, "PLAN_TABLE", "check instance is setup for spark-oracle")
+
+    if (!plan_table_exists) {
+      throw new SQLException(s"${dsKey} is not setup for spark-oracle: missing PLAN_TABLE")
     }
   }
 

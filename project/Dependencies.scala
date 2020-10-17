@@ -62,6 +62,7 @@ object Dependencies {
     val dependencies = Seq(
       "org.scalatest" %% "scalatest" % scalatestVersion % "test",
       "org.apache.hadoop" % "hadoop-client" % hadoopVersion % "test",
-      "org.apache.derby" % "derby" % derbyVersion % "test")
+      "org.apache.derby" % "derby" % derbyVersion % "test",
+      "org.scalacheck" %% "scalacheck" % "1.14.1" % "test")
   }
 }

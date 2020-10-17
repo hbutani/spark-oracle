@@ -18,7 +18,8 @@
 package org.apache.spark.sql.oracle
 
 import java.io.File
-import org.scalatest.{BeforeAndAfterAll, fixture}
+
+import org.scalatest.{fixture, BeforeAndAfterAll}
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{DataFrame, Row}
