@@ -18,13 +18,19 @@ package org.apache.spark.sql.oracle.readpath
 
 import oracle.spark.ConnectionManagement
 
+import org.apache.spark.sql.connector.catalog.oracle.OraMetadataMgrInternalTest
+import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.AbstractTest
 
-class AbstractReadTests extends AbstractTest {
+class AbstractReadTests extends AbstractTest with OraMetadataMgrInternalTest {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    ReadPathTestSetup.createAndLoad(ConnectionManagement.getDSKeyInTestEnv)
+    TestOracleHive.sql("use oracle.sparktest")
+    val needsSetup = !mdMgr.cache_only && !catalogTableMap("sparktest").contains("UNIT_TEST")
+    if (needsSetup) {
+      ReadPathTestSetup.createAndLoad(ConnectionManagement.getDSKeyInTestEnv)
+    }
   }
 
 }

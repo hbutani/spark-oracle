@@ -186,7 +186,7 @@ object ReadPathTestSetup {
 
     if (needsCreation) {
       val r = TestDataSetup.createTable(dsKey, "unit_test", unit_test_table_ddl)
-      ORASQLUtils.performDSDML(dsKey, grantOnTable("unit_test"), s"grant access on 'unit_test'")
+      ORASQLUtils.performDSDDL(dsKey, grantOnTable("unit_test"), s"grant access on 'unit_test'")
       TestDataSetup.loadTable(dsKey, "unit_test",
         unit_test_table_scheme,
         unit_test_table_insert_stat,
@@ -194,7 +194,7 @@ object ReadPathTestSetup {
       )
 
       TestDataSetup.createTable(dsKey, "unit_test_partitioned", unit_test_partitioned_table_ddl)
-      ORASQLUtils.performDSDML(dsKey, grantOnTable("unit_test_partitioned"),
+      ORASQLUtils.performDSDDL(dsKey, grantOnTable("unit_test_partitioned"),
         s"grant access on 'unit_test_partitioned'")
       TestDataSetup.loadTable(dsKey, "unit_test_partitioned",
         unit_test_partitioned_table_scheme,

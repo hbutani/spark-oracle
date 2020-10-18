@@ -27,12 +27,58 @@ import org.apache.spark.sql.catalyst.plans.logical.LocalRelation
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.types.DataType
 
-// scalastyle:off println
+/**
+ * Please read these notes when running or adding new tests.
+ *
+ * - In steady state tests are run against the 'mammoth' ADW instance.
+ *   - since this is a cloud instance making connections and executing queries can
+ *     takes 10s of seconds.
+ *   - so we have optimized for this by having a checked-in 'metadata_cache' and a
+ *     'resultset_cache'
+ *   - but you can run into errors because of cache inconsistencies that you
+ *     need to be mindful off.
+ *
+ * Locally you can run tests against other instances. Just configure
+ * '-Dspark.oracle.test.db_instance' approriately. To run against the
+ * 'mammoth' instance set: '-Dspark.oracle.test.db_instance=mammoth_medium -Dspark.oracle.test.db_wallet_loc=/Users/hbutani/oracle/wallet_mammoth'
+ *
+ * Never commit changes to the 'sql/src/test/resources/metadata_cache' folder
+ * except when explicitly changing the metadata cache.
+ * Follow this procedure below for that.
+ *
+ * Procedure to change the 'metadata_cache'
+ * - delete 'sql/src/test/resources/metadata_cache/000005.sst',
+ *   'sql/src/test/resources/metadata_cache/MANIFEST-000004'
+ * - run with '.set("spark.sql.catalog.oracle.use_metadata_cache_only", "false")'
+ *   in [[TestOracleHive]]
+ * - run [[org.apache.spark.sql.connector.catalog.oracle.LoadMetadataCache]] only to
+ *   create new cache.
+ * - you may have to run it twice for 'levelDB' to comapct the log file.
+ *
+ * 'resultset_cache' quirk:
+ * - this uses the built-in SAXXMLParser to read and write resultsets
+ *   See details in [[org.apache.spark.sql.oracle.experiments.ResultSetCaching]]
+ *   on setup.
+ * - When on vpn the SAXParser takes 10s of seconds to load/write xml files
+ *   because it cannot load the xsd file.
+ * - So any steady state tun tests outside of vpn.
+ *
+ * Procedure to add to 'resultset_cache'
+ * - the straight-forward way is to be on vpn, run the test; this will create the
+ *   new xml file.
+ * - a shortcut is to use a local db with the same schema and tables. Connect
+ *   and run tests against it. Then change the name of the new resultset cml files
+ *   so that the initial section matches mammoth dskey(-1641891193)
+ *
+ * You can use [[DataGens]] and [[TestDataSetup]] to create new test tables and data.
+ */
 abstract class AbstractTest
     extends fixture.FunSuite
     with fixture.TestDataFixture
     with BeforeAndAfterAll
     with Logging {
+
+  // scalastyle:off println
 
   override def beforeAll(): Unit = {
     println("*** Starting TestCase " ++ this.toString())

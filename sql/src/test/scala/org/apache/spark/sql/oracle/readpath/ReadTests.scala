@@ -19,7 +19,7 @@ package org.apache.spark.sql.oracle.readpath
 
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 
-abstract class ReadTests  extends AbstractReadTests {
+class ReadTests  extends AbstractReadTests {
 
   test("scan_unit_test") {td =>
     TestOracleHive.sql(
