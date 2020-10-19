@@ -45,7 +45,7 @@ object Predicates {
     import SQLSnippet._
 
     override def orasql: SQLSnippet =
-      oExpr.orasql + IN + LPAREN ++ inList.map(_.orasql) + RPAREN
+      oExpr.orasql + IN + LPAREN + csv(inList.map(_.orasql): _*) + RPAREN
 
     override def children: Seq[OraExpression] = oExpr +: inList
   }

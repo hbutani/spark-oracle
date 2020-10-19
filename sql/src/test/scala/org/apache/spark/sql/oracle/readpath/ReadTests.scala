@@ -37,4 +37,24 @@ class ReadTests  extends AbstractReadTests {
     ).show(1000, false)
   }
 
+  test("filters") {td =>
+    TestOracleHive.sql(
+      """
+        |select c_byte, c_short
+        |from unit_test
+        |where
+        |    c_int > 1 and
+        |    case
+        |       when c_short > 0 then "positive"
+        |       when c_short < 0 then "negative"
+        |       else "zero"
+        |     end in ("positive", "zero") and
+        |    (c_int % 5) < (c_int * 5) and
+        |    abs(c_long) > c_long and
+        |    c_date is null and
+        |    c_timestamp is not null
+        |""".stripMargin
+    ).show(1000, false)
+  }
+
 }

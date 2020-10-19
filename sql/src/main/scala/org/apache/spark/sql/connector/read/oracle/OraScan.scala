@@ -175,6 +175,8 @@ case class OraFileScan(
       "ReadSchema" -> readDataSchema.catalogString,
       "PartitionSchema" -> readPartitionSchema.catalogString,
       "dsKey" -> dsKey.toString,
+      "oraPushdownSQL" -> oraPlan.orasql.sql,
+      "oraPushdownBindValues" -> oraPlan.orasql.params.mkString(", "),
       "OraPlan" -> oraPlan.numberedTreeString)
   }
 

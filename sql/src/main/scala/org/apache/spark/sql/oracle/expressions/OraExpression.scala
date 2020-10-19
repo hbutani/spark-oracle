@@ -76,7 +76,7 @@ case class OraBinaryFnExpression(
     right: OraExpression)
     extends OraExpression {
   val children: Seq[OraExpression] = Seq(left, right)
-  override def orasql: SQLSnippet = SQLSnippet.operator(fn, left.orasql, right.orasql)
+  override def orasql: SQLSnippet = SQLSnippet.call(fn, left.orasql, right.orasql)
 }
 
 case class OraFnExpression(fn: String, catalystExpr: Expression, children: Seq[OraExpression])
