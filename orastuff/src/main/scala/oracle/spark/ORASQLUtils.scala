@@ -20,10 +20,11 @@ package oracle.spark
 import java.sql.{CallableStatement, Connection, PreparedStatement, ResultSet, Statement}
 
 import scala.util.Try
-import org.apache.spark.internal.Logging
-import org.apache.spark.sql.oracle.OraSparkUtils
 
 import scala.collection.mutable.ArrayBuffer
+
+import org.apache.spark.internal.Logging
+import org.apache.spark.sql.oracle.OraSparkUtils
 
 object ORASQLUtils extends Logging {
 

@@ -34,8 +34,17 @@ import org.apache.spark.util.{ShutdownHookManager, Utils}
  * Provides Oracle Metadata. Clients can ask for ''namespaces'',
  * ''tables'' and table details as ''OraTable''.
  *
- * It can operate in ''cache_only'' mode where it servers request from information in the
+ * It can operate in ''cache_only'' mode where it serves request from information in the
  * local cache. This should only be used for testing.
+ *
+ * Caching behavior:
+ * - on startup namespace list and table lists are loaded from local disk cache or DB
+ *   and cached in memory.
+ * - table metadata is loaded into local disk cache on demand.
+ * - steady state is served from in-memory namespace & table lists + on-disk cached table metadata
+ * - 'invalidateTable' deletes on-disk cached table metadata.
+ * - 'reloadCatalog' reload in-memory and on-disk cache of namespace list and table lists
+ *   - This doesn't clear individual table metadata
  *
  * @param cMap
  */
@@ -78,8 +87,23 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
     db
   }
 
-  private val namespacesMap: CaseInsensitiveMap[String] = {
-    val nsBytes = cache.get(OracleMetadata.NAMESPACES_CACHE_KEY)
+  @volatile private var _namespacesMap: CaseInsensitiveMap[String] = null
+  @volatile private var _namespaces : Array[Array[String]] = null
+  @volatile private var _tableMap: CaseInsensitiveMap[Set[String]] = null
+
+  private[oracle] val defaultNamespace: String = dsKey.userName
+
+  /*
+   * On start load namespaces and table lists from local cache or DB.
+   */
+  loadNamespaces()
+  loadTableSpaces()
+
+  private def loadNamespaces(reload : Boolean = false) : Unit = {
+
+    val nsBytes : Array[Byte] = if (!reload) {
+      cache.get(OracleMetadata.NAMESPACES_CACHE_KEY)
+    } else null
 
     val nsSet = if (nsBytes != null) {
       Serialization.deserialize[Set[String]](nsBytes)
@@ -91,18 +115,15 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
         Serialization.serialize[Set[String]](accessibleUsers))
       accessibleUsers
     }
-    CaseInsensitiveMap(nsSet.map(n => n -> n).toMap)
+    _namespacesMap = CaseInsensitiveMap(nsSet.map(n => n -> n).toMap)
+    _namespaces = _namespacesMap.values.map(ns => Array(ns)).toArray
   }
 
-  private[oracle] lazy val namespaces =
-    namespacesMap.values.map(ns => Array(ns)).toArray
+  private def loadTableSpaces(reload : Boolean = false) : Unit = {
 
-  private[oracle] def namespaceExists(ns: String): Boolean = namespacesMap.contains(ns)
-
-  private[oracle] val defaultNamespace: String = dsKey.userName
-
-  private[oracle] val tableMap: CaseInsensitiveMap[Set[String]] = {
-    val tListBytes = cache.get(OracleMetadata.TABLE_LIST_CACHE_KEY)
+    val tListBytes : Array[Byte] = if (!reload) {
+      cache.get(OracleMetadata.TABLE_LIST_CACHE_KEY)
+    } else null
 
     val tablMap: Map[String, Array[String]] = if (tListBytes != null) {
       Serialization.deserialize[Map[String, Array[String]]](tListBytes)
@@ -114,12 +135,25 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
         Serialization.serialize[Map[String, Array[String]]](tblMap))
       tblMap
     }
-    CaseInsensitiveMap(tablMap.mapValues(_.toSet))
+    _tableMap = CaseInsensitiveMap(tablMap.mapValues(_.toSet))
+  }
+
+
+  private[oracle] def namespaces : Array[Array[String]] = {
+    _namespaces
+  }
+
+  private[oracle] def namespaceExists(ns: String): Boolean = {
+    _namespacesMap.contains(ns)
+  }
+
+  private[oracle] def tableMap : CaseInsensitiveMap[Set[String]] = {
+    _tableMap
   }
 
   private def tableKey(schema: String, table: String): (String, String, Array[Byte]) = {
-    val oraSchema = namespacesMap(schema)
-    val oraTblNm = if (tableMap(oraSchema).contains(table)) {
+    val oraSchema = _namespacesMap(schema)
+    val oraTblNm = if (_tableMap(oraSchema).contains(table)) {
       table
     } else table.toUpperCase(Locale.ROOT)
 
@@ -129,7 +163,6 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
   }
 
   private[oracle] def oraTable(schema: String, table: String): OraTable = {
-
     val (oraSchema, oraTblNm, tblIdKey) = tableKey(schema, table)
     val tblMetadataBytes = cache.get(tblIdKey)
 
@@ -156,9 +189,14 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
 
   private[oracle] def invalidateTable(schema: String, table: String): Unit = {
     if (!cache_only) {
-    val (_, _, tblIdKey) = tableKey(schema, table)
-    cache.delete(tblIdKey)
+      val (_, _, tblIdKey) = tableKey(schema, table)
+      cache.delete(tblIdKey)
+    }
   }
+
+  private[oracle] def reloadCatalog : Unit = {
+    loadNamespaces(true)
+    loadTableSpaces(true)
   }
 
 }
