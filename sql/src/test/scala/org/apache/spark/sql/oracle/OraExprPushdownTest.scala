@@ -18,6 +18,8 @@
 package org.apache.spark.sql.oracle
 
 import org.apache.spark.sql.AnalysisException
+import org.apache.spark.sql.catalyst.QueryPlanningTracker
+import org.apache.spark.sql.catalyst.analysis.TypeCoercion
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan}
 import org.apache.spark.sql.connector.catalog.oracle.OraMetadataMgrInternalTest
@@ -31,15 +33,18 @@ class OraExprPushdownTest extends AbstractTest with OraMetadataMgrInternalTest {
 
   lazy val unit_test_table = TestOracleHive.sparkSession.table("unit_test")
 
+  lazy val typeCoercionRules =
+    TypeCoercion.typeCoercionRules(TestOracleHive.sparkSession.sqlContext.conf)
+
   protected def resolveExpr(exprStr: String,
                             plan: LogicalPlan = unit_test_table.queryExecution.analyzed
                            ): Expression = {
     val expr = parser.parseExpression(exprStr)
     val r1 = analyzer.resolveExpressionBottomUp(expr, plan, false)
 
-    // hack to resolve functions.
-    val f1 = analyzer.ResolveFunctions(Filter(r1, plan))
-    f1.asInstanceOf[Filter].condition
+    val fPlan = Filter(r1, plan)
+    val aPlan = analyzer.executeAndCheck(fPlan, new QueryPlanningTracker)
+    aPlan.asInstanceOf[Filter].condition
   }
 
   protected def resolveExpr(exprStr: String,
@@ -83,8 +88,8 @@ class OraExprPushdownTest extends AbstractTest with OraMetadataMgrInternalTest {
     "abs(c_long) > c_long",
     """
       |case
-      |  when c_short > 0 then "positive"
-      |  when c_short < 0 then "negative"
+      |  when c_int > 0 then "positive"
+      |  when c_int < 0 then "negative"
       |  else "zero"
       |end in ("positive", "zero")""".stripMargin,
     """
@@ -97,8 +102,8 @@ class OraExprPushdownTest extends AbstractTest with OraMetadataMgrInternalTest {
     """
       |c_int > 1 and
       |    case
-      |       when c_short > 0 then "positive"
-      |       when c_short < 0 then "negative"
+      |       when c_int > 0 then "positive"
+      |       when c_int < 0 then "negative"
       |       else "zero"
       |     end in ("positive", "zero") and
       |    (c_int % 5) < (c_int * 5) and

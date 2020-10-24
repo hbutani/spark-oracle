@@ -351,4 +351,21 @@ object OraLiterals {
         s"Currently Unsupported DataType for reading/writing values from oracle: ${dt}")
   }
 
+  def dataTypeMinMaxRange(dt : NumericType) : (OraExpression, OraExpression) = {
+    val (minV, maxV) = dt match {
+      case ByteType => (Literal(Byte.MinValue), Literal(Byte.MaxValue))
+      case ShortType => (Literal(Short.MinValue), Literal(Short.MaxValue))
+      case IntegerType => (Literal(Int.MinValue), Literal(Int.MaxValue))
+      case LongType => (Literal(Long.MinValue), Literal(Long.MaxValue))
+      case FloatType => (Literal(Float.MinValue), Literal(Float.MaxValue))
+      case DoubleType => (Literal(Double.MinValue), Literal(Double.MaxValue))
+      case dt : DecimalType =>
+        val pVal = "9" * (dt.precision - dt.scale)
+        val sVal = "9" * dt.scale
+        val v = s"${pVal}.${sVal}"
+        (s"-${v}", v)
+    }
+    (OraLiteral(Literal(minV)).toLiteralSql, OraLiteral(Literal(maxV)).toLiteralSql)
+  }
+
 }
