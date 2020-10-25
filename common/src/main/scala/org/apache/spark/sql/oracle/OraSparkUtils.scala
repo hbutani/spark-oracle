@@ -21,9 +21,9 @@ import java.util.Locale
 
 import scala.util.Random
 
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.{SparkConf, SparkContext, SparkEnv}
-import org.apache.spark.sql.{AnalysisException, DataFrame, Dataset, SQLContext, SparkSession}
+import org.apache.spark.sql.{AnalysisException, DataFrame, Dataset, SparkSession, SQLContext}
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.oracle.util.CrossProductIterator
 import org.apache.spark.sql.types.{DataType, FractionalType, NumericType, StructType}

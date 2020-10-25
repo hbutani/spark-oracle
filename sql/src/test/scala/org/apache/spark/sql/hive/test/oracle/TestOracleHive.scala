@@ -67,6 +67,7 @@ object OracleTestConf {
     .set("spark.sql.catalog.oracle.log_and_time_sql.log_level", "info")
     .set("spark.sql.catalog.oracle.use_resultset_cache", "true")
     .set("spark.sql.catalog.oracle.resultset_cache_loc", "sql/src/test/resources/resultset_cache")
+    // .set("spark.sql.oracle.max_string_size", "32767")
 
   lazy val localConf: SparkConf = {
 

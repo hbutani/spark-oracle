@@ -20,21 +20,9 @@ package org.apache.spark.sql.connector.catalog.oracle
 import java.sql.{JDBCType, Types}
 import java.util.Locale
 
-import org.apache.spark.sql.oracle.OraSparkUtils
-import org.apache.spark.sql.types.{
-  ByteType,
-  DataType,
-  DateType,
-  DecimalType,
-  DoubleType,
-  FloatType,
-  IntegerType,
-  LongType,
-  NumericType,
-  ShortType,
-  StringType,
-  TimestampType
-}
+import org.apache.spark.sql.{types, SparkSession}
+import org.apache.spark.sql.oracle.{OraSparkConfig, OraSparkUtils}
+import org.apache.spark.sql.types.{BooleanType, ByteType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, NumericType, ShortType, StringType, TimestampType}
 
 /**
  * References:
@@ -283,5 +271,25 @@ object OraDataType {
       OraSparkUtils.throwAnalysisException(
         s"Unsupported SqlType: " +
           s"${JDBCType.valueOf(sqlType).getName}")
+  }
+
+  def toOraDataType(dataType: DataType)
+                   (implicit sparkSession : SparkSession = OraSparkUtils.currentSparkSession)
+  : OraDataType = dataType match {
+    case BooleanType => OraNumber(Some(1), None)
+    case ByteType => OraNumber(Some(3), None)
+    case ShortType => OraNumber(Some(5), None)
+    case IntegerType => OraNumber(Some(10), None)
+    case LongType => OraNumber(Some(19), None)
+    // based on [[DecimalType#FloatDecimal]] definition
+    case FloatType => OraNumber(Some(14), Some(7))
+    // based on [[DecimalType#DoubleDecimal]] definition
+    case DoubleType => OraNumber(Some(30), Some(15))
+    case decT : DecimalType => OraNumber(Some(decT.precision), Some(decT.scale))
+    case StringType => OraVarchar2(OraSparkConfig.getConf(OraSparkConfig.VARCHAR2_MAX_LENGTH), true)
+    case DateType => OraDate
+    case types.TimestampType => OraTimestamp(None)
+    case _ => OraSparkUtils.throwAnalysisException(
+      s"Unsupported dataType translation: ${dataType}")
   }
 }

@@ -19,6 +19,7 @@ package org.apache.spark.sql.oracle.expressions
 import org.apache.spark.sql.catalyst.analysis.TypeCoercion
 import org.apache.spark.sql.catalyst.expressions.{Cast, CheckOverflow, Expression, Literal, PromotePrecision}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
+import org.apache.spark.sql.connector.catalog.oracle.OraDataType
 import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet}
 import org.apache.spark.sql.types._
 
@@ -300,9 +301,12 @@ object Casts extends OraSQLImplicits {
         childOE
       } else {
         val (minV, maxV) = OraLiterals.dataTypeMinMaxRange(toDT)
-        val oraDT : OraExpression = ???
+        val oraDTE : OraExpression = {
+          val oraDT = OraDataType.toOraDataType(toDT)
+          OraLiteral(Literal(oraDT.oraTypeString)).toLiteralSql
+        }
         val orasql = osql"case when ${childOE} >= ${minV} and ${childOE} <= ${maxV}" +
-          osql" then cast(${childOE} as ${oraDT}) else null"
+          osql" then cast(${childOE} as ${oraDTE}) else null"
         OraCast(castExpr, childOE, orasql)
       }
     }
@@ -531,8 +535,6 @@ object Casts extends OraSQLImplicits {
    * - c_date < cast('' as date) and c_timestamp > cast('' as timestamp)
    *
    * 2. Coding tasks
-   * - NumericCasting implement 'oraDT : OraExpression' line 305
-   *   - requires OraDataType: DataType => OraDataType
    * - Implement StringCasting
    * - Implement DateCasting
    * - Implement TimestampCasting
