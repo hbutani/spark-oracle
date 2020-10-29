@@ -291,7 +291,7 @@ object Casts extends OraSQLImplicits {
   trait NumericCasting { self : CastingBase =>
     def isDataTypeWidening(fromDT : NumericType, toDT : NumericType) : Boolean = {
       val tType = TypeCoercion.findTightestCommonType(fromDT, toDT)
-      tType.isDefined && tType == toDT
+      tType.isDefined && tType.get == toDT
     }
 
     def num_conv : OraExpression = {

@@ -30,6 +30,11 @@ object OraSparkConfig {
       .intConf
       .createWithDefault(4000)
 
+  val ENABLE_ORA_PUSHDOWN = buildConf(
+    "spark.sql.oracle.enable.pushdown").
+    doc("Enable Pushdown of Spark Operators as Oracle Queries").
+    booleanConf.createWithDefault(true)
+
   def getConf[T](configEntry : ConfigEntry[T])(
     implicit sparkSession : SparkSession = OraSparkUtils.currentSparkSession
   ) : T = {

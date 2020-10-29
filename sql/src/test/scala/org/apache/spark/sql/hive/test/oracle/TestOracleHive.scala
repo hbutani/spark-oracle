@@ -56,7 +56,9 @@ object OracleTestConf {
     .set(
       "spark.sql.planChangeLog.rules",
       "org.apache.spark.sql.execution.datasources.PruneFileSourcePartitions," +
-        "org.apache.spark.sql.execution.datasources.v2.V2ScanRelationPushDown")
+        "org.apache.spark.sql.execution.datasources.v2.V2ScanRelationPushDown," +
+        "org.apache.spark.sql.catalyst.optimizer.RewritePredicateSubquery," +
+        "org.apache.spark.sql.catalyst.optimizer.PullupCorrelatedPredicates")
      */
     .set(
       "spark.sql.catalog.oracle",

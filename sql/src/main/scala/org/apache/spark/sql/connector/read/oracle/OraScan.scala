@@ -25,24 +25,12 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.connector.read.{
-  Batch,
-  InputPartition,
-  PartitionReaderFactory,
-  Scan,
-  Statistics,
-  SupportsReportPartitioning,
-  SupportsReportStatistics
-}
+import org.apache.spark.sql.connector.read.{Batch, InputPartition, PartitionReaderFactory, Scan, Statistics, SupportsReportPartitioning, SupportsReportStatistics}
 import org.apache.spark.sql.connector.read.partitioning.Partitioning
-import org.apache.spark.sql.execution.datasources.{
-  FilePartition,
-  InMemoryFileIndex,
-  PartitioningAwareFileIndex
-}
+import org.apache.spark.sql.execution.datasources.{FilePartition, InMemoryFileIndex, PartitioningAwareFileIndex}
 import org.apache.spark.sql.execution.datasources.v2.FileScan
 import org.apache.spark.sql.internal.connector.SupportsMetadata
-import org.apache.spark.sql.oracle.operators.OraPlan
+import org.apache.spark.sql.oracle.operators.{OraPlan, OraTableScan}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 
@@ -111,15 +99,15 @@ trait OraScan {
 }
 
 case class OraFileScan(
-    sparkSession: SparkSession,
-    dataSchema: StructType,
-    readDataSchema: StructType,
-    readPartitionSchema: StructType,
-    dsKey: DataSourceKey,
-    oraPlan: OraPlan,
-    options: CaseInsensitiveStringMap,
-    partitionFilters: Seq[Expression],
-    dataFilters: Seq[Expression])
+                        sparkSession: SparkSession,
+                        dataSchema: StructType,
+                        readDataSchema: StructType,
+                        readPartitionSchema: StructType,
+                        dsKey: DataSourceKey,
+                        oraPlan: OraTableScan,
+                        options: CaseInsensitiveStringMap,
+                        partitionFilters: Seq[Expression],
+                        dataFilters: Seq[Expression])
     extends FileScan
     with SupportsReportPartitioning
     with OraScan {

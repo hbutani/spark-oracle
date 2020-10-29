@@ -40,7 +40,7 @@ import org.apache.spark.sql.types.StructType
  * [[org.apache.spark.sql.connector.read.oracle.OraScan]] needs a [[LogicalPlan]].
  *
  */
-abstract class OraPlan extends TreeNode[OraPlan] with ScanBuilder with SQLSnippetProvider {
+abstract class OraPlan extends TreeNode[OraPlan] with SQLSnippetProvider {
 
   /*
    * Notes:
@@ -77,9 +77,9 @@ abstract class OraPlan extends TreeNode[OraPlan] with ScanBuilder with SQLSnippe
 object OraPlan {
 
   def filter(
-      oraPlan: OraPlan,
+      oraPlan: OraTableScan,
       partitionFilters: Seq[Expression],
-      dataFilters: Seq[Expression]): OraPlan = {
+      dataFilters: Seq[Expression]): OraTableScan = {
 
     var plan = oraPlan
 
@@ -112,7 +112,7 @@ object OraPlan {
   def buildOraPlan(
       table: OraTable,
       requiredAttrs: Seq[Attribute],
-      pushedFilters: Array[Filter]): OraPlan = {
+      pushedFilters: Array[Filter]): OraTableScan = {
 
     // TODO and oraExpressions
     val pushedOraExpressions: Array[OraExpression] =

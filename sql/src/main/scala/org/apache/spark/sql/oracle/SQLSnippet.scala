@@ -297,7 +297,7 @@ object SQLSnippet {
   }
 
   def colRef(nm: String): SQLSnippet = {
-    apply(nm, Seq.empty)
+    apply(s""""${nm}"""", Seq.empty)
   }
 
   /**

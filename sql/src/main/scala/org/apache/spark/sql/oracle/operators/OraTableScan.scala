@@ -27,9 +27,19 @@ import org.apache.spark.sql.oracle.expressions.{
   OraExpressions
 }
 
-trait ScanBuilder { self: OraPlan =>
+case class OraTableScan(
+                         oraTable: OraTable,
+                         catalystOp: Option[LogicalPlan],
+                         catalystOutput: Seq[Attribute],
+                         catalystOutputSchema: AttributeSet,
+                         projections: Seq[OraExpression],
+                         filter: Option[OraExpression],
+                         partitionFilter: Option[OraExpression])
+  extends OraPlan { self =>
 
-  def filter(oFil: OraExpression, isPartFilter: Boolean): OraPlan = {
+  val children: Seq[OraPlan] = Seq.empty
+
+  def filter(oFil: OraExpression, isPartFilter: Boolean): OraTableScan = {
 
     def setFil(os: OraTableScan) = {
       val currFilt = if (!isPartFilter) {
@@ -84,20 +94,6 @@ trait ScanBuilder { self: OraPlan =>
     }
   }
 
-}
-
-case class OraTableScan(
-    oraTable: OraTable,
-    catalystOp: Option[LogicalPlan],
-    catalystOutput: Seq[Attribute],
-    catalystOutputSchema: AttributeSet,
-    projections: Seq[OraExpression],
-    filter: Option[OraExpression],
-    partitionFilter: Option[OraExpression])
-    extends OraPlan {
-
-  val children: Seq[OraPlan] = Seq.empty
-
   override def orasql: SQLSnippet = {
     val filOpt =
       SQLSnippet.combine(SQLSnippet.AND, filter.map(_.orasql), partitionFilter.map(_.orasql))
@@ -132,3 +128,4 @@ case class OraProject(child: OraPlan, projections: Seq[OraExpression], catalystP
     ???
   }
 }
+
