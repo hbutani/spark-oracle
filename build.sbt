@@ -29,15 +29,20 @@ lazy val commonSettings = Seq(
     "-Xmx3g",
     "-Duser.timezone=UTC",
     "-Dscalac.patmat.analysisBudget=512",
-    "-XX:MaxPermSize=256M"),
+    "-XX:MaxPermSize=256M",
+    "-Dspark.oracle.test.db_instance=mammoth_medium",
+    "-Dspark.oracle.test.db_wallet_loc=/Users/hbutani/oracle/wallet_mammoth",
+    "-Xrunjdwp:transport=dt_socket,address=5005,server=y,suspend=n"),
   scalacOptions ++= Seq("-target:jvm-1.8", "-feature", "-deprecation"),
   test in assembly := {},
-  fork in Test := false,
+  fork in Test := true,
   parallelExecution in Test := false,
   libraryDependencies ++= (scala.dependencies ++
     spark.dependencies ++
     utils.dependencies ++
-    test_infra.dependencies))
+    test_infra.dependencies),
+  excludeDependencies ++= Seq(ExclusionRule("org.apache.calcite.avatica"))
+)
 
 lazy val common = project
   .in(file("common"))

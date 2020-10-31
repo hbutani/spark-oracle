@@ -1,0 +1,86 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.spark.sql.oracle.operators
+
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, AttributeSet}
+import org.apache.spark.sql.catalyst.plans.{FullOuter, JoinType, LeftOuter, RightOuter}
+import org.apache.spark.sql.catalyst.plans.logical._
+import org.apache.spark.sql.oracle.SQLSnippet
+import org.apache.spark.sql.oracle.expressions.Named.OraColumnRef
+import org.apache.spark.sql.oracle.expressions.OraExpression
+
+case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onClause: OraExpression)
+
+trait OraQueryBlockState {
+  self: OraQueryBlock =>
+
+  lazy val hasComputedShape: Boolean = select.exists(o => !o.isInstanceOf[OraColumnRef])
+  lazy val hasOuterJoin: Boolean =
+    joins.exists(j => Set[JoinType](LeftOuter, RightOuter, FullOuter).contains(j.joinType))
+  lazy val hasFilter: Boolean = where.isDefined
+
+  def canApply(plan: LogicalPlan): Boolean = plan match {
+    case p: Project => true
+    case f: Filter => !hasOuterJoin
+    case j@Join(_, _, (LeftOuter | RightOuter | FullOuter), _, _) =>
+      !(hasComputedShape || hasFilter)
+    case j: Join => !hasComputedShape
+    case e: Expand => !hasComputedShape
+    case a: Aggregate => !hasComputedShape
+  }
+
+}
+
+/**
+ * Represents a Oracle SQL query block.
+ *
+ * @param source  the initial [[OraPlan]] on which this QueryBlock is layered.
+ * @param joins   the `inner` or `outer` joins in this query block.
+ * @param select  the projected expressions of this query block.
+ * @param where   an optional filter expression
+ * @param groupBy optional aggregation expressions.
+ */
+case class OraQueryBlock(source: OraPlan,
+                         joins: Seq[OraJoinClause],
+                         select: Seq[OraExpression],
+                         where: Option[OraExpression],
+                         groupBy: Seq[OraExpression],
+                         catalystOp: Option[LogicalPlan],
+                         catalystOutput: Seq[Attribute],
+                         catalystOutputSchema: AttributeSet)
+  extends OraPlan with OraQueryBlockState {
+
+  val children: Seq[OraPlan] = Seq(source)
+
+  override def orasql: SQLSnippet = {
+    // TODO
+    ???
+  }
+
+  /**
+   * Start a new OraQueryBlock on top of the current block.
+   * @return
+   */
+  def newBlockOnCurrent: OraQueryBlock = {
+    val oraSelect = catalystOutput.map(a => OraColumnRef(a.asInstanceOf[AttributeReference]))
+    OraQueryBlock(this, Seq.empty, oraSelect, None,
+      Seq.empty, catalystOp, catalystOutput, catalystOutputSchema
+    )
+  }
+
+  def toOraQueryBlock : OraQueryBlock = this
+}

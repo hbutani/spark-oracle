@@ -22,6 +22,7 @@ import org.apache.spark.sql.catalyst.QueryPlanningTracker
 import org.apache.spark.sql.catalyst.analysis.TypeCoercion
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan}
+import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.connector.catalog.oracle.OraMetadataMgrInternalTest
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.expressions.OraExpression
@@ -33,8 +34,7 @@ class OraExprPushdownTest extends AbstractTest with OraMetadataMgrInternalTest {
 
   lazy val unit_test_table = TestOracleHive.sparkSession.table("unit_test")
 
-  lazy val typeCoercionRules =
-    TypeCoercion.typeCoercionRules(TestOracleHive.sparkSession.sqlContext.conf)
+  lazy val typeCoercionRules = TypeCoercion.typeCoercionRules
 
   protected def resolveExpr(exprStr: String,
                             plan: LogicalPlan = unit_test_table.queryExecution.analyzed

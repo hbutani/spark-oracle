@@ -70,29 +70,29 @@ case class OraTableScan(
     }
   }
 
-  def filter(catalystFil: Filter): Option[OraPlan] = {
-    val oraFilExpr = OraExpression.convert(catalystFil.condition, catalystFil.inputSet)
-    (self, oraFilExpr) match {
-      case (_, None) => None
-      case (_: OraTableScan, Some(oraFilExpr)) => Some(filter(oraFilExpr, false))
-      case (_, Some(oraFilExpr)) => Some(OraFilter(self, oraFilExpr, catalystFil))
-    }
-  }
-
-  def project(catalystProj: Project): Option[OraPlan] = {
-    val oraProjs = OraExpressions.unapplySeq(catalystProj.projectList)
-
-    (self, oraProjs) match {
-      case (_, None) => None
-      case (os: OraTableScan, Some(oraProjs)) =>
-        Some(
-          os.copy(
-            projections = oraProjs,
-            catalystOp = Some(catalystProj),
-            catalystOutputSchema = catalystProj.outputSet))
-      case (_, Some(oraProjs)) => Some(OraProject(self, oraProjs, catalystProj))
-    }
-  }
+//  def filter(catalystFil: Filter): Option[OraPlan] = {
+//    val oraFilExpr = OraExpression.convert(catalystFil.condition, catalystFil.inputSet)
+//    (self, oraFilExpr) match {
+//      case (_, None) => None
+//      case (_: OraTableScan, Some(oraFilExpr)) => Some(filter(oraFilExpr, false))
+//      case (_, Some(oraFilExpr)) => Some(OraFilter(self, oraFilExpr, catalystFil))
+//    }
+//  }
+//
+//  def project(catalystProj: Project): Option[OraPlan] = {
+//    val oraProjs = OraExpressions.unapplySeq(catalystProj.projectList)
+//
+//    (self, oraProjs) match {
+//      case (_, None) => None
+//      case (os: OraTableScan, Some(oraProjs)) =>
+//        Some(
+//          os.copy(
+//            projections = oraProjs,
+//            catalystOp = Some(catalystProj),
+//            catalystOutputSchema = catalystProj.outputSet))
+//      case (_, Some(oraProjs)) => Some(OraProject(self, oraProjs, catalystProj))
+//    }
+//  }
 
   override def orasql: SQLSnippet = {
     val filOpt =
@@ -100,32 +100,10 @@ case class OraTableScan(
 
     SQLSnippet.select(projections.map(_.orasql): _*).from(oraTable).where(filOpt)
   }
-}
 
-case class OraFilter(child: OraPlan, filter: OraExpression, catalystFil: Filter) extends OraPlan {
-
-  val children: Seq[OraPlan] = Seq(child)
-  val catalystOp: Option[LogicalPlan] = Some(catalystFil)
-  val catalystOutput = catalystFil.output
-  val catalystOutputSchema: AttributeSet = catalystFil.outputSet
-
-  override def orasql: SQLSnippet = {
-    // TODO
-    ???
-  }
-}
-
-case class OraProject(child: OraPlan, projections: Seq[OraExpression], catalystProj: Project)
-    extends OraPlan {
-
-  val children: Seq[OraPlan] = Seq(child)
-  val catalystOp: Option[LogicalPlan] = Some(catalystProj)
-  val catalystOutput = catalystProj.output
-  val catalystOutputSchema: AttributeSet = catalystProj.outputSet
-
-  override def orasql: SQLSnippet = {
-    // TODO
-    ???
-  }
+  def toOraQueryBlock : OraQueryBlock =
+    OraQueryBlock(this, Seq.empty, projections, filter, Seq.empty,
+      catalystOp, catalystOutput, catalystOutputSchema
+    )
 }
 

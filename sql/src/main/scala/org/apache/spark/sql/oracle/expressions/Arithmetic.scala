@@ -40,22 +40,22 @@ object Arithmetic {
 
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
-      case cE @ UnaryMinus(OraExpression(oE)) => OraUnaryOpExpression(MINUS, cE, oE)
+      case cE @ UnaryMinus(OraExpression(oE), _) => OraUnaryOpExpression(MINUS, cE, oE)
       case cE @ UnaryPositive(OraExpression(oE)) => OraUnaryOpExpression(PLUS, cE, oE)
       case cE @ Abs(OraExpression(oE)) => OraUnaryFnExpression(ABS, cE, oE)
-      case cE @ Add(OraExpression(left), OraExpression(right)) =>
+      case cE @ Add(OraExpression(left), OraExpression(right), _) =>
         OraBinaryOpExpression(PLUS, cE, left, right)
-      case cE @ Subtract(OraExpression(left), OraExpression(right)) =>
+      case cE @ Subtract(OraExpression(left), OraExpression(right), _) =>
         OraBinaryOpExpression(MINUS, cE, left, right)
-      case cE @ Multiply(OraExpression(left), OraExpression(right)) =>
+      case cE @ Multiply(OraExpression(left), OraExpression(right), _) =>
         OraBinaryOpExpression(MULTIPLY, cE, left, right)
-      case cE @ Divide(OraExpression(left), OraExpression(right)) =>
+      case cE @ Divide(OraExpression(left), OraExpression(right), _) =>
         OraBinaryOpExpression(DIVIDE, cE, left, right)
-      case cE @ IntegralDivide(OraExpression(left), OraExpression(right)) =>
+      case cE @ IntegralDivide(OraExpression(left), OraExpression(right), _) =>
         OraUnaryFnExpression(TRUNC, cE, OraBinaryOpExpression(DIVIDE, cE, left, right))
-      case cE @ Remainder(OraExpression(left), OraExpression(right)) =>
+      case cE @ Remainder(OraExpression(left), OraExpression(right), _) =>
         OraBinaryFnExpression(REMAINDER, cE, left, right)
-      case cE @ Pmod(OraExpression(left), OraExpression(right)) =>
+      case cE @ Pmod(OraExpression(left), OraExpression(right), _) =>
         OraUnaryFnExpression(ABS, cE, OraBinaryFnExpression(MOD, cE, left, right))
       case cE @ Least(OraExpressions(oEs @ _*)) => OraFnExpression(LEAST, cE, oEs)
       case cE @ Greatest(OraExpressions(oEs @ _*)) => OraFnExpression(GREATEST, cE, oEs)
