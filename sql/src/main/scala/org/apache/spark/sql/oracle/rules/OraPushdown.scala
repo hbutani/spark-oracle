@@ -17,12 +17,13 @@
 package org.apache.spark.sql.oracle.rules
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression}
+import org.apache.spark.sql.catalyst.expressions.{AliasHelper, And, AttributeReference, Expression, NamedExpression, PredicateHelper}
 import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.connector.read.oracle.{OraPushdownScan, OraScan}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
-import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock}
+import org.apache.spark.sql.oracle.expressions.{AND, OraBinaryOpExpression, OraExpression, OraExpressions}
+import org.apache.spark.sql.oracle.operators.OraQueryBlock
 
 // scalastyle:off
 /**
@@ -59,39 +60,20 @@ trait OraPushdown {
   val pushdownCatalystOp: LogicalPlan
   val sparkSession: SparkSession
 
-  /**
-   * Ensure that the [[LogicalPlan] catalyst operator] input(s)
-   * shape matches the [[currQBlk]]
-   */
-  lazy val catalytstOpHasMatchingInput: Boolean = {
-    inQBlk.catalystOutput == pushdownCatalystOp.children.map(_.output).flatten
-  }
-
-  lazy val currQBlk = if (catalytstOpHasMatchingInput) {
-    if (inQBlk.canApply(pushdownCatalystOp)) {
-      inQBlk
-    } else {
-      inQBlk.newBlockOnCurrent
-    }
-  } else {
+  lazy val currQBlk = if (inQBlk.canApply(pushdownCatalystOp)) {
     inQBlk
+  } else {
+    inQBlk.newBlockOnCurrent
   }
 
   private[rules] def pushdownSQL: Option[OraQueryBlock]
 
   def pushdown: Option[DataSourceV2ScanRelation] = {
-
-    var newOraPlan: Option[OraPlan] = None
-
-    if (catalytstOpHasMatchingInput) {
-      newOraPlan = pushdownSQL
-    }
-
-    newOraPlan.map { oraPlan =>
+    pushdownSQL.map { oraPlan =>
       val newOraScan = OraPushdownScan(sparkSession, inOraScan.dsKey, oraPlan)
       inDSScan.copy(
         scan = newOraScan,
-        output = oraPlan.catalystOutput.asInstanceOf[Seq[AttributeReference]]
+        output = pushdownCatalystOp.output.asInstanceOf[Seq[AttributeReference]]
       )
     }
   }
@@ -102,9 +84,42 @@ case class ProjectPushdown(inDSScan: DataSourceV2ScanRelation,
                            inOraScan: OraScan,
                            inQBlk: OraQueryBlock,
                            pushdownCatalystOp: Project,
-                           sparkSession: SparkSession) extends OraPushdown {
+                           sparkSession: SparkSession)
+  extends OraPushdown with AliasHelper {
 
-  private[rules] def pushdownSQL: Option[OraQueryBlock] = None
+  /**
+   * copied from [[CollapseProject]] rewrite rule.
+   * - substitues refernces to aliases and `trimNonTopLevelAliases`
+   * For example:
+   * {{{
+   *   Project(c + d as e,
+   *           Project(a + b as c, d, DSV2...)
+   *           )
+   *  // becomes
+   *  Project(a + b +d as e, DSV2...)
+   * }}}
+   * @param upper
+   * @param lower
+   * @return
+   */
+  def buildCleanedProjectList(upper: Seq[NamedExpression],
+                              lower: Seq[NamedExpression]): Seq[NamedExpression] = {
+    val aliases = getAliasMap(lower)
+    upper.map(replaceAliasButKeepName(_, aliases))
+  }
+
+  private[rules] def pushdownSQL: Option[OraQueryBlock] = {
+    if (inQBlk.canApply(pushdownCatalystOp)) {
+      val projOp = pushdownCatalystOp
+      val pushdownProjList =
+        buildCleanedProjectList(projOp.projectList, currQBlk.catalystProjectList)
+      for(oraExpressions <- OraExpressions.unapplySeq(pushdownProjList)) yield {
+        currQBlk.copy(select = oraExpressions,
+          catalystOp = Some(projOp),
+          catalystProjectList = projOp.projectList)
+      }
+    } else None
+  }
 
 }
 
@@ -112,9 +127,43 @@ case class FilterPushdown(inDSScan: DataSourceV2ScanRelation,
                           inOraScan: OraScan,
                           inQBlk: OraQueryBlock,
                           pushdownCatalystOp: Filter,
-                          sparkSession: SparkSession) extends OraPushdown {
+                          sparkSession: SparkSession)
+  extends OraPushdown with PredicateHelper {
 
-  private[rules] def pushdownSQL: Option[OraQueryBlock] = None
+  private[rules] def pushdownSQL: Option[OraQueryBlock] = {
+    if (inQBlk.canApply(pushdownCatalystOp)) {
+      val filOp = pushdownCatalystOp
+
+      val pushdownCondition =
+        replaceAlias(filOp.condition, getAliasMap(currQBlk.catalystProjectList))
+      val pushdownFilters = {
+        val splitConds = splitConjunctivePredicates(pushdownCondition)
+        val currConds: Set[Expression] = currQBlk.where.map { oraCond =>
+          oraCond.collect {
+            case oE => oE.catalystExpr.canonicalized
+          }
+        }.getOrElse(Seq.empty).toSet
+        splitConds.filter(e => !currConds.contains(e.canonicalized))
+      }
+
+      if (pushdownFilters.nonEmpty) {
+        val pushCond = pushdownFilters.reduceLeft(And)
+        for (oraExpression <- OraExpression.unapply(pushCond)) yield {
+          val newFil = currQBlk.where.map(f =>
+            OraBinaryOpExpression(AND, And(f.catalystExpr, pushdownCondition), f, oraExpression)
+          ).getOrElse(oraExpression)
+
+          currQBlk.copy(
+            where = Some(newFil),
+            catalystOp = Some(filOp),
+            catalystProjectList = filOp.output
+          )
+        }
+      } else {
+        Some(currQBlk)
+      }
+    } else None
+  }
 }
 
 case class JoinPushDown(inDSScan: DataSourceV2ScanRelation,

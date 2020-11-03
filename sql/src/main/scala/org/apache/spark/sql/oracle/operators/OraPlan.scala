@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.oracle.operators
 
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeSet, Expression}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.trees.TreeNode
@@ -25,7 +25,6 @@ import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
 import org.apache.spark.sql.oracle.{SQLSnippet, SQLSnippetProvider}
 import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions}
 import org.apache.spark.sql.sources.Filter
-import org.apache.spark.sql.types.StructType
 
 /**
  * Represents an Oracle Query, captured as an Operator tree that can be
@@ -57,8 +56,9 @@ abstract class OraPlan extends TreeNode[OraPlan] with SQLSnippetProvider {
 
   def catalystOp: Option[LogicalPlan]
 
-  def catalystOutput: Seq[Attribute]
-  def catalystOutputSchema: AttributeSet
+  def catalystProjectList : Seq[NamedExpression]
+
+  lazy val catalystAttributes : Seq[Attribute] = catalystProjectList.map(_.toAttribute)
 
   def orasql: SQLSnippet
 
@@ -72,8 +72,6 @@ abstract class OraPlan extends TreeNode[OraPlan] with SQLSnippetProvider {
 
   override def verboseString(maxFields: Int): String = simpleString(maxFields)
 
-  def toOraQueryBlock : OraQueryBlock
-
 }
 
 object OraPlan {
@@ -86,13 +84,13 @@ object OraPlan {
     var plan = oraPlan
 
     if (dataFilters.nonEmpty) {
-      for (datFil <- OraExpression.convert(dataFilters, oraPlan.catalystOutputSchema)) {
+      for (datFil <- OraExpression.convert(dataFilters)) {
         plan = plan.filter(datFil, false)
       }
     }
 
     if (partitionFilters.nonEmpty) {
-      val partFil = OraExpression.convert(partitionFilters, oraPlan.catalystOutputSchema)
+      val partFil = OraExpression.convert(partitionFilters)
 
       /*
        * Why must be throw exception here?
@@ -120,21 +118,19 @@ object OraPlan {
     val pushedOraExpressions: Array[OraExpression] =
       pushedFilters.flatMap(OraExpression.convert(_, table).toSeq)
 
-    val attrSet = AttributeSet(requiredAttrs)
     val oraProjs = OraExpressions.unapplySeq(requiredAttrs)
 
     if (!oraProjs.isDefined) {
       InternalFailure(
         "build project list",
         null,
-        s"failed create ora expressions for projectList: ${attrSet.mkString(",")}")
+        s"failed create ora expressions for projectList: ${requiredAttrs.mkString(",")}")
     } else {
 
       OraTableScan(
         table,
         None,
         requiredAttrs,
-        attrSet,
         oraProjs.get,
         if (pushedOraExpressions.nonEmpty) Some(pushedOraExpressions.head) else None,
         None)

@@ -17,25 +17,22 @@
 
 package org.apache.spark.sql.oracle.operators
 
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeSet}
-import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan, Project}
+import org.apache.spark.sql.catalyst.expressions.{And, Attribute}
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
 import org.apache.spark.sql.oracle.{expressions, SQLSnippet}
-import org.apache.spark.sql.oracle.expressions.{
-  OraBinaryOpExpression,
-  OraExpression,
-  OraExpressions
-}
+import org.apache.spark.sql.oracle.expressions.{OraBinaryOpExpression, OraExpression}
 
 case class OraTableScan(
                          oraTable: OraTable,
                          catalystOp: Option[LogicalPlan],
-                         catalystOutput: Seq[Attribute],
-                         catalystOutputSchema: AttributeSet,
+                         catalystProjectList : Seq[Attribute],
                          projections: Seq[OraExpression],
                          filter: Option[OraExpression],
                          partitionFilter: Option[OraExpression])
   extends OraPlan { self =>
+
+  override lazy val catalystAttributes : Seq[Attribute] = catalystProjectList
 
   val children: Seq[OraPlan] = Seq.empty
 
@@ -50,7 +47,9 @@ case class OraTableScan(
 
       val newFil = if (currFilt.isDefined) {
         val fil = currFilt.get
-        OraBinaryOpExpression(expressions.AND, fil.catalystExpr, fil, oFil)
+        OraBinaryOpExpression(expressions.AND,
+          And(fil.catalystExpr, oFil.catalystExpr),
+          fil, oFil)
       } else oFil
 
       if (!isPartFilter) {
@@ -102,8 +101,6 @@ case class OraTableScan(
   }
 
   def toOraQueryBlock : OraQueryBlock =
-    OraQueryBlock(this, Seq.empty, projections, filter, Seq.empty,
-      catalystOp, catalystOutput, catalystOutputSchema
-    )
+    OraQueryBlock(this, Seq.empty, projections, filter, None, catalystOp, catalystProjectList)
 }
 

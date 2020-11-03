@@ -16,12 +16,12 @@
  */
 package org.apache.spark.sql.oracle.operators
 
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, AttributeSet}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, AttributeSet, NamedExpression}
 import org.apache.spark.sql.catalyst.plans.{FullOuter, JoinType, LeftOuter, RightOuter}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.oracle.SQLSnippet
+import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions}
 import org.apache.spark.sql.oracle.expressions.Named.OraColumnRef
-import org.apache.spark.sql.oracle.expressions.OraExpression
 
 case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onClause: OraExpression)
 
@@ -32,10 +32,11 @@ trait OraQueryBlockState {
   lazy val hasOuterJoin: Boolean =
     joins.exists(j => Set[JoinType](LeftOuter, RightOuter, FullOuter).contains(j.joinType))
   lazy val hasFilter: Boolean = where.isDefined
+  lazy val hasAggregate : Boolean = groupBy.isDefined
 
   def canApply(plan: LogicalPlan): Boolean = plan match {
     case p: Project => true
-    case f: Filter => !hasOuterJoin
+    case f: Filter => !(hasOuterJoin || hasAggregate)
     case j@Join(_, _, (LeftOuter | RightOuter | FullOuter), _, _) =>
       !(hasComputedShape || hasFilter)
     case j: Join => !hasComputedShape
@@ -58,10 +59,9 @@ case class OraQueryBlock(source: OraPlan,
                          joins: Seq[OraJoinClause],
                          select: Seq[OraExpression],
                          where: Option[OraExpression],
-                         groupBy: Seq[OraExpression],
+                         groupBy: Option[Seq[OraExpression]],
                          catalystOp: Option[LogicalPlan],
-                         catalystOutput: Seq[Attribute],
-                         catalystOutputSchema: AttributeSet)
+                         catalystProjectList: Seq[NamedExpression])
   extends OraPlan with OraQueryBlockState {
 
   val children: Seq[OraPlan] = Seq(source)
@@ -76,11 +76,7 @@ case class OraQueryBlock(source: OraPlan,
    * @return
    */
   def newBlockOnCurrent: OraQueryBlock = {
-    val oraSelect = catalystOutput.map(a => OraColumnRef(a.asInstanceOf[AttributeReference]))
-    OraQueryBlock(this, Seq.empty, oraSelect, None,
-      Seq.empty, catalystOp, catalystOutput, catalystOutputSchema
-    )
+    val newOraExprs = OraExpressions.unapplySeq(catalystAttributes).get
+    OraQueryBlock(this, Seq.empty, newOraExprs, None, None, None, catalystAttributes)
   }
-
-  def toOraQueryBlock : OraQueryBlock = this
 }

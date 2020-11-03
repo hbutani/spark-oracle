@@ -73,7 +73,7 @@ trait OraScan {
 
   override def createReaderFactory(): PartitionReaderFactory = {
     OraPartitionReaderFactory(
-      oraPlan.catalystOutput,
+      oraPlan.catalystAttributes,
       OraPartition.createAccumulators(sparkSession))
   }
 
@@ -184,7 +184,7 @@ case class OraPushdownScan(sparkSession: SparkSession, dsKey: DataSourceKey, ora
     with SupportsReportPartitioning
     with OraScan {
 
-  lazy val readSchema = StructType.fromAttributes(oraPlan.catalystOutputSchema.toSeq)
+  lazy val readSchema = StructType.fromAttributes(oraPlan.catalystAttributes)
 
   override def hashCode(): Int = oraPlan.hashCode()
 

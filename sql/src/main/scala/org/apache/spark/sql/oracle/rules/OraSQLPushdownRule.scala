@@ -22,10 +22,41 @@ import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{ExtractEquiJoinKeys, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.{LeftAnti, LeftSemi}
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.connector.read.oracle.OraScan
+import org.apache.spark.sql.connector.read.oracle.{OraPushdownScan, OraScan}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
+import org.apache.spark.sql.oracle.expressions.{AND, OraBinaryOpExpression, OraExpression, OraExpressions}
+import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock, OraTableScan}
 
-class OraSQLPushdownRule extends OraLogicalRule with Logging {
+object OraSQLPushdownRule extends OraLogicalRule with Logging {
+
+  /**
+   * Setting up a [[OraQueryBlock]] for a [[OraTableScan]]:
+   * - the [[OraExpression]]s in the [[OraTableScan]] refer to
+   * [[org.apache.spark.sql.catalyst.expressions.AttributeReference]]s that have
+   * different [[org.apache.spark.sql.catalyst.expressions.ExprId]]s from
+   * the once in the [[DataSourceV2ScanRelation#output]].
+   * - this should be ok; as long as we capture the [[DataSourceV2ScanRelation#output]]
+   *   as the `catalystOutput` of the constructed [[OraQueryBlock]]
+   *
+   * @param oraPlan
+   * @param dsv2
+   * @return
+   */
+  private def toOraQueryBlock(oraPlan : OraPlan,
+                      dsv2: DataSourceV2ScanRelation) : OraQueryBlock = oraPlan match {
+    case oraTScan : OraTableScan =>
+      val oraProjs = OraExpressions.unapplySeq(dsv2.output).get
+      val fils = (oraTScan.filter.toSeq ++ oraTScan.partitionFilter.toSeq)
+      val oraFil = if (fils.nonEmpty) {
+        Some(
+          fils.reduceLeft[OraExpression] {
+          case (l, r) => OraBinaryOpExpression(AND, l.catalystExpr, l, r)
+        }
+        )
+      } else None
+      OraQueryBlock(oraTScan, Seq.empty, oraProjs, oraFil, None, Some(dsv2), dsv2.output)
+    case oraQBlck : OraQueryBlock => oraQBlck
+  }
 
   private def pushProjectFilters(dsV2: DataSourceV2ScanRelation,
                                  scanPlan: LogicalPlan,
@@ -56,21 +87,31 @@ class OraSQLPushdownRule extends OraLogicalRule with Logging {
       s
     }
 
-    val pushPlans = getLastProjectFilter(scanPlan, dsV2, projections.nonEmpty, filters.nonEmpty)
+    def withOraQBlock(dsv2: DataSourceV2ScanRelation) : DataSourceV2ScanRelation = {
+      val oraScan : OraScan = dsv2.scan.asInstanceOf[OraScan]
+      val oraQBlk : OraQueryBlock = toOraQueryBlock(oraScan.oraPlan, dsv2)
+      dsv2.copy(scan = OraPushdownScan(oraScan.sparkSession, oraScan.dsKey, oraQBlk))
+    }
 
-    val pushedDSV2 = pushPlans.foldLeft(Some(dsV2): Option[DataSourceV2ScanRelation]) {
+    val pushPlans = getLastProjectFilter(scanPlan, dsV2, projections.nonEmpty, filters.nonEmpty)
+    /*
+     * set the [[OraPlan]] in the [[DataSourceV2ScanRelation]] as a [[OraQueryBlock]]
+     */
+    val dsV2WithOraQBlock = withOraQBlock(dsV2)
+
+    val pushedDSV2 = pushPlans.foldLeft(Some(dsV2WithOraQBlock): Option[DataSourceV2ScanRelation]) {
       case (None, _) => None
       case (Some(dsV2@DataSourceV2ScanRelation(_, oraScan: OraScan, _)), p: Project) =>
         ProjectPushdown(dsV2,
           oraScan: OraScan,
-          oraScan.oraPlan.toOraQueryBlock,
+          oraScan.oraPlan.asInstanceOf[OraQueryBlock],
           p,
           sparkSession: SparkSession
         ).pushdown
       case (Some(dsV2@DataSourceV2ScanRelation(_, oraScan: OraScan, _)), f: Filter) =>
         FilterPushdown(dsV2,
           oraScan: OraScan,
-          oraScan.oraPlan.toOraQueryBlock,
+          oraScan.oraPlan.asInstanceOf[OraQueryBlock],
           f,
           sparkSession: SparkSession
         ).pushdown
@@ -94,25 +135,27 @@ class OraSQLPushdownRule extends OraLogicalRule with Logging {
         pushProjectFilters(dsV2, scanPlan, projections, filters)
       case joinOp@ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, condition,
       leftChild@DataSourceV2ScanRelation(_, oraScanL : OraScan, _),
-      DataSourceV2ScanRelation(_, oraScanR : OraScan, _),
+      rightChild@DataSourceV2ScanRelation(_, oraScanR : OraScan, _),
       _
       ) => joinType match {
         case LeftAnti | LeftSemi =>
-          SemiAntiJoinPushDown(leftChild, oraScanL, oraScanL.oraPlan.toOraQueryBlock,
-            oraScanR.oraPlan.toOraQueryBlock, joinOp, joinType, leftKeys, rightKeys,
+          SemiAntiJoinPushDown(leftChild, oraScanL, toOraQueryBlock(oraScanL.oraPlan, leftChild),
+            toOraQueryBlock(oraScanR.oraPlan, rightChild), joinOp, joinType, leftKeys, rightKeys,
             condition, sparkSession
             ).pushdown.getOrElse(joinOp)
         case _ =>
-          JoinPushDown(leftChild, oraScanL, oraScanL.oraPlan.toOraQueryBlock,
-            oraScanR.oraPlan.toOraQueryBlock, joinOp, joinType, leftKeys, rightKeys,
+          JoinPushDown(leftChild, oraScanL, toOraQueryBlock(oraScanL.oraPlan, leftChild),
+            toOraQueryBlock(oraScanL.oraPlan, leftChild), joinOp, joinType, leftKeys, rightKeys,
             condition, sparkSession
           ).pushdown.getOrElse(joinOp)
       }
       case aggOp@Aggregate(_, _, child@DataSourceV2ScanRelation(_, oraScan : OraScan, _)) =>
-        AggregatePushDown(child, oraScan, oraScan.oraPlan.toOraQueryBlock, aggOp, sparkSession).
+        AggregatePushDown(child, oraScan,
+          toOraQueryBlock(oraScan.oraPlan, child), aggOp, sparkSession).
           pushdown.getOrElse(aggOp)
       case expOp@Expand(_, _, child@DataSourceV2ScanRelation(_, oraScan : OraScan, _)) =>
-        ExpandPushDown(child, oraScan, oraScan.oraPlan.toOraQueryBlock, expOp, sparkSession).
+        ExpandPushDown(child, oraScan,
+          toOraQueryBlock(oraScan.oraPlan, child), expOp, sparkSession).
           pushdown.getOrElse(expOp)
     }
   }

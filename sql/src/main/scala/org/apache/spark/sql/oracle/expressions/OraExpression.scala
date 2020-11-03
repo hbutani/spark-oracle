@@ -115,18 +115,19 @@ object OraExpression {
     None
   }
 
-  def convert(expr: Expression, inputAttributeSet: AttributeSet): Option[OraExpression] = {
+  def convert(expr: Expression): Option[OraExpression] = {
     unapply(expr)
   }
 
-  def convert(exprs: Seq[Expression], inputAttributeSet: AttributeSet): Option[OraExpression] = {
-    val oEs = exprs.map(convert(_, inputAttributeSet)).collect {
+  def convert(exprs: Seq[Expression]): Option[OraExpression] = {
+    val oEs = exprs.map(convert(_)).collect {
       case Some(oE) => oE
     }
 
     if (oEs.nonEmpty) {
       Some(oEs.tail.foldLeft(oEs.head) {
-        case (left, right) => OraBinaryOpExpression(AND, left.catalystExpr, left, right)
+        case (left, right) =>
+          OraBinaryOpExpression(AND, And(left.catalystExpr, right.catalystExpr), left, right)
       })
     } else {
       None
