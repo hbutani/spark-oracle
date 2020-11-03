@@ -56,6 +56,10 @@ class SQLSnippet private (val sql: String, val params: Seq[Literal]) {
   def groupBy(columns: SQLSnippet*): SQLSnippet =
     if (columns.isEmpty) this else osql"${this} group by ${csv(columns: _*)}"
 
+  def groupBy(gByListOpt: Option[Seq[SQLSnippet]]): SQLSnippet = {
+    gByListOpt.fold(this) { columns => groupBy(columns : _*) }
+  }
+
   def having(condition: SQLSnippet): SQLSnippet = osql"${this} having ${condition}"
 
   def orderBy(columns: SQLSnippet*): SQLSnippet =
@@ -66,8 +70,8 @@ class SQLSnippet private (val sql: String, val params: Seq[Literal]) {
   def limit(n: Int): SQLSnippet = osql"${this} limit ${n}"
   def offset(n: Int): SQLSnippet = osql"${this} offset ${n}"
 
-  def from(oraTbl: OraTable): SQLSnippet =
-    osql"${this}${nl}from ${literalSnippet(oraTbl.schema + "." + oraTbl.name)}"
+  def from(oraTbl: OraTable): SQLSnippet = from(SQLSnippet.tableQualId(oraTbl))
+  def from(sql : SQLSnippet) : SQLSnippet = osql"${this}${nl}from ${sql}"
 
   def where: SQLSnippet = osql"${this} where"
   def where(where: SQLSnippet): SQLSnippet = osql"${this}${nl}where ${where}"
@@ -299,6 +303,11 @@ object SQLSnippet {
   def colRef(nm: String): SQLSnippet = {
     apply(s""""${nm}"""", Seq.empty)
   }
+
+  def tableQualId(oraTbl: OraTable) : SQLSnippet =
+    literalSnippet(oraTbl.schema + "." + oraTbl.name)
+
+  def subQuery(sql : SQLSnippet) : SQLSnippet = osql"( ${sql} )"
 
   /**
    * A [[SQLSnippet]] generator build from a scala String Interpolation

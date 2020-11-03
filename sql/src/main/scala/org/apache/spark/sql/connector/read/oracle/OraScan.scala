@@ -196,8 +196,16 @@ case class OraPushdownScan(sparkSession: SparkSession, dsKey: DataSourceKey, ora
   override def description(): String = super.description()
 
   override def getMetaData(): Map[String, String] = {
-    Map("dsKey" -> dsKey.toString, "OraPlan" -> oraPlan.numberedTreeString)
+    Map(
+      "ReadSchema" -> readSchema.catalogString,
+      "dsKey" -> dsKey.toString,
+      "OraPlan" -> oraPlan.numberedTreeString,
+      "oraPushdownSQL" -> oraPlan.orasql.sql,
+      "oraPushdownBindValues" -> oraPlan.orasql.params.mkString(", ")
+    )
   }
+
+  override def toBatch: Batch = this
 }
 
 object OraScan {

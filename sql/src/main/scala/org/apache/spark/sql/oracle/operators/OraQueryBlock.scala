@@ -25,8 +25,7 @@ import org.apache.spark.sql.oracle.expressions.Named.OraColumnRef
 
 case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onClause: OraExpression)
 
-trait OraQueryBlockState {
-  self: OraQueryBlock =>
+trait OraQueryBlockState { self: OraQueryBlock =>
 
   lazy val hasComputedShape: Boolean = select.exists(o => !o.isInstanceOf[OraColumnRef])
   lazy val hasOuterJoin: Boolean =
@@ -46,6 +45,25 @@ trait OraQueryBlockState {
 
 }
 
+trait OraQueryBlockSQLSnippets {self: OraQueryBlock =>
+
+  private lazy val sourceSnippet : SQLSnippet = source match {
+    case ot : OraTableScan => SQLSnippet.tableQualId(ot.oraTable)
+    case oQ : OraQueryBlock => SQLSnippet.subQuery(oQ.orasql)
+  }
+
+  lazy val selectListSQL = select.map(_.orasql)
+
+  lazy val sourcesSQL : SQLSnippet = {
+    sourceSnippet
+    // TODO joins
+  }
+
+  lazy val whereConditionSQL = where.map(_.orasql)
+
+  lazy val groupByListSQL = groupBy.map(_.map(_.orasql))
+}
+
 /**
  * Represents a Oracle SQL query block.
  *
@@ -62,13 +80,15 @@ case class OraQueryBlock(source: OraPlan,
                          groupBy: Option[Seq[OraExpression]],
                          catalystOp: Option[LogicalPlan],
                          catalystProjectList: Seq[NamedExpression])
-  extends OraPlan with OraQueryBlockState {
+  extends OraPlan with OraQueryBlockState with OraQueryBlockSQLSnippets {
 
   val children: Seq[OraPlan] = Seq(source)
 
   override def orasql: SQLSnippet = {
-    // TODO
-    ???
+    SQLSnippet.select(selectListSQL : _*).
+      from(sourcesSQL).
+      where(whereConditionSQL).
+      groupBy(groupByListSQL)
   }
 
   /**

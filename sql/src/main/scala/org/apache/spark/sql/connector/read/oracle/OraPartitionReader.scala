@@ -16,7 +16,7 @@
  */
 package org.apache.spark.sql.connector.read.oracle
 
-import java.sql.{PreparedStatement, ResultSet}
+import java.sql.{Connection, PreparedStatement, ResultSet}
 
 import oracle.spark.{ConnectionManagement, DataSourceInfo}
 import scala.util.control.NonFatal
@@ -41,8 +41,6 @@ case class OraPartitionReader(
   private[this] var closed = false
 
   private[this] val oraQuery = OraQueryStatement(oraPart, accumulators.timeToFirstRow)
-
-  import oraQuery.{underlying => stmt, conn}
 
   private[this] val rs: ResultSet = oraQuery.executeQuery()
 
@@ -86,9 +84,11 @@ case class OraPartitionReader(
     } catch {
       case e: Exception => logWarning("Exception closing resultset", e)
     }
+
+    val conn = oraQuery.getConn
     try {
-      if (null != stmt) {
-        stmt.close()
+      if (null != conn) {
+        oraQuery.underlying.close()
       }
     } catch {
       case e: Exception => logWarning("Exception closing statement", e)
@@ -118,13 +118,14 @@ case class OraQueryStatement(oraPart: OraPartition, timeToExecute: DoubleAccumul
 
   import oraPart._
 
-  lazy val conn = ConnectionManagement.getConnectionInExecutor(dsInfo)
+  private var conn : Connection = null
 
   lazy val sqlTemplate: String = oraPartSQL
   lazy val bindValues: Seq[Literal] = oraPartSQLParams
   lazy val datasourceInfo : DataSourceInfo = dsInfo
 
   lazy val underlying: PreparedStatement = {
+    conn = ConnectionManagement.getConnectionInExecutor(dsInfo)
     val ps =
       conn.prepareStatement(sqlTemplate, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
     ps.setFetchSize(dsInfo.catalogOptions.fetchSize)
@@ -143,4 +144,6 @@ case class OraQueryStatement(oraPart: OraPartition, timeToExecute: DoubleAccumul
       setter.setValue(bV, ps, i)
     }
   }
+
+  private[oracle] def getConn : Connection = conn
 }
