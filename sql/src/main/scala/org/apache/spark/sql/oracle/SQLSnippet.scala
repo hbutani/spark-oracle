@@ -189,6 +189,7 @@ object SQLSnippet {
   val END: SQLSnippet = osql"END"
   val AS: SQLSnippet = osql"AS"
   val IN: SQLSnippet = osql"IN"
+  val NOT_IN: SQLSnippet = osql"NOT IN"
   val LPAREN: SQLSnippet = osql"("
   val RPAREN: SQLSnippet = osql")"
   val AND: SQLSnippet = osql"and"

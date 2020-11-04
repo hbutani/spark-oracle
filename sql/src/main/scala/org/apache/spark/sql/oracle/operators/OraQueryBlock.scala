@@ -16,7 +16,8 @@
  */
 package org.apache.spark.sql.oracle.operators
 
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, AttributeSet, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.NamedExpression
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.plans.{FullOuter, JoinType, LeftOuter, RightOuter}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.oracle.SQLSnippet
@@ -31,16 +32,25 @@ trait OraQueryBlockState { self: OraQueryBlock =>
   lazy val hasOuterJoin: Boolean =
     joins.exists(j => Set[JoinType](LeftOuter, RightOuter, FullOuter).contains(j.joinType))
   lazy val hasFilter: Boolean = where.isDefined
-  lazy val hasAggregate : Boolean = groupBy.isDefined
+  private lazy val hasAggregations : Boolean = {
+    select.map {oE =>
+      oE.map(_.catalystExpr).collect {
+        case aE : AggregateExpression => aE
+      }
+    }.flatten.nonEmpty
+  }
+  lazy val hasAggregate : Boolean = {
+    groupBy.isDefined || hasAggregations
+  }
 
   def canApply(plan: LogicalPlan): Boolean = plan match {
     case p: Project => true
     case f: Filter => !(hasOuterJoin || hasAggregate)
     case j@Join(_, _, (LeftOuter | RightOuter | FullOuter), _, _) =>
-      !(hasComputedShape || hasFilter)
-    case j: Join => !hasComputedShape
+      !(hasComputedShape || hasFilter || hasAggregations)
+    case j: Join => !(hasComputedShape || hasAggregations)
     case e: Expand => !hasComputedShape
-    case a: Aggregate => !hasComputedShape
+    case a: Aggregate => !(hasComputedShape || hasAggregations)
   }
 
 }

@@ -19,20 +19,10 @@ package org.apache.spark.sql.oracle.expressions
 
 import scala.util.Try
 
-import org.apache.spark.sql.catalyst.expressions.{
-  And,
-  BinaryComparison,
-  EqualNullSafe,
-  Expression,
-  In,
-  InSet,
-  InSubquery,
-  Literal,
-  Not,
-  Or,
-  Predicate
-}
+import org.apache.spark.sql.catalyst.expressions.{And, BinaryComparison, EqualNullSafe, Expression, In, InSet, InSubquery, Literal, Not, Or, Predicate}
+import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.oracle.SQLSnippet
+import org.apache.spark.sql.oracle.operators.OraQueryBlock
 
 /**
  * Conversions for expressions in ''predicates.scala''
@@ -48,6 +38,36 @@ object Predicates {
       oExpr.orasql + IN + LPAREN + csv(inList.map(_.orasql): _*) + RPAREN
 
     override def children: Seq[OraExpression] = oExpr +: inList
+  }
+
+  /**
+   * Represents a subQuery check (such as IN or NOT IN)
+   * This is the Oracle SQL for a Spark [[LeftSemi]] or [[LeftAnti]]
+   * `join` operattion.
+   *
+   * @param joinOp
+   * @param joiningExprs
+   * @param op
+   * @param qryBlk
+   */
+  case class OraSubQueryFilter(joinOp : Join,
+                               joiningExprs : Seq[OraExpression],
+                               op : SQLSnippet,
+                               qryBlk : OraQueryBlock) extends OraExpression {
+    override def catalystExpr: Expression = joinOp.condition.get
+
+    override def orasql: SQLSnippet = {
+      val joinExprsSQL : Seq[SQLSnippet] = joiningExprs.map(_.orasql)
+      val subQrySQL = qryBlk.orasql
+
+      if (joinExprsSQL.size > 1) {
+        osql" (${SQLSnippet.csv(joinExprsSQL : _*)}) ${op} ( ${subQrySQL} )"
+      } else {
+        osql" ${joinExprsSQL.head} ${op} ( ${subQrySQL} )"
+      }
+    }
+
+    override def children: Seq[OraExpression] = joiningExprs
   }
 
   def unapply(e: Expression): Option[OraExpression] =
