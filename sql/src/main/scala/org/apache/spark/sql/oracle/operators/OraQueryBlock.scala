@@ -51,6 +51,7 @@ trait OraQueryBlockState { self: OraQueryBlock =>
     case j: Join => !(hasComputedShape || hasAggregations)
     case e: Expand => !hasComputedShape
     case a: Aggregate => !(hasComputedShape || hasAggregations)
+    case gl : GlobalLimit => !(hasOuterJoin || hasAggregate)
   }
 
 }

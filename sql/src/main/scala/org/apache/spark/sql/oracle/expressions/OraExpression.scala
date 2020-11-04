@@ -17,13 +17,14 @@
 
 package org.apache.spark.sql.oracle.expressions
 
-import org.apache.spark.sql.catalyst.expressions.{And, AttributeSet, Expression, Literal}
+import org.apache.spark.sql.catalyst.expressions.{And, Expression}
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
-import org.apache.spark.sql.oracle.{OraSparkUtils, OraSQLImplicits, SQLSnippet}
+import org.apache.spark.sql.oracle.{OraSparkUtils, OraSQLImplicits, SQLSnippet, SQLSnippetProvider}
 import org.apache.spark.sql.sources.Filter
 
-abstract class OraExpression extends TreeNode[OraExpression] with OraSQLImplicits {
+abstract class OraExpression extends TreeNode[OraExpression]
+  with OraSQLImplicits with SQLSnippetProvider {
 
   def catalystExpr: Expression
 
@@ -95,6 +96,7 @@ object OraExpression {
       case Named(oE) => oE
       case Predicates(oE) => oE
       case Nulls(oE) => oE
+      case Subquery(oE) => oE
       case _ => null
     })
 

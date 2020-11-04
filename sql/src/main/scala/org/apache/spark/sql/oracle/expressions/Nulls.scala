@@ -18,6 +18,8 @@
 package org.apache.spark.sql.oracle.expressions
 
 import org.apache.spark.sql.catalyst.expressions.{Expression, IsNotNull, IsNull}
+import org.apache.spark.sql.oracle.SQLSnippet
+import org.apache.spark.sql.oracle.expressions.Subquery.{OraNullCheckSubQuery, OraSubQuery}
 
 /**
  * Conversions for expressions in ''nullExpressions.scala''
@@ -26,9 +28,16 @@ object Nulls {
 
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
-      case cE @ IsNull(OraExpression(child)) => OraPostfixUnaryOpExpression(ISNULL, cE, child)
+      case cE @ IsNull(OraExpression(child)) =>
+        child match {
+          case sq : OraSubQuery => OraNullCheckSubQuery(cE, SQLSnippet.NOT_EXISTS, sq)
+          case _ => OraPostfixUnaryOpExpression(ISNULL, cE, child)
+        }
       case cE @ IsNotNull(OraExpression(child)) =>
-        OraPostfixUnaryOpExpression(ISNOTNULL, cE, child)
+        child match {
+          case sq : OraSubQuery => OraNullCheckSubQuery(cE, SQLSnippet.EXISTS, sq)
+          case _ => OraPostfixUnaryOpExpression(ISNOTNULL, cE, child)
+        }
       case _ => null
     })
 

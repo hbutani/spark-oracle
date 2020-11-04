@@ -24,7 +24,7 @@ import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.oracle.{OraSparkUtils, SQLSnippet}
 import org.apache.spark.sql.oracle.expressions.{AND, OraBinaryOpExpression, OraExpression, OraExpressions}
-import org.apache.spark.sql.oracle.expressions.Predicates.OraSubQueryFilter
+import org.apache.spark.sql.oracle.expressions.Subquery.OraSubQueryJoin
 import org.apache.spark.sql.oracle.operators.OraQueryBlock
 
 /**
@@ -190,7 +190,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
     val joinOp = pushdownCatalystOp
 
     for (leftOraExprs <- OraExpressions.unapplySeq(leftKeys)) yield {
-      val oraExpression: OraExpression = OraSubQueryFilter(
+      val oraExpression: OraExpression = OraSubQueryJoin(
         joinOp,
         leftOraExprs,
         SQLSnippet.IN,
@@ -232,7 +232,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
       /*
        * 2. Add NOT IN predicate to `currQBlk`
        */
-      val oraExpression: OraExpression = OraSubQueryFilter(
+      val oraExpression: OraExpression = OraSubQueryJoin(
         joinOp,
         leftOraExprs,
         SQLSnippet.NOT_IN,
@@ -268,7 +268,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
       ) yield {
         val newRQBlk = rightQBlk.copy(select = rightOraExprs)
 
-        val oraExpression: OraExpression = OraSubQueryFilter(
+        val oraExpression: OraExpression = OraSubQueryJoin(
           joinOp,
           leftOraExprs,
           SQLSnippet.NOT_IN,
@@ -290,13 +290,12 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
   }
 
   private[rules] def pushdownSQL: Option[OraQueryBlock] = {
-    if (currQBlk.canApply(pushdownCatalystOp) &&
-      leftKeys.size > 0) {
+    if (currQBlk.canApply(pushdownCatalystOp)) {
 
       joinType match {
-        case LeftSemi if !joinCond.isDefined => pushSemiJoin
-        case LeftAnti if !joinCond.isDefined => pushNotExists
-        case LeftAnti => pushNotIn
+        case LeftSemi if leftKeys.nonEmpty && !joinCond.isDefined => pushSemiJoin
+        case LeftAnti if leftKeys.nonEmpty && !joinCond.isDefined => pushNotExists
+        case LeftAnti if joinCond.isDefined => pushNotIn
         case _ => None
       }
     } else None

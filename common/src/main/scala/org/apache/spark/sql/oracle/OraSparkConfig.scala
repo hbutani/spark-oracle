@@ -45,4 +45,16 @@ object OraSparkConfig {
                  conf: SQLConf) : T = {
     conf.getConf(configEntry)
   }
+
+  def setConf[T](configEntry : ConfigEntry[T], value : T)(
+    implicit sparkSession : SparkSession = OraSparkUtils.currentSparkSession
+  ) : Unit = {
+    setConf(configEntry, value, sparkSession.sqlContext.conf)
+  }
+
+  def setConf[T](configEntry : ConfigEntry[T],
+                 value : T,
+                 conf: SQLConf) : Unit = {
+    conf.setConf(configEntry, value)
+  }
 }

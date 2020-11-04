@@ -193,6 +193,9 @@ object SQLSnippet {
   val LPAREN: SQLSnippet = osql"("
   val RPAREN: SQLSnippet = osql")"
   val AND: SQLSnippet = osql"and"
+  val LTE: SQLSnippet = osql"<="
+  val EXISTS: SQLSnippet = osql"exists"
+  val NOT_EXISTS: SQLSnippet = osql"not exists"
 
   def literalSnippet(s: String): SQLSnippet =
     SQLSnippet(s, Seq.empty)

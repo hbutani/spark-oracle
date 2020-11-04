@@ -41,7 +41,7 @@ case class OraLiteralSql(catalystExpr: Literal) extends OraExpression with OraLe
   override def orasql: SQLSnippet =
     SQLSnippet.literalSnippet(catalystExpr)
 
-  def this(s: String) = this(Literal(s, StringType))
+  def this(s: String) = this(Literal(UTF8String.fromString(s), StringType))
 }
 
 /**
