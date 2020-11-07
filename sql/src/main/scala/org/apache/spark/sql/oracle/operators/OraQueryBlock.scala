@@ -18,13 +18,47 @@ package org.apache.spark.sql.oracle.operators
 
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.plans.{FullOuter, JoinType, LeftOuter, RightOuter}
+import org.apache.spark.sql.catalyst.plans.{FullOuter, Inner, JoinType, LeftOuter, RightOuter}
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.oracle.SQLSnippet
+import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet, SQLSnippetProvider}
 import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions}
 import org.apache.spark.sql.oracle.expressions.Named.OraColumnRef
 
-case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onClause: OraExpression)
+case class OraJoinClause(joinType: JoinType,
+                         joinSrc: OraPlan,
+                         onCondition: OraExpression
+                        ) extends SQLSnippetProvider {
+  import OraSQLImplicits._
+
+  lazy val joinTypeSQL : SQLSnippet = joinType match {
+    case Inner => osql"join"
+    case LeftOuter => osql"left outer"
+    case RightOuter => osql"right outer"
+    case FullOuter => osql"full outer"
+    case _ => null
+  }
+
+  private var joinAlias : Option[String] = None
+
+  def setJoinAlias(a : String) : Unit = {
+    joinAlias = Some(a)
+  }
+
+  lazy val joinSrcSQL : SQLSnippet = {
+    val srcSQL = joinSrc match {
+      case ot : OraTableScan => SQLSnippet.tableQualId(ot.oraTable)
+      case oQ : OraQueryBlock => SQLSnippet.subQuery(oQ.orasql)
+    }
+
+    val qualifier : SQLSnippet =
+      joinAlias.map(jA => SQLSnippet.colRef(jA)).getOrElse(SQLSnippet.empty)
+
+    srcSQL + qualifier
+
+  }
+
+  lazy val orasql: SQLSnippet = osql"${joinTypeSQL + joinSrcSQL} on ${onCondition.reifyLiterals}"
+}
 
 trait OraQueryBlockState { self: OraQueryBlock =>
 
@@ -43,6 +77,8 @@ trait OraQueryBlockState { self: OraQueryBlock =>
     groupBy.isDefined || hasAggregations
   }
 
+  lazy val hasJoins = joins.nonEmpty
+
   def canApply(plan: LogicalPlan): Boolean = plan match {
     case p: Project => true
     case f: Filter => !(hasOuterJoin || hasAggregate)
@@ -58,21 +94,31 @@ trait OraQueryBlockState { self: OraQueryBlock =>
 
 trait OraQueryBlockSQLSnippets {self: OraQueryBlock =>
 
-  private lazy val sourceSnippet : SQLSnippet = source match {
-    case ot : OraTableScan => SQLSnippet.tableQualId(ot.oraTable)
-    case oQ : OraQueryBlock => SQLSnippet.subQuery(oQ.orasql)
+  private var sourceAlias : Option[String] = None
+
+  def setSourceAlias(a : String) : Unit = {
+    sourceAlias = Some(a)
   }
 
-  lazy val selectListSQL = select.map(_.orasql)
+  private lazy val sourceSnippet : SQLSnippet = {
+    val srcSQL = source match {
+      case ot : OraTableScan => SQLSnippet.tableQualId(ot.oraTable)
+      case oQ : OraQueryBlock => SQLSnippet.subQuery(oQ.orasql)
+    }
+    val qualifier : SQLSnippet =
+      sourceAlias.map(sA => SQLSnippet.colRef(sA)).getOrElse(SQLSnippet.empty)
+    srcSQL + qualifier
+  }
+
+  lazy val selectListSQL = select.map(_.reifyLiterals.orasql)
 
   lazy val sourcesSQL : SQLSnippet = {
-    sourceSnippet
-    // TODO joins
+    sourceSnippet ++ joins.map(_.orasql)
   }
 
   lazy val whereConditionSQL = where.map(_.orasql)
 
-  lazy val groupByListSQL = groupBy.map(_.map(_.orasql))
+  lazy val groupByListSQL = groupBy.map(_.map(_.reifyLiterals.orasql))
 }
 
 /**
@@ -93,7 +139,9 @@ case class OraQueryBlock(source: OraPlan,
                          catalystProjectList: Seq[NamedExpression])
   extends OraPlan with OraQueryBlockState with OraQueryBlockSQLSnippets {
 
-  val children: Seq[OraPlan] = Seq(source)
+  val children: Seq[OraPlan] = Seq(source) ++ joins.map(_.joinSrc)
+
+  override def stringArgs: Iterator[Any] = Iterator(catalystProjectList, select, where, groupBy)
 
   override def orasql: SQLSnippet = {
     SQLSnippet.select(selectListSQL : _*).
@@ -110,4 +158,5 @@ case class OraQueryBlock(source: OraPlan,
     val newOraExprs = OraExpressions.unapplySeq(catalystAttributes).get
     OraQueryBlock(this, Seq.empty, newOraExprs, None, None, None, catalystAttributes)
   }
+
 }

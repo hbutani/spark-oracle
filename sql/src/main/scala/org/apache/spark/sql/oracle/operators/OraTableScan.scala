@@ -35,6 +35,8 @@ case class OraTableScan(
   override lazy val catalystAttributes : Seq[Attribute] = catalystProjectList
 
   val children: Seq[OraPlan] = Seq.empty
+  override def stringArgs: Iterator[Any] =
+    Iterator(SQLSnippet.tableQualId(oraTable).sql, catalystProjectList, projections, filter)
 
   def filter(oFil: OraExpression, isPartFilter: Boolean): OraTableScan = {
 
@@ -69,38 +71,11 @@ case class OraTableScan(
     }
   }
 
-//  def filter(catalystFil: Filter): Option[OraPlan] = {
-//    val oraFilExpr = OraExpression.convert(catalystFil.condition, catalystFil.inputSet)
-//    (self, oraFilExpr) match {
-//      case (_, None) => None
-//      case (_: OraTableScan, Some(oraFilExpr)) => Some(filter(oraFilExpr, false))
-//      case (_, Some(oraFilExpr)) => Some(OraFilter(self, oraFilExpr, catalystFil))
-//    }
-//  }
-//
-//  def project(catalystProj: Project): Option[OraPlan] = {
-//    val oraProjs = OraExpressions.unapplySeq(catalystProj.projectList)
-//
-//    (self, oraProjs) match {
-//      case (_, None) => None
-//      case (os: OraTableScan, Some(oraProjs)) =>
-//        Some(
-//          os.copy(
-//            projections = oraProjs,
-//            catalystOp = Some(catalystProj),
-//            catalystOutputSchema = catalystProj.outputSet))
-//      case (_, Some(oraProjs)) => Some(OraProject(self, oraProjs, catalystProj))
-//    }
-//  }
-
   override def orasql: SQLSnippet = {
     val filOpt =
       SQLSnippet.combine(SQLSnippet.AND, filter.map(_.orasql), partitionFilter.map(_.orasql))
 
     SQLSnippet.select(projections.map(_.orasql): _*).from(oraTable).where(filOpt)
   }
-
-  def toOraQueryBlock : OraQueryBlock =
-    OraQueryBlock(this, Seq.empty, projections, filter, None, catalystOp, catalystProjectList)
 }
 

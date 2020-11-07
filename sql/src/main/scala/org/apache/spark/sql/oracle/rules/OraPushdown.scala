@@ -79,23 +79,6 @@ trait OraPushdown {
 
 }
 
-case class JoinPushDown(inDSScan: DataSourceV2ScanRelation,
-                        leftOraScan: OraScan,
-                        leftQBlk: OraQueryBlock,
-                        rightQBlk: OraQueryBlock,
-                        pushdownCatalystOp: Join,
-                        joinType: JoinType,
-                        leftKeys: Seq[Expression],
-                        rightKeys: Seq[Expression],
-                        joinCond: Option[Expression],
-                        sparkSession: SparkSession) extends OraPushdown {
-  override val inOraScan: OraScan = leftOraScan
-  override val inQBlk: OraQueryBlock = leftQBlk
-
-  private[rules] def pushdownSQL: Option[OraQueryBlock] = None
-
-}
-
 case class ExpandPushDown(inDSScan: DataSourceV2ScanRelation,
                           inOraScan: OraScan,
                           inQBlk: OraQueryBlock,

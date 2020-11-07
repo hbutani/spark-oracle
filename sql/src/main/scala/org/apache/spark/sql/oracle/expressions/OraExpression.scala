@@ -17,9 +17,13 @@
 
 package org.apache.spark.sql.oracle.expressions
 
+import java.util.Locale
+
 import org.apache.spark.sql.catalyst.expressions.{And, Expression}
 import org.apache.spark.sql.catalyst.trees.TreeNode
+import org.apache.spark.sql.catalyst.util.truncatedString
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.oracle.{OraSparkUtils, OraSQLImplicits, SQLSnippet, SQLSnippetProvider}
 import org.apache.spark.sql.sources.Filter
 
@@ -30,12 +34,44 @@ abstract class OraExpression extends TreeNode[OraExpression]
 
   def orasql: SQLSnippet
 
+  def reifyLiterals : OraExpression = this transformUp {
+    case l : OraLiteral => l.toLiteralSql
+  }
+
+  /*
+   * When showing `OraExpression` such as in the treeString of
+   * `OraPlan` just show the wrapped `catalystExpr`
+   */
+  override def stringArgs: Iterator[Any] = Iterator(catalystExpr)
+
+  /*
+   * Copy behavior for String and treeString from [[Expression]]
+   * `treeString` of a OraPlan will show `OraExpression` similar
+   * to how spark `Expression` are shown in treeString of
+   * spark `QueryPlan`.
+   */
+
+  def prettyName: String = nodeName.toLowerCase(Locale.ROOT)
+
+  protected def flatArguments: Iterator[Any] = stringArgs.flatMap {
+    case t: Iterable[_] => t
+    case single => single :: Nil
+  }
+
+  // Marks this as final, Expression.verboseString should never be called, and thus shouldn't be
+  // overridden by concrete classes.
   final override def verboseString(maxFields: Int): String = simpleString(maxFields)
+
+  override def simpleString(maxFields: Int): String = toString
+
+  override def toString: String = prettyName + truncatedString(
+    flatArguments.toSeq, "(", ", ", ")", SQLConf.get.maxToStringFields)
 
   override def simpleStringWithNodeId(): String = {
     throw new UnsupportedOperationException(
       s"$nodeName does not implement simpleStringWithNodeId")
   }
+
 }
 
 trait OraLeafExpression { self: OraExpression =>

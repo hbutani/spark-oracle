@@ -135,7 +135,7 @@ class SQLSnippet private (val sql: String, val params: Seq[Literal]) {
     osql"${this} not in (${inlist})"
   }
 
-  def as(alias: String): SQLSnippet = this + AS + literalSnippet(alias)
+  def as(alias: String): SQLSnippet = this + AS + colRef(alias)
 }
 
 /**
@@ -306,6 +306,10 @@ object SQLSnippet {
 
   def colRef(nm: String): SQLSnippet = {
     apply(s""""${nm}"""", Seq.empty)
+  }
+
+  def qualifiedColRef(qual : String, nm: String): SQLSnippet = {
+    apply(s""""${qual}"."${nm}"""", Seq.empty)
   }
 
   def tableQualId(oraTbl: OraTable) : SQLSnippet =

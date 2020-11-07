@@ -264,7 +264,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
       val (notInLKeys, notInRkeys) = notInJoinKeys.get.unzip
       for (
         leftOraExprs <- OraExpressions.unapplySeq(leftKeys ++ notInLKeys);
-        rightOraExprs <- OraExpressions.unapplySeq(leftKeys ++ notInRkeys)
+        rightOraExprs <- OraExpressions.unapplySeq(rightKeys ++ notInRkeys)
       ) yield {
         val newRQBlk = rightQBlk.copy(select = rightOraExprs)
 

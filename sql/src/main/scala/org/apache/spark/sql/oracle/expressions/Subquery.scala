@@ -48,6 +48,13 @@ object Subquery {
     })
 
   /**
+   * Marker trait for ''sub-query'' expressions.
+   */
+  trait OraSubqueryExpression extends OraExpression {
+    def oraPlan : OraPlan
+  }
+
+  /**
    * Represents a subQuery check (such as IN or NOT IN)
    * This is the Oracle SQL for a Spark [[LeftSemi]] or [[LeftAnti]]
    * `join` operattion.
@@ -55,17 +62,17 @@ object Subquery {
    * @param joinOp
    * @param joiningExprs
    * @param op
-   * @param qryBlk
+   * @param oraPlan
    */
   case class OraSubQueryJoin(joinOp : Join,
                              joiningExprs : Seq[OraExpression],
                              op : SQLSnippet,
-                             qryBlk : OraQueryBlock) extends OraExpression {
+                             oraPlan : OraQueryBlock) extends OraSubqueryExpression {
     override def catalystExpr: Expression = joinOp.condition.get
 
     override def orasql: SQLSnippet = {
       val joinExprsSQL : Seq[SQLSnippet] = joiningExprs.map(_.orasql)
-      val subQrySQL = qryBlk.orasql
+      val subQrySQL = oraPlan.orasql
 
       if (joinExprsSQL.size > 1) {
         osql" (${SQLSnippet.csv(joinExprsSQL : _*)}) ${op} ( ${subQrySQL} )"
@@ -78,8 +85,8 @@ object Subquery {
   }
 
   case class OraSubQuery(catalystExpr : SubqueryExpression,
-                         qryBlk : OraPlan) extends OraExpression {
-    override def orasql: SQLSnippet = qryBlk.orasql
+                         oraPlan : OraPlan) extends OraSubqueryExpression {
+    override def orasql: SQLSnippet = oraPlan.orasql
     override val children: Seq[OraExpression] = Seq.empty
   }
 

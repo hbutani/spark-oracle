@@ -16,6 +16,7 @@
  */
 package org.apache.spark.sql.oracle.translation
 
+// scalastyle:off line.size.limit
 class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
   testPushdown("inSubQuery",
     """
@@ -25,7 +26,16 @@ class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |                from sparktest.unit_test_partitioned
       |                where c_int > 5
       |                )
-      |""".stripMargin
+      |""".stripMargin,
+    // why the funny form: """.stripMargin + """
+    //   have to compensate for idea behavior of removing trailing spaces
+    //   if you remove the """.stripMargin + """ the trailing space
+    //   disappears after a compile.
+    """select "C_LONG"
+      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |where  "C_INT" IN ( select "C_INT"
+      |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
+      |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) )""".stripMargin
   )
 
   testPushdown("notinSubQuery",
@@ -36,7 +46,12 @@ class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |                from sparktest.unit_test_partitioned
       |                where c_int > 5
       |                )
-      |""".stripMargin
+      |""".stripMargin,
+    """select "C_LONG"
+      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |where  "C_INT" NOT IN ( select "C_INT"
+      |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
+      |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) )""".stripMargin
   )
 
   testPushdown("existsSubQuery",
@@ -57,7 +72,13 @@ class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |               from ssales_other
       |
       |               )
-      |""".stripMargin
+      |""".stripMargin,
+    """select "SS_ITEM_SK"
+      |from TPCDS.STORE_SALES """.stripMargin + """
+      |where (("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) AND exists  ( select 1 AS "col"
+      |from TPCDS.STORE_SALES """.stripMargin + """
+      |where (("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) AND rownum <= 1) ))""".
+      stripMargin
   )
 
   testPushdown("notExistsSubQuery",
@@ -77,6 +98,11 @@ class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       | where not exists (select ssales_other.ss_item_sk
       |               from ssales_other
       |               )
-      |""".stripMargin
+      |""".stripMargin,
+    """select "SS_ITEM_SK"
+      |from TPCDS.STORE_SALES """.stripMargin + """
+      |where (("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) AND not exists  ( select 1 AS "col"
+      |from TPCDS.STORE_SALES """.stripMargin + """
+      |where (("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) AND rownum <= 1) ))""".stripMargin
   )
 }

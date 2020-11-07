@@ -26,7 +26,11 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
   |                from sparktest.unit_test_partitioned
   |                where c_long = sparktest.unit_test.c_long
   |                )
-  |""".stripMargin)
+  |""".stripMargin,
+  """select "C_LONG"
+    |from SPARKTEST.UNIT_TEST """.stripMargin + """
+    |where  ("C_INT", "C_LONG") IN ( select "C_INT", "C_LONG"
+    |from SPARKTEST.UNIT_TEST_PARTITIONED  )""".stripMargin)
 
   testPushdown(
     "existsSubQuery",
@@ -46,7 +50,12 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       | where exists (select ssales_other.ss_item_sk
       |               from ssales_other
       |               where ssales_other.ss_item_sk = ssales.ss_item_sk
-      |               )""".stripMargin)
+      |               )""".stripMargin,
+  """select "SS_ITEM_SK"
+    |from TPCDS.STORE_SALES """.stripMargin + """
+    |where (("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) AND  "SS_ITEM_SK" IN ( select "SS_ITEM_SK"
+    |from TPCDS.STORE_SALES """.stripMargin + """
+    |where ("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) ))""".stripMargin)
 
   testPushdown(
     "notinSubquery",
@@ -56,7 +65,11 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |where c_int not in (select c_int
       |                from sparktest.unit_test_partitioned
       |                where c_long = sparktest.unit_test.c_long
-      |                )""".stripMargin)
+      |                )""".stripMargin,
+  """select "C_LONG"
+    |from SPARKTEST.UNIT_TEST """.stripMargin + """
+    |where  ("C_LONG", "C_INT") NOT IN ( select "C_LONG", "C_INT"
+    |from SPARKTEST.UNIT_TEST_PARTITIONED  )""".stripMargin)
 
   testPushdown(
     "notexistsSubQuery",
@@ -67,6 +80,11 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |                 from sparktest.unit_test_partitioned
       |                 where c_long = sparktest.unit_test.c_long and
       |                       c_int = sparktest.unit_test.c_int
-      |                 )""".stripMargin)
+      |                 )""".stripMargin,
+  """select "C_LONG"
+    |from SPARKTEST.UNIT_TEST """.stripMargin + """
+    |where  ("C_LONG", "C_INT") NOT IN ( select "C_INT", "C_LONG"
+    |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
+    |where ("C_LONG" IS NOT NULL AND "C_INT" IS NOT NULL) )""".stripMargin)
 
 }

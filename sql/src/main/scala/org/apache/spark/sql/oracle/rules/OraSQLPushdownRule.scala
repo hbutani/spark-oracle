@@ -20,28 +20,24 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{ExtractEquiJoinKeys, PhysicalOperation}
-import org.apache.spark.sql.catalyst.plans.{LeftAnti, LeftSemi}
+import org.apache.spark.sql.catalyst.plans.{ExistenceJoin, LeftAnti, LeftSemi}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.connector.read.oracle.{OraPushdownScan, OraScan}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
-import org.apache.spark.sql.oracle.expressions.{
-  AND,
-  OraBinaryOpExpression,
-  OraExpression,
-  OraExpressions
-}
+import org.apache.spark.sql.oracle.expressions.{AND, OraBinaryOpExpression, OraExpression, OraExpressions}
 import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock, OraTableScan}
 
 object OraSQLPushdownRule extends OraLogicalRule with Logging {
 
   /**
    * Setting up a [[OraQueryBlock]] for a [[OraTableScan]]:
-   * - the [[OraExpression]]s in the [[OraTableScan]] refer to
-   * [[org.apache.spark.sql.catalyst.expressions.AttributeReference]]s that have
-   * different [[org.apache.spark.sql.catalyst.expressions.ExprId]]s from
-   * the once in the [[DataSourceV2ScanRelation#output]].
-   * - this should be ok; as long as we capture the [[DataSourceV2ScanRelation#output]]
-   *   as the `catalystOutput` of the constructed [[OraQueryBlock]]
+   *
+   *  - the [[OraExpression]]s in the [[OraTableScan]] refer to
+   * [[org.apache.spark.sql.catalyst.expressions.AttributeReference spark attrs]] that have
+   * different [[org.apache.spark.sql.catalyst.expressions.ExprId expr_ids]] from
+   * the once in the [[DataSourceV2ScanRelation#output dsv2 output]].
+   *  - we fix this by setting up `OraQBlk <- QraTableScan` tree with
+   *    the expr_ids of the output and expressions matching the dsv2.output expr_ids.
    *
    * @param oraPlan
    * @param dsv2
@@ -57,7 +53,16 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
             case (l, r) => OraBinaryOpExpression(AND, l.catalystExpr, l, r)
           })
         } else None
-        OraQueryBlock(oraTScan, Seq.empty, oraProjs, oraFil, None, Some(dsv2), dsv2.output)
+
+        OraQueryBlock(
+          oraTScan.copy(
+            catalystOp = Some(dsv2),
+            catalystProjectList = dsv2.output,
+            projections = Seq.empty,
+            filter = None,
+            partitionFilter = None),
+          Seq.empty, oraProjs, oraFil, None, Some(dsv2), dsv2.output
+        )
       case oraQBlck: OraQueryBlock => oraQBlck
     }
 
@@ -147,6 +152,11 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
             rightChild @ DataSourceV2ScanRelation(_, oraScanR: OraScan, _),
             _) =>
         joinType match {
+            /*
+             - for example tpcds q10, q35
+             - TODO: how to handle exists boolean attribute on top of the join operator
+             */
+          case _ : ExistenceJoin => joinOp
           case LeftAnti | LeftSemi =>
             SemiAntiJoinPushDown(
               leftChild,
@@ -160,11 +170,11 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
               condition,
               sparkSession).pushdown.getOrElse(joinOp)
           case _ =>
-            JoinPushDown(
+            JoinPushdown(
               leftChild,
               oraScanL,
               toOraQueryBlock(oraScanL.oraPlan, leftChild),
-              toOraQueryBlock(oraScanL.oraPlan, leftChild),
+              toOraQueryBlock(oraScanR.oraPlan, rightChild),
               joinOp,
               joinType,
               leftKeys,

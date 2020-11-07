@@ -20,14 +20,14 @@ package org.apache.spark.sql.oracle
 import org.apache.spark.sql.{SparkSessionExtensions => ApacheSparkSessionExtensions}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.oracle.parsing.OraParser
-import org.apache.spark.sql.oracle.rules.OraSQLPushdownRule
+import org.apache.spark.sql.oracle.rules.OraLogicalRules
 
 /**
  * Include this class in ''spark.sql.extensions'' for these extensions to take effect.
  *
- * The [[OraParser]] is also used to ensure that the [[OraSQLPushdownRule]] is
+ * The [[OraParser]] is also used to ensure that the [[OraLogicalRules]] are
  * applied as an `extraOptimizations`. This ensures that the
- * [[OraSQLPushdownRule]] is applied in the *User Provided Optimizers*
+ * [[OraLogicalRules]] are applied in the *User Provided Optimizers*
  * **Batch** of the [[org.apache.spark.sql.execution.SparkOptimizer]],
  * which comes after all built-in rewrites. The rewrites in
  * [[OraSQLPushdownRule]] assume the input [[LogicalPlan]] has been

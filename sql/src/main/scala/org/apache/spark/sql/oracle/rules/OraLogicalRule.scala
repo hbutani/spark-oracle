@@ -40,6 +40,17 @@ abstract class OraLogicalRule extends Rule[LogicalPlan] {
 
 }
 
+object OraLogicalRules extends OraLogicalRule {
+
+  val RULES = Seq(OraSQLPushdownRule, OraFixColumnNames)
+
+  override def _apply(plan: LogicalPlan)(implicit sparkSession: SparkSession): LogicalPlan = {
+    RULES.foldLeft(plan) {
+      case (plan, r) => r(plan)
+    }
+  }
+}
+
 /*
  * Translation Notes:
  * Plan Matching Pattern is

@@ -22,7 +22,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.oracle.OraSparkUtils
-import org.apache.spark.sql.oracle.rules.OraSQLPushdownRule
+import org.apache.spark.sql.oracle.rules.OraLogicalRules
 import org.apache.spark.sql.types.{DataType, StructType}
 
 class OraParser(baseParser : ParserInterface) extends ParserInterface {
@@ -40,9 +40,9 @@ class OraParser(baseParser : ParserInterface) extends ParserInterface {
   private def ensurePushdownRuleRegistered(ss : SparkSession) : Unit = {
     val extraRules = ss.sessionState.experimentalMethods.extraOptimizations
 
-    if (!extraRules.contains(OraSQLPushdownRule)) {
+    if (!extraRules.contains(OraLogicalRules)) {
       ss.sessionState.experimentalMethods.extraOptimizations =
-        ss.sessionState.experimentalMethods.extraOptimizations :+ OraSQLPushdownRule
+        ss.sessionState.experimentalMethods.extraOptimizations :+ OraLogicalRules
     }
   }
 

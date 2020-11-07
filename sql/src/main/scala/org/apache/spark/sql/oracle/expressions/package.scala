@@ -33,7 +33,7 @@ package object expressions {
   private[oracle] val AND = "AND"
   private[expressions] val OR = "OR"
   private[expressions] val DECODE = "DECODE"
-  private[expressions] val EQ = "="
+  private[oracle] val EQ = "="
   private[expressions] val ISNULL = "IS NULL"
   private[expressions] val ISNOTNULL = "IS NOT NULL"
 }

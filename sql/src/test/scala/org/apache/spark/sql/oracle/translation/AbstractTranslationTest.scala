@@ -27,12 +27,17 @@ abstract class AbstractTranslationTest extends AbstractTest with PlanTestHelpers
   import AbstractTranslationTest._
 
   def testPushdown(nm : String,
-                   sqlStr : String) : Unit = {
+                   sqlStr : String,
+                  oraSQL : String = null) : Unit = {
     test(nm) { td =>
       val df = TestOracleHive.sql(sqlStr)
       val scans = collectScans(df.queryExecution.optimizedPlan)
       assert(scans.size == 1)
-      scans(0).showOraSQL(nm)
+      if (oraSQL == null) {
+        scans(0).showOraSQL(nm)
+      } else {
+        assert(scans(0).oraPlan.orasql.sql == oraSQL)
+      }
     }
   }
 }
