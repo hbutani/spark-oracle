@@ -35,7 +35,8 @@ class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |from SPARKTEST.UNIT_TEST """.stripMargin + """
       |where  "C_INT" IN ( select "C_INT"
       |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
-      |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) )""".stripMargin
+      |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) )""".stripMargin,
+    true, true
   )
 
   testPushdown("notinSubQuery",
@@ -51,7 +52,8 @@ class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |from SPARKTEST.UNIT_TEST """.stripMargin + """
       |where  "C_INT" NOT IN ( select "C_INT"
       |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
-      |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) )""".stripMargin
+      |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) )""".stripMargin,
+    true, true
   )
 
   testPushdown("existsSubQuery",

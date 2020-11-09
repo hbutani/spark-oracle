@@ -189,12 +189,16 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
   private def pushSemiJoin : Option[OraQueryBlock] = {
     val joinOp = pushdownCatalystOp
 
-    for (leftOraExprs <- OraExpressions.unapplySeq(leftKeys)) yield {
+    for (
+      leftOraExprs <- OraExpressions.unapplySeq(leftKeys);
+      rightOraExprs <- OraExpressions.unapplySeq(rightKeys);
+      outProjections <- OraExpressions.unapplySeq(joinOp.output)
+    ) yield {
       val oraExpression: OraExpression = OraSubQueryJoin(
         joinOp,
         leftOraExprs,
         SQLSnippet.IN,
-        rightQBlk)
+        rightQBlk.copy(select = rightOraExprs))
       val newFil = currQBlk.where.map(f =>
         OraBinaryOpExpression(AND,
           And(f.catalystExpr, oraExpression.catalystExpr),
@@ -203,6 +207,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
       ).getOrElse(oraExpression)
 
       currQBlk.copy(
+        select = outProjections,
         where = Some(newFil),
         catalystOp = Some(joinOp),
         catalystProjectList = joinOp.output
@@ -215,7 +220,9 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
     val rightNullChecks : Expression = rightKeys.map(IsNotNull(_)).reduceLeft(And)
     for (
       leftOraExprs <- OraExpressions.unapplySeq(leftKeys);
-      rightOraNotNullExprs <- OraExpression.unapply(rightNullChecks)
+      rightOraExprs <- OraExpressions.unapplySeq(rightKeys);
+      rightOraNotNullExprs <- OraExpression.unapply(rightNullChecks);
+      outProjections <- OraExpressions.unapplySeq(joinOp.output)
     ) yield {
 
       /*
@@ -227,7 +234,10 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
         OraBinaryOpExpression(AND, And(f.catalystExpr, rightNullChecks), f, rightOraNotNullExprs)
       ).getOrElse(rightOraNotNullExprs)
 
-      val newRQBlk = rightQBlk.copy(where = Some(newRFil))
+      val newRQBlk = rightQBlk.copy(
+        select = rightOraExprs,
+        where = Some(newRFil)
+      )
 
       /*
        * 2. Add NOT IN predicate to `currQBlk`
@@ -245,6 +255,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
       ).getOrElse(oraExpression)
 
       currQBlk.copy(
+        select = outProjections,
         where = Some(newFil),
         catalystOp = Some(joinOp),
         catalystProjectList = joinOp.output
@@ -264,7 +275,8 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
       val (notInLKeys, notInRkeys) = notInJoinKeys.get.unzip
       for (
         leftOraExprs <- OraExpressions.unapplySeq(leftKeys ++ notInLKeys);
-        rightOraExprs <- OraExpressions.unapplySeq(rightKeys ++ notInRkeys)
+        rightOraExprs <- OraExpressions.unapplySeq(rightKeys ++ notInRkeys);
+        outProjections <- OraExpressions.unapplySeq(joinOp.output)
       ) yield {
         val newRQBlk = rightQBlk.copy(select = rightOraExprs)
 
@@ -281,6 +293,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
         ).getOrElse(oraExpression)
 
         currQBlk.copy(
+          select = outProjections,
           where = Some(newFil),
           catalystOp = Some(joinOp),
           catalystProjectList = joinOp.output

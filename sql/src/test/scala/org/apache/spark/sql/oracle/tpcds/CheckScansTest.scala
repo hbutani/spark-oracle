@@ -32,8 +32,8 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
       TestOracleHive.sql(s"explain formatted ${q.sql}").show(false)
 
        */
-      
-      showOraScans(q.sql)
+
+      showOraQueries(qNm, q.sql)
 
     }
   }

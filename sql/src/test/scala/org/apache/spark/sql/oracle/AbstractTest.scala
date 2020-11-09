@@ -107,11 +107,31 @@ abstract class AbstractTest
     df.collect()
   }
 
+  def doSQL(nm: String,
+            sqlArg : Either[String, DataFrame],
+            showPlan: Boolean = false,
+            showResults: Boolean = false,
+           numRows : Int = 20) : Unit = {
+    try {
+      val df = sqlArg match {
+        case Left(sql) => sqlAndLog(nm, sql)
+        case Right(df) => df
+      }
+      if (showPlan) {
+        logPlan(nm, df)
+      }
+      if (showResults) {
+        df.show(numRows, false)
+      }
+    } finally {}
+  }
+
   def test(
       nm: String,
       sql: String,
       showPlan: Boolean = false,
       showResults: Boolean = false,
+      numRows : Int = 20,
       setupSQL: Option[(String, String)] = None): Unit = {
     test(nm) { td =>
       println("*** *** Running Test " ++ nm)
@@ -122,15 +142,8 @@ abstract class AbstractTest
           TestOracleHive.sql(s)
         }
 
-        try {
-          val df = sqlAndLog(nm, sql)
-          if (showPlan) {
-            logPlan(nm, df)
-          }
-          if (showResults) {
-            df.show(20, false)
-          }
-        } finally {}
+        doSQL(nm, Left(sql), showPlan, showResults, numRows)
+
       } finally {
         for ((s, e) <- setupSQL) {
           TestOracleHive.sql(e)

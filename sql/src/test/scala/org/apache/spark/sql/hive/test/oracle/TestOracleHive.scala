@@ -84,6 +84,8 @@ object OracleTestConf {
         conf = local_hb(conf)
       case "local_sc" =>
         conf = local_sc(conf)
+      case "local_tpcds" =>
+        conf = local_tpcds(conf)
       case "mammoth_medium" =>
         assert(
           System.getProperty(SPARK_ORACLE_DB_WALLET_LOC) != null,
@@ -107,6 +109,12 @@ object OracleTestConf {
       .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@//localhost:1521/ORCLCDB")
       .set("spark.sql.catalog.oracle.user", "sparktest")
       .set("spark.sql.catalog.oracle.password", "sparktest")
+
+  def local_tpcds(conf: SparkConf): SparkConf =
+    conf
+      .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@hbutani-Mac:1521/orclpdb1")
+      .set("spark.sql.catalog.oracle.user", "tpcds")
+      .set("spark.sql.catalog.oracle.password", "Performance_1234")
 
   def mammoth_medium(conf: SparkConf): SparkConf =
     conf

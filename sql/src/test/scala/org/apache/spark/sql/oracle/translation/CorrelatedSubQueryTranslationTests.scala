@@ -30,7 +30,8 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
   """select "C_LONG"
     |from SPARKTEST.UNIT_TEST """.stripMargin + """
     |where  ("C_INT", "C_LONG") IN ( select "C_INT", "C_LONG"
-    |from SPARKTEST.UNIT_TEST_PARTITIONED  )""".stripMargin)
+    |from SPARKTEST.UNIT_TEST_PARTITIONED  )""".stripMargin,
+    true, true)
 
   testPushdown(
     "existsSubQuery",
@@ -69,7 +70,8 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
   """select "C_LONG"
     |from SPARKTEST.UNIT_TEST """.stripMargin + """
     |where  ("C_LONG", "C_INT") NOT IN ( select "C_LONG", "C_INT"
-    |from SPARKTEST.UNIT_TEST_PARTITIONED  )""".stripMargin)
+    |from SPARKTEST.UNIT_TEST_PARTITIONED  )""".stripMargin,
+    true, true)
 
   testPushdown(
     "notexistsSubQuery",
@@ -83,8 +85,9 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |                 )""".stripMargin,
   """select "C_LONG"
     |from SPARKTEST.UNIT_TEST """.stripMargin + """
-    |where  ("C_LONG", "C_INT") NOT IN ( select "C_INT", "C_LONG"
+    |where  ("C_LONG", "C_INT") NOT IN ( select "C_LONG", "C_INT"
     |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
-    |where ("C_LONG" IS NOT NULL AND "C_INT" IS NOT NULL) )""".stripMargin)
+    |where ("C_LONG" IS NOT NULL AND "C_INT" IS NOT NULL) )""".stripMargin,
+    true, true)
 
 }

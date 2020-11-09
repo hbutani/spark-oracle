@@ -28,7 +28,9 @@ abstract class AbstractTranslationTest extends AbstractTest with PlanTestHelpers
 
   def testPushdown(nm : String,
                    sqlStr : String,
-                  oraSQL : String = null) : Unit = {
+                   oraSQL : String = null,
+                   showPlan: Boolean = false,
+                   showResults: Boolean = false) : Unit = {
     test(nm) { td =>
       val df = TestOracleHive.sql(sqlStr)
       val scans = collectScans(df.queryExecution.optimizedPlan)
@@ -38,6 +40,7 @@ abstract class AbstractTranslationTest extends AbstractTest with PlanTestHelpers
       } else {
         assert(scans(0).oraPlan.orasql.sql == oraSQL)
       }
+      doSQL(nm, Right(df), showPlan, showResults, 1000)
     }
   }
 }

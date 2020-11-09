@@ -19,8 +19,11 @@ package org.apache.spark.sql.oracle
 
 import java.io.PrintStream
 
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.connector.read.oracle.OraScan
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
-import org.apache.spark.sql.oracle.operators.OraTableScanValidator
+import org.apache.spark.sql.oracle.operators.{OraQueryBlock, OraTableScanValidator}
 import org.apache.spark.sql.oracle.operators.OraTableScanValidator.ScanDetails
 
 trait PlanTestHelpers {
@@ -91,6 +94,23 @@ trait PlanTestHelpers {
     val plan = TestOracleHive.sql(sqlStat).queryExecution.optimizedPlan
     val scanV = OraTableScanValidator(plan)
     scanV.validateScans(reqdScans)
+  }
+
+  def collectOraQueryBlocks(plan : LogicalPlan) : Seq[OraQueryBlock] = plan collect {
+    case dsv2@DataSourceV2ScanRelation(_, oraScan: OraScan, _)
+    if oraScan.oraPlan.isInstanceOf[OraQueryBlock] => oraScan.oraPlan.asInstanceOf[OraQueryBlock]
+  }
+
+  def showOraQueries(qNm : String,
+                     sqlStat: String,
+                     out: PrintStream = System.out): Unit = {
+    val plan = TestOracleHive.sql(sqlStat).queryExecution.optimizedPlan
+    val oraQueries = collectOraQueryBlocks(plan)
+    out.println(s"Query '${qNm}':")
+    out.println(s"Spark SQL is:")
+    out.println(sqlStat)
+    out.println("oracle sqls generated:")
+    out.println(oraQueries.map(_.orasql.sql).mkString("\n\n"))
   }
   // scalastyle:on println
 
