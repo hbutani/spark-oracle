@@ -25,6 +25,7 @@ import scala.util.Try
 import oracle.jdbc.rowset.OracleWebRowSet
 import oracle.spark.DataSourceInfo
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.oracle.OracleCatalogOptions
 import org.apache.spark.util.Utils
 
@@ -32,7 +33,7 @@ import org.apache.spark.util.Utils
  * If [[OracleCatalogOptions.use_resultset_cache]] is enabled
  * [[ResultSet]]s are saved and served from a local folder.
  */
-object ResultSetCache {
+object ResultSetCache extends  Logging {
 
   private var cacheLoc : File = null
 
@@ -123,7 +124,24 @@ object ResultSetCache {
     def loadCachedResultSet: ResultSet = {
       ensureSAXParserFactorySet
       val webRowSet = new OracleWebRowSet()
-      webRowSet.readXml(new FileInputStream(resultSetCache))
+      /*
+       * Observation on 11/10:
+       * - relying on OracleWebRowSet has proven to be problematic
+       *   - xml parsing issues, datatype support issues
+       * - for now going to bail with an empty rowset if reading fails
+       * - have to revisit how to support running tests that have result data
+       */
+      try {
+        webRowSet.readXml(new FileInputStream(resultSetCache))
+      } catch {
+        case e : Exception => logError(
+          s"""RETURNING EMPTY RESULTSET
+             |Ignoring parse error for cached resultset file (${rsSetCacheFileNm})
+             |SQL is:
+             |${sql}""".stripMargin,
+          e
+        )
+      }
       webRowSet.beforeFirst()
       webRowSet
     }

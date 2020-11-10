@@ -16,6 +16,7 @@
  */
 package org.apache.spark.sql.oracle.expressions
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.analysis.TypeCoercion
 import org.apache.spark.sql.catalyst.expressions.{Cast, CheckOverflow, Expression, Literal, PromotePrecision}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
@@ -31,29 +32,39 @@ import org.apache.spark.sql.types._
  *    - if `nullOnOverflow` is true add a case check
  *    - if `nullOnOverflow` is false: do nothing? translated oExpr will throw
  */
-object Casts extends OraSQLImplicits {
+object Casts extends OraSQLImplicits with Logging {
 
   case class OraCast(catalystExpr : Cast,
-                     children: Seq[OraExpression],
-                     orasql: SQLSnippet) extends OraExpression {
+                     childOE : OraExpression,
+                     nullOnOverflow : Boolean) extends OraExpression {
 
+    override def orasql: SQLSnippet = {
+      Casting(catalystExpr, childOE, nullOnOverflow).translate
+    }
+
+    override def children: Seq[OraExpression] = Seq(childOE)
   }
 
-  object OraCast {
-    def apply(catalystExpr : Cast, child: OraExpression, orasql: SQLSnippet) : OraCast =
-      new OraCast(catalystExpr, Seq(child), orasql)
-  }
-
-  def unapply(e: Expression): Option[OraExpression] =
+  def unapply(e: Expression): Option[OraExpression] = {
     Option(e match {
       case CheckOverflow(PromotePrecision(cE@Cast(OraExpression(oE), _, _)), _, nullOnOverflow) =>
-        Casting(cE, oE, nullOnOverflow).translate
+        Casting(cE, oE, nullOnOverflow)
       case CheckOverflow(cE@Cast(OraExpression(oE), _, _), _, nullOnOverflow) =>
-        Casting(cE, oE, nullOnOverflow).translate
+        Casting(cE, oE, nullOnOverflow)
       case PromotePrecision(cE@Cast(OraExpression(oE), _, _)) => Casting(cE, oE, false).translate
-      case cE@Cast(OraExpression(oE), _, _) => Casting(cE, oE, false).translate
+      case cE@Cast(OraExpression(oE), _, _) => Casting(cE, oE, false)
       case _ => null
-    })
+    }).flatMap {
+      /*
+       * ensure Cast expression can be generated.
+       * setup OraCast that will recreate sqlSnippet
+       * when orasql method is invoked.
+       */
+      case c : Casting if c.translate != null =>
+      Some(OraCast(c.castExpr, c.childOE, c.nullOnOverFlow))
+      case _ => None
+    }
+  }
 
   object CastingType extends Enumeration {
     val NUMERIC_CONV = Value
@@ -65,18 +76,19 @@ object Casts extends OraSQLImplicits {
     val FROM_DATE = Value
     val TO_TIMESTAMP = Value
     val FROM_TIMESTAMP = Value
+    val UNSUPPORTED = Value
 
     def apply(castExpr : Cast) : Value = (castExpr.child.dataType, castExpr.dataType) match {
       case (l : NumericType, r : NumericType) => NUMERIC_CONV
       case (StringType, _) => FROM_STRING
       case (_, StringType) => TO_STRING
-      case (BooleanType, _) => FROM_BOOLEAN
-      case (_, BooleanType) => TO_BOOLEAN
       case (DateType, _) => FROM_DATE
       case (_, DateType) => TO_DATE
       case (TimestampType, _) => FROM_TIMESTAMP
       case (_, TimestampType) => TO_TIMESTAMP
-      case _ => ???
+      case (BooleanType, _) => FROM_BOOLEAN
+      case (_, BooleanType) => TO_BOOLEAN
+      case _ => UNSUPPORTED
     }
   }
 
@@ -100,15 +112,14 @@ object Casts extends OraSQLImplicits {
    * @return
    */
   def dtToTimestamp(oraE : OraExpression,
-                    catalystExpr : Cast) : OraCast = {
+                    catalystExpr : Cast) : SQLSnippet = {
     val zoneId = catalystExpr.timeZoneId.map(DateTimeUtils.getZoneId)
-    val orasql = if (zoneId.isDefined) {
+    if (zoneId.isDefined) {
       val zoneOE = OraLiteral(Literal(zoneId.get.getId)).toLiteralSql
       osql"cast(${oraE} as timestamp) at time zone ${zoneOE}"
     } else {
       osql"cast(${oraE} as timestamp)"
     }
-    OraCast(catalystExpr, oraE, orasql)
   }
 
   /**
@@ -122,15 +133,14 @@ object Casts extends OraSQLImplicits {
    * @return
    */
   def timestampToDt(oraE : OraExpression,
-                    catalystExpr : Cast) : OraCast = {
+                    catalystExpr : Cast) : SQLSnippet = {
     val zoneId = catalystExpr.timeZoneId.map(DateTimeUtils.getZoneId)
-    val orasql = if (zoneId.isDefined) {
+    if (zoneId.isDefined) {
       val zoneOE = OraLiteral(Literal(zoneId.get.getId)).toLiteralSql
       osql"cast(from_tz(cast(${oraE} as timestamp), ${zoneOE}) as date)"
     } else {
       osql"cast(${oraE} as date)"
     }
-    OraCast(catalystExpr, oraE, orasql)
   }
 
   /**
@@ -138,7 +148,7 @@ object Casts extends OraSQLImplicits {
    * {{{
    * millisToInterval = numtodsinterval({oraE}/1000, 'SECOND')
    * millisToIntervalWithTZOffset = {millisToInterval} + {epochTS} - {epochTSAtSessionTZ}
-   * result = epochTSAtSessionTZ} + ({millisToIntervalWitTZOffset})
+   * result = {epochTSAtSessionTZ} + ({millisToIntervalWitTZOffset})
    * }}}
    *
    * For example for `oraE = 1603425037802`, sql is:
@@ -155,10 +165,12 @@ object Casts extends OraSQLImplicits {
    * @return
    */
   def epochToTimestamp(oraE : OraExpression,
-                       catalystExpr : Cast) : OraCast = {
-    val orasql : SQLSnippet = osql"" //FIXME
+                       catalystExpr : Cast) : SQLSnippet = {
+    val millisToInterval = osql"numtodsinterval(${oraE}/1000, 'SECOND')"
+    val millisToIntervalWithTZOffset =
+      osql"${millisToInterval} + ${epochTS} - ${epochTSAtSessionTZ}"
 
-    OraCast(catalystExpr, oraE, orasql)
+    osql"${epochTSAtSessionTZ} + (${millisToIntervalWithTZOffset})"
   }
 
   /**
@@ -187,10 +199,13 @@ object Casts extends OraSQLImplicits {
    * @return
    */
   def epochToDate(oraE : OraExpression,
-                  catalystExpr : Cast) : OraCast = {
-    val orasql : SQLSnippet = osql"" //FIXME
+                  catalystExpr : Cast) : SQLSnippet = {
+    val millisToInterval = osql"numtodsinterval(${oraE}/1000, 'SECOND')"
+    val millisToIntervalWithTZOffset =
+      osql"${millisToInterval} + ${epochTS} - ${epochTSAtSessionTZ}"
+    val epoch_ts = osql"${epochTSAtSessionTZ} + ${millisToIntervalWithTZOffset}"
 
-    OraCast(catalystExpr, oraE, orasql)
+    osql"trunc(${epoch_ts}, 'DD')"
   }
 
   /**
@@ -217,17 +232,15 @@ object Casts extends OraSQLImplicits {
    * @return
    */
   def timestampToEpoch(oraE : OraExpression,
-                       catalystExpr : Cast) : OraCast = {
+                       catalystExpr : Cast) : SQLSnippet = {
 
     val days = osql"extract(day from (${oraE} - ${epochTS})) * 24 * 60 * 60"
     val hours = osql"extract(hour from (${oraE} - ${epochTS})) * 60 * 60"
     val mins = osql"extract(minute from (${oraE} - ${epochTS})) * 60 * 60"
     val secs = osql"extract(second from (${oraE} - ${epochTS})) * 60 * 60"
 
-    val orasql : SQLSnippet =
-      osql"(${days} + ${hours} + ${mins} + ${secs}) * 1000"
+    osql"(${days} + ${hours} + ${mins} + ${secs}) * 1000"
 
-    OraCast(catalystExpr, oraE, orasql)
   }
 
   /**
@@ -253,20 +266,20 @@ object Casts extends OraSQLImplicits {
    * @return
    */
   def dateToEpoch(oraE : OraExpression,
-                  catalystExpr : Cast) : OraCast = {
-
+                  catalystExpr : Cast) : SQLSnippet = {
     val days = osql"extract( day from (trunc(sysdate, 'DD') - ${epochTS})"
     val hours = osql"extract( hour from (trunc(sysdate, 'DD') - ${epochTS})"
 
-    val orasql = osql"(${days} * 24 + ${hours}) * 60 * 60 * 1000"
-
-    OraCast(catalystExpr, oraE, orasql)
+    osql"(${days} * 24 + ${hours}) * 60 * 60 * 1000"
   }
 
   trait CastingBase {
     val castExpr : Cast
     val childOE : OraExpression
     val nullOnOverFlow : Boolean
+
+    val fromDT = inputExpr.dataType
+    val toDT = castExpr.dataType
 
     lazy val inputExpr = castExpr.child
     lazy val castingType = CastingType(castExpr)
@@ -294,20 +307,19 @@ object Casts extends OraSQLImplicits {
       tType.isDefined && tType.get == toDT
     }
 
-    def num_conv : OraExpression = {
-      val fromDT = inputExpr.dataType.asInstanceOf[NumericType]
-      val toDT = castExpr.dataType.asInstanceOf[NumericType]
-      if (isDataTypeWidening(fromDT, toDT) || !nullOnOverFlow) {
-        childOE
+    def num_conv : SQLSnippet = {
+      val nFromDT = fromDT.asInstanceOf[NumericType]
+      val nToDT = toDT.asInstanceOf[NumericType]
+      if (isDataTypeWidening(nFromDT, nToDT) || !nullOnOverFlow) {
+        childOE.orasql
       } else {
-        val (minV, maxV) = OraLiterals.dataTypeMinMaxRange(toDT)
+        val (minV, maxV) = OraLiterals.dataTypeMinMaxRange(nToDT)
         val oraDTE : OraExpression = {
-          val oraDT = OraDataType.toOraDataType(toDT)
+          val oraDT = OraDataType.toOraDataType(nToDT)
           OraLiteral(Literal(oraDT.oraTypeString)).toLiteralSql
         }
-        val orasql = osql"case when ${childOE} >= ${minV} and ${childOE} <= ${maxV}" +
+        osql"case when ${childOE} >= ${minV} and ${childOE} <= ${maxV}" +
           osql" then cast(${childOE} as ${oraDTE}) else null"
-        OraCast(castExpr, childOE, orasql)
       }
     }
   }
@@ -401,30 +413,70 @@ object Casts extends OraSQLImplicits {
    *    - use template: `case when {childOE} then 'true' else 'false' end`
    */
   trait StringCasting { self : CastingBase =>
-    def to_str : OraExpression = ???
-    def from_str : OraExpression = ???
+
+    def from_str : SQLSnippet = {
+      toDT match {
+        case _ : NumericType => osql"to_numeric(${childOE})"
+        case _ : DateType => osql"to_date(${childOE})"
+        case _ : TimestampType => osql"to_timestamp(${childOE})"
+        case _ : BooleanType =>
+          osql"(case when ${childOE} in ('t', 'true', 'y', 'yes', '1') then 1 " +
+            osql"when ${childOE} in ('f', 'false', 'n', 'no', '0') then 0 " +
+            osql"else null end) = 1"
+        case _ => null
+      }
+    }
+
+    def to_str : SQLSnippet = {
+      fromDT match {
+        case _ : NumericType => osql"to_char(${childOE})"
+        case _ : DateType => osql"to_char(${childOE})"
+        case _ : TimestampType => osql"to_char(${childOE})"
+        case _ : BooleanType =>
+          osql"case when ${childOE} then 'true' else 'false' end"
+        case _ => null
+      }
+    }
   }
 
   /**
    * '''from boolean:'''
    *
-   * - '''to numeric:'''
-   * - '''to string:'''
-   * - '''to date:'''
-   * - '''to timestamp:'''
+   *  - '''to numeric:''' `{orE} != 0`
+   *  - '''to string:''' Same as `Boolean -> String` in [[StringCasting]]
+   *  - '''to date:''' Same as `Boolean -> Date` in [[DateCasting]]
+   *  - '''to timestamp:''' Same as `Boolean -> Timestamp` in [[TimestampCasting]]
    *
    * '''to boolean:'''
    *
-   * - '''from numeric:'''
-   * - '''from string:'''
-   * - '''from date:'''
-   * - '''from timestamp:'''
+   *  - '''from numeric:''' `{oraE}`
+   *  - '''from string:''' Same as `String -> Boolean` in [[StringCasting]]
+   *  - '''from date:''' Same as `Date -> Boolean` in [[DateCasting]]
+   *  - '''from timestamp:''' Same as `Timestamp -> Boolean` in [[TimestampCasting]]
    *
    */
 
-  trait BooleanCasting { self : CastingBase =>
-    def to_boolean : OraExpression = ???
-    def from_boolean : OraExpression = ???
+  trait BooleanCasting { self : Casting =>
+
+    def from_boolean : SQLSnippet = {
+      toDT match {
+        case _ : NumericType => osql"${childOE} != 0"
+        case _ : StringType => to_str
+        case _ : TimestampType => to_timestamp
+        case _ : DateType => to_date
+        case _ => null
+      }
+    }
+
+    def to_boolean : SQLSnippet = {
+      fromDT match {
+        case _ : NumericType => childOE.orasql
+        case _ : StringType => from_str
+        case _ : DateType => from_date
+        case _ : TimestampType => from_timestamp
+        case _ => null
+      }
+    }
   }
 
   /**
@@ -466,9 +518,26 @@ object Casts extends OraSQLImplicits {
    *    - In Spark it is undefined
    *    - we throw during translation.
    */
-  trait DateCasting { self : CastingBase =>
-    def to_date : OraExpression = ???
-    def from_date : OraExpression = ???
+  trait DateCasting { self : Casting =>
+    def from_date : SQLSnippet = {
+      toDT match {
+        case _ : NumericType => osql"${childOE} - ${epochDt}"
+        case _ : StringType => to_str
+        case _ : TimestampType => dtToTimestamp(childOE, castExpr)
+        case _ : BooleanType => osql"null"
+        case _ => null
+      }
+    }
+
+    def to_date : SQLSnippet = {
+      fromDT match {
+        case _ : NumericType => osql"${epochDt} + ${childOE}"
+        case _ : DateType => from_str
+        case _ : TimestampType => timestampToDt(childOE, castExpr)
+        case _ : BooleanType => null
+        case _ => null
+      }
+    }
   }
 
   /**
@@ -495,11 +564,30 @@ object Casts extends OraSQLImplicits {
    *  - '''from boolean:'''
    *    - In Spark: `true` is interpreted as `1L millis_since_epoch`,
    *      and `false` is `0L millis_since_epoch`.
-   *    - translate to: `case when {oraE} then ${epochTS} else ${true_bool_TS} end`
+   *    - translate to: `case when {oraE} then ${true_bool_TS} else ${epochTS} end`
    */
-  trait TimestampCasting { self : CastingBase =>
-    def to_timestamp : OraExpression = ???
-    def from_timestamp : OraExpression = ???
+  trait TimestampCasting { self : Casting =>
+
+    def from_timestamp : SQLSnippet = {
+      toDT match {
+        case _ : NumericType => timestampToEpoch(childOE, castExpr)
+        case _ : StringType => to_str
+        case _ : DateType => timestampToDt(childOE, castExpr)
+        case _ : BooleanType => osql"${timestampToEpoch(childOE, castExpr)} != 0"
+        case _ => null
+      }
+    }
+
+    def to_timestamp : SQLSnippet = {
+      fromDT match {
+        case _ : NumericType => epochToTimestamp(childOE, castExpr)
+        case _ : StringType => from_str
+        case _ : DateType => dtToTimestamp(childOE, castExpr)
+        case _ : BooleanType =>
+          osql"case when ${childOE} then ${true_bool_TS} else ${epochTS} end"
+        case _ => null
+      }
+    }
   }
 
   case class Casting(castExpr : Cast,
@@ -512,37 +600,29 @@ object Casts extends OraSQLImplicits {
 
     import CastingType._
 
-    def translate : OraExpression = castingType match {
-      case  NUMERIC_CONV => num_conv
-      case TO_STRING => to_str
-      case FROM_STRING => from_str
-      case TO_BOOLEAN => to_boolean
-      case FROM_BOOLEAN => from_boolean
-      case TO_DATE => to_date
-      case FROM_DATE => from_date
-      case TO_TIMESTAMP => to_timestamp
-      case FROM_TIMESTAMP => from_timestamp
+    def translate : SQLSnippet = {
+      val oE = castingType match {
+        case  NUMERIC_CONV => num_conv
+        case TO_STRING => to_str
+        case FROM_STRING => from_str
+        case TO_BOOLEAN => to_boolean
+        case FROM_BOOLEAN => from_boolean
+        case TO_DATE => to_date
+        case FROM_DATE => from_date
+        case TO_TIMESTAMP => to_timestamp
+        case FROM_TIMESTAMP => from_timestamp
+        case _ => null
+      }
+
+      if (oE == null) {
+        logWarning(
+          s"""Failed to translate catalyst casting expression:
+             |${castExpr.treeString}
+             |""".stripMargin
+        )
+      }
+
+      oE
     }
   }
-
-  /*
-   * TODO:
-   * 1. Tests
-   * - c_int + c_long + c_byte < c_decimal_scale_5 * 5 + c_decimal_scale_8
-   * - c_long + "5" > c_int + c_decimal_scale_8
-   * - c_date < c_timestamp
-   * - c_date + 10 < c_timestamp
-   * - c_date < cast('' as date) and c_timestamp > cast('' as timestamp)
-   *
-   * 2. Coding tasks
-   * - Implement StringCasting
-   * - Implement DateCasting
-   * - Implement TimestampCasting
-   * - BooleanCasting
-   * - misc
-   *   - fixme in  CastingType apply
-   *   - implement orasql in epochToTimestamp
-   *   - implement orasql in epochToDate
-   * - wire into OraExpressions.unapply
-   */
 }

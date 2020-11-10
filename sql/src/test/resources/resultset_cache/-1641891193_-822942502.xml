@@ -22,7 +22,7 @@
     <rowset-type>1005</rowset-type>
     <show-deleted>false</show-deleted>
     <table-name></table-name>
-    <url>jdbc:oracle:thin:@hbutani-Mac:1521/orclpdb1</url>
+    <url>jdbc:oracle:thin:@mammoth_medium</url>
     <sync-provider>
       <sync-provider-name>com.sun.rowset.providers.RIOptimisticProvider</sync-provider-name>
       <sync-provider-vendor>Oracle Corporation</sync-provider-vendor>
@@ -32,44 +32,25 @@
     </sync-provider>
   </properties>
   <metadata>
-    <column-count>2</column-count>
+    <column-count>1</column-count>
     <column-definition>
       <column-index>1</column-index>
       <auto-increment>false</auto-increment>
-      <case-sensitive>false</case-sensitive>
-      <currency>true</currency>
+      <case-sensitive>true</case-sensitive>
+      <currency>false</currency>
       <nullable>1</nullable>
       <signed>true</signed>
       <searchable>true</searchable>
-      <column-display-size>10</column-display-size>
-      <column-label>C_INT</column-label>
-      <column-name>C_INT</column-name>
+      <column-display-size>40</column-display-size>
+      <column-label>c_long</column-label>
+      <column-name>c_long</column-name>
       <schema-name></schema-name>
-      <column-precision>9</column-precision>
+      <column-precision>0</column-precision>
       <column-scale>0</column-scale>
       <table-name></table-name>
       <catalog-name></catalog-name>
-      <column-type>2</column-type>
-      <column-type-name>NUMBER</column-type-name>
-    </column-definition>
-    <column-definition>
-      <column-index>2</column-index>
-      <auto-increment>false</auto-increment>
-      <case-sensitive>false</case-sensitive>
-      <currency>true</currency>
-      <nullable>1</nullable>
-      <signed>true</signed>
-      <searchable>true</searchable>
-      <column-display-size>19</column-display-size>
-      <column-label>C_LONG</column-label>
-      <column-name>C_LONG</column-name>
-      <schema-name></schema-name>
-      <column-precision>18</column-precision>
-      <column-scale>0</column-scale>
-      <table-name></table-name>
-      <catalog-name></catalog-name>
-      <column-type>2</column-type>
-      <column-type-name>NUMBER</column-type-name>
+      <column-type>12</column-type>
+      <column-type-name>VARCHAR2</column-type-name>
     </column-definition>
   </metadata>
   <data>

@@ -20,12 +20,11 @@ package org.apache.spark.sql.oracle
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.QueryPlanningTracker
 import org.apache.spark.sql.catalyst.analysis.TypeCoercion
-import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.expressions.{Cast, Expression}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan}
-import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.connector.catalog.oracle.OraMetadataMgrInternalTest
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
-import org.apache.spark.sql.oracle.expressions.OraExpression
+import org.apache.spark.sql.oracle.expressions.{Casts, OraExpression}
 
 class OraExprPushdownTest extends AbstractTest with OraMetadataMgrInternalTest {
 
@@ -67,7 +66,13 @@ class OraExprPushdownTest extends AbstractTest with OraMetadataMgrInternalTest {
            plan: () => LogicalPlan): Unit = test(nm) { td =>
     val expr = resolveExpr(exprStr, plan())
     expr match {
-      case OraExpression(oraExpr) => ()
+      // scalastyle:off println
+      case cE@OraExpression(oraExpr) =>
+        println(
+          s"""OraExpression for spark expression: ${cE.sql}:
+             |  ${oraExpr.reifyLiterals.orasql.sql}""".stripMargin
+        )
+      // scalastyle:on println
       case _ =>
         throw new AnalysisException(
           s"""for
@@ -76,6 +81,55 @@ class OraExprPushdownTest extends AbstractTest with OraMetadataMgrInternalTest {
              |spark expression: ${expr.toString()}""".stripMargin
         )
     }
+  }
+
+  val castingExpressions : Seq[String] = {
+    val from_str = Seq(
+      """cast('1' as long) = 1""",
+      """cast('1.0' as double) = 1.0""",
+      """cast('1' as long) = 1""",
+      // oracle default date format is 'DD-MON-RR'
+      """cast('01-JAN-20' as date) = cast('01-JAN-20 12.00.00.000000000 AM' as timestamp)""",
+      """cast('t' as boolean)""",
+
+    )
+
+    val to_str = Seq(
+      """cast(1 as string) = '1'""",
+      """cast(1.0 as string) = '1.0'""",
+      """cast(1L as string) = '1'""",
+      """cast(cast('01-JAN-20' as date) as string) = '01-JAN-20'""",
+      """cast(c_date as string) = '01-JAN-20'""",
+      """cast(cast('01-JAN-20' as timestamp) as string) = '01-JAN-20 12.00.00.000000000 AM'""",
+      """cast(c_timestamp as string) = '01-JAN-20 12.00.00.000000000 AM'"""
+    )
+
+    val from_date = Seq(
+      """cast(c_date as long) = 0""",
+      """cast(c_date as double) = 0.0""",
+      """cast(c_date as string) = '01-JAN-20'""",
+      """c_date = c_timestamp""",
+      """cast(c_date as boolean) is null"""
+    )
+    val to_date = Seq(
+      // """cast(0 as date) = c_date""", cannot cast int to date
+      """cast('01-JAN-20' as date) = c_date""",
+      """cast(c_timestamp as date) = c_date"""
+    )
+
+    val from_ts = Seq(
+      """cast(0 as timestamp) = c_timestamp""",
+      """cast(c_timestamp as long) = 0""",
+      """cast(c_timestamp as double) = 0.0""",
+      """cast(c_timestamp as string) = '01-JAN-20 12.00.00.000000000 AM'"""
+    )
+    val to_ts = Seq(
+      """cast(1 as timestamp) = c_timestamp""",
+      """cast(1.0 as timestamp) = c_timestamp""",
+      """cast(c_varchar2_10 as timestamp) = c_timestamp""",
+      """cast(c_date as timestamp) = c_timestamp""",
+    )
+    from_str ++ to_str ++ from_date ++ to_date ++ from_ts ++ to_ts
   }
 
   val pushableExpressions = Seq(
@@ -110,9 +164,11 @@ class OraExprPushdownTest extends AbstractTest with OraMetadataMgrInternalTest {
       |    abs(c_long) > c_long and
       |    c_date is null and
       |    c_timestamp is not null""".stripMargin
-  )
+  ) ++ castingExpressions
 
   for ((pE, i) <- pushableExpressions.zipWithIndex) {
     test(s"test_pushExpr_${i}", pE, () => unit_test_table.queryExecution.analyzed)
   }
+
+
 }

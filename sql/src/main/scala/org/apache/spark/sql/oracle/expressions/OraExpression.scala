@@ -133,6 +133,7 @@ object OraExpression {
       case Predicates(oE) => oE
       case Nulls(oE) => oE
       case Subquery(oE) => oE
+      case Casts(oE) => oE
       case _ => null
     })
 

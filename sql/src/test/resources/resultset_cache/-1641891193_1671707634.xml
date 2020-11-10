@@ -55,12 +55,12 @@
     <column-definition>
       <column-index>2</column-index>
       <auto-increment>false</auto-increment>
-      <case-sensitive>false</case-sensitive>
+      <case-sensitive>true</case-sensitive>
       <currency>false</currency>
       <nullable>1</nullable>
       <signed>true</signed>
       <searchable>true</searchable>
-      <column-display-size>7</column-display-size>
+      <column-display-size>18</column-display-size>
       <column-label>CC_REC_START_DATE</column-label>
       <column-name>CC_REC_START_DATE</column-name>
       <schema-name></schema-name>
@@ -68,8 +68,8 @@
       <column-scale>0</column-scale>
       <table-name></table-name>
       <catalog-name></catalog-name>
-      <column-type>93</column-type>
-      <column-type-name>DATE</column-type-name>
+      <column-type>12</column-type>
+      <column-type-name>VARCHAR2</column-type-name>
     </column-definition>
     <column-definition>
       <column-index>3</column-index>
@@ -112,40 +112,40 @@
     <column-definition>
       <column-index>5</column-index>
       <auto-increment>false</auto-increment>
-      <case-sensitive>false</case-sensitive>
-      <currency>true</currency>
+      <case-sensitive>true</case-sensitive>
+      <currency>false</currency>
       <nullable>1</nullable>
       <signed>true</signed>
       <searchable>true</searchable>
-      <column-display-size>39</column-display-size>
+      <column-display-size>40</column-display-size>
       <column-label>CC_EMPLOYEES</column-label>
       <column-name>CC_EMPLOYEES</column-name>
       <schema-name></schema-name>
-      <column-precision>38</column-precision>
+      <column-precision>0</column-precision>
       <column-scale>0</column-scale>
       <table-name></table-name>
       <catalog-name></catalog-name>
-      <column-type>2</column-type>
-      <column-type-name>NUMBER</column-type-name>
+      <column-type>12</column-type>
+      <column-type-name>VARCHAR2</column-type-name>
     </column-definition>
     <column-definition>
       <column-index>6</column-index>
       <auto-increment>false</auto-increment>
-      <case-sensitive>false</case-sensitive>
-      <currency>true</currency>
+      <case-sensitive>true</case-sensitive>
+      <currency>false</currency>
       <nullable>1</nullable>
       <signed>true</signed>
       <searchable>true</searchable>
-      <column-display-size>39</column-display-size>
+      <column-display-size>40</column-display-size>
       <column-label>CC_SQ_FT</column-label>
       <column-name>CC_SQ_FT</column-name>
       <schema-name></schema-name>
-      <column-precision>38</column-precision>
+      <column-precision>0</column-precision>
       <column-scale>0</column-scale>
       <table-name></table-name>
       <catalog-name></catalog-name>
-      <column-type>2</column-type>
-      <column-type-name>NUMBER</column-type-name>
+      <column-type>12</column-type>
+      <column-type-name>VARCHAR2</column-type-name>
     </column-definition>
     <column-definition>
       <column-index>7</column-index>
@@ -283,46 +283,46 @@
     <column-definition>
       <column-index>14</column-index>
       <auto-increment>false</auto-increment>
-      <case-sensitive>false</case-sensitive>
-      <currency>true</currency>
+      <case-sensitive>true</case-sensitive>
+      <currency>false</currency>
       <nullable>1</nullable>
       <signed>true</signed>
       <searchable>true</searchable>
-      <column-display-size>7</column-display-size>
+      <column-display-size>40</column-display-size>
       <column-label>CC_GMT_OFFSET</column-label>
       <column-name>CC_GMT_OFFSET</column-name>
       <schema-name></schema-name>
-      <column-precision>5</column-precision>
-      <column-scale>2</column-scale>
+      <column-precision>0</column-precision>
+      <column-scale>0</column-scale>
       <table-name></table-name>
       <catalog-name></catalog-name>
-      <column-type>2</column-type>
-      <column-type-name>NUMBER</column-type-name>
+      <column-type>12</column-type>
+      <column-type-name>VARCHAR2</column-type-name>
     </column-definition>
     <column-definition>
       <column-index>15</column-index>
       <auto-increment>false</auto-increment>
-      <case-sensitive>false</case-sensitive>
-      <currency>true</currency>
+      <case-sensitive>true</case-sensitive>
+      <currency>false</currency>
       <nullable>1</nullable>
       <signed>true</signed>
       <searchable>true</searchable>
-      <column-display-size>7</column-display-size>
+      <column-display-size>40</column-display-size>
       <column-label>CC_TAX_PERCENTAGE</column-label>
       <column-name>CC_TAX_PERCENTAGE</column-name>
       <schema-name></schema-name>
-      <column-precision>5</column-precision>
-      <column-scale>2</column-scale>
+      <column-precision>0</column-precision>
+      <column-scale>0</column-scale>
       <table-name></table-name>
       <catalog-name></catalog-name>
-      <column-type>2</column-type>
-      <column-type-name>NUMBER</column-type-name>
+      <column-type>12</column-type>
+      <column-type-name>VARCHAR2</column-type-name>
     </column-definition>
   </metadata>
   <data>
     <currentRow>
       <columnValue>AAAAAAAAHAAAAAAA</columnValue>
-      <columnValue>883641600000</columnValue>
+      <columnValue>01-JAN-98</columnValue>
       <columnValue>Pacific Northwest</columnValue>
       <columnValue>small</columnValue>
       <columnValue>6280</columnValue>
@@ -339,7 +339,7 @@
     </currentRow>
     <currentRow>
       <columnValue>AAAAAAAAKAAAAAAA</columnValue>
-      <columnValue>883641600000</columnValue>
+      <columnValue>01-JAN-98</columnValue>
       <columnValue>Hawaii/Alaska</columnValue>
       <columnValue>large</columnValue>
       <columnValue>17687</columnValue>
@@ -352,11 +352,11 @@
       <columnValue>MI</columnValue>
       <columnValue>42477     </columnValue>
       <columnValue>-5</columnValue>
-      <columnValue>0.02</columnValue>
+      <columnValue>.02</columnValue>
     </currentRow>
     <currentRow>
       <columnValue>AAAAAAAAKAAAAAAA</columnValue>
-      <columnValue>946800000000</columnValue>
+      <columnValue>02-JAN-00</columnValue>
       <columnValue>Hawaii/Alaska</columnValue>
       <columnValue>small</columnValue>
       <columnValue>17687</columnValue>
@@ -369,11 +369,11 @@
       <columnValue>MI</columnValue>
       <columnValue>42477     </columnValue>
       <columnValue>-5</columnValue>
-      <columnValue>0.01</columnValue>
+      <columnValue>.01</columnValue>
     </currentRow>
     <currentRow>
       <columnValue>AAAAAAAAKAAAAAAA</columnValue>
-      <columnValue>1009872000000</columnValue>
+      <columnValue>01-JAN-02</columnValue>
       <columnValue>Hawaii/Alaska</columnValue>
       <columnValue>large</columnValue>
       <columnValue>55979</columnValue>
@@ -386,7 +386,7 @@
       <columnValue>MI</columnValue>
       <columnValue>42477     </columnValue>
       <columnValue>-5</columnValue>
-      <columnValue>0.06</columnValue>
+      <columnValue>.06</columnValue>
     </currentRow>
   </data>
 </webRowSet>
