@@ -16,26 +16,31 @@
  */
 package org.apache.spark.sql.oracle.rules
 
+import scala.collection.mutable.ArrayBuffer
+
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.ExprId
+import org.apache.spark.sql.catalyst.expressions.{Attribute, ExprId}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
-import org.apache.spark.sql.oracle.expressions.Named.{OraAlias, OraColumnRef, OraNamedExpression, QualFixedColNm, UnQualFixedColNm}
+import org.apache.spark.sql.oracle.expressions.Named.{OraColumnRef, OraNamedExpression, QualFixedColNm, UnQualFixedColNm}
 import org.apache.spark.sql.oracle.expressions.OraExpression
 import org.apache.spark.sql.oracle.expressions.Subquery.OraSubqueryExpression
 import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock, OraTableScan}
 
 /**
- * Ensure 'correct' column names used in oracle-sql. This entails 2 things:
+ * Ensure 'correct' column names used in oracle-sql. This entails 3 things:
  *  - where possible use the catalog name of a column instead of the case insensitive
  *    name used in Spark.
  *  - When there are multiple
  *    [[org.apache.spark.sql.catalyst.expressions.AttributeReference attributes]]
  *    with the same name apply de-dup strategies of qualifying names or generating
  *    new names.
+ *  - If Spark name exceed 30 characters applying truncation.
+ *
+ * <img src="doc-files/fixNames.png" />
  *
  * '''Column Name case:'''
  *
@@ -137,7 +142,29 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
 
   private type SourcePos = Int
   private val NAME_TAG = "sparkora"
+  private val ORA_NM_MAX_SZ = 30
 
+  private def fixOraNmtoSz(nm : String, i : Int) : (Int, String) = {
+    if (nm.size > ORA_NM_MAX_SZ) {
+      val j = i + 1
+      (j, genNm(nm, j))
+    } else (i, nm)
+  }
+
+  private val internalNmPattern = "\\.|#|CAST".r
+
+  private def replaceNm(nm : String) : Boolean =
+    internalNmPattern.findFirstIn(nm).isDefined
+
+  private def genNm(nm : String, i : Int) : String = {
+    val iNm = s"${i}_${NAME_TAG}"
+    if (replaceNm(nm)) {
+      iNm
+    } else {
+      val p = nm.substring(0, Math.min(nm.length(), ORA_NM_MAX_SZ - iNm.length - 1))
+      s"${p}_${iNm}"
+    }
+  }
 
   sealed trait FixPlan {
     def oraPlan: OraPlan
@@ -166,18 +193,57 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
         case (eId, _) => qualifiedExprIds.contains(eId)
       }.map(t => t._2.srcPos).toSet
 
-      def fixName(oc: OraColumnRef): Unit = {
+      /*
+       * capture 'fixed' Lateral Join output names
+       */
+      val fixedLJOut : Map[ExprId, String] = {
+        val ab = ArrayBuffer[(ExprId, String)]()
+        /*
+         * why start at inEIdMap.size?
+         * - because there can be name clashes between the input up-to the
+         *   lateral join and lateral-join projections.
+         * - for expressions in grouping sets Spark generates a new ExprId in
+         *   Expand.out. So we retain a OraLatJoinProjEntry for them.
+         *   Then the fixNm logic could end by generating the same name.
+         *   (happens for cube test on `d_year + 1`
+         */
+        var i : Int = inEIdMap.size
+        for ( (eId, a) <- latJoinOutMap.iterator) {
+          val (j, nm) = fixOraNmtoSz(a.name, i)
+          i = j
+          ab += ((eId, nm))
+        }
+        ab.toMap
+      }
+
+      /*
+       * When fixing query-block names we want to
+       * apply the lat Join renames for expressions
+       * after the lateral Join, but not for expressions
+       * before. So apply the rewrite on expressions
+       * in the where, select and group-by clauses.
+       */
+      def fixName(oc: OraColumnRef, applyLJFixes : Boolean): Unit = {
         val exprId = oc.catalystExpr.exprId
         if (qualifiedExprIds.contains(exprId)) {
           oc.setOraFixedNm(inEIdMap(exprId).fixedName)
         } else {
-          val inNm = inEIdMap(exprId).name
-          if (inNm != oc.outNmInOraSQL) {
-            oc.setOraFixedNm(UnQualFixedColNm(inNm))
+          if (inEIdMap.contains(exprId)) {
+            val inNm = inEIdMap(exprId).name
+            if (inNm != oc.outNmInOraSQL) {
+              oc.setOraFixedNm(UnQualFixedColNm(inNm))
+            }
+          } else if (applyLJFixes && fixedLJOut.contains(exprId) ) {
+            val inNm = fixedLJOut(exprId)
+            if (inNm != oc.outNmInOraSQL) {
+              oc.setOraFixedNm(UnQualFixedColNm(inNm))
+            }
           }
         }
       }
     }
+
+    def latJoinOutMap : Map[ExprId, Attribute]
 
     lazy val inDetails = {
       val inEIdMap : Map[ExprId, QualCol] = (
@@ -214,6 +280,9 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
     override def projectList: Seq[OraExpression] = oraPlan.projections
     override def numSources: SourcePos = 0
     override def source(id: SourcePos): FixPlan = null
+
+    lazy val latJoinOutMap : Map[ExprId, Attribute] = Map.empty
+
     override protected def fixInternals : Unit = ()
 
     override def outEIdMap: Map[ExprId, String] =
@@ -232,9 +301,14 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
         })
 
       (for (cP <- childPlans) yield {
+        cP.execute
         (cP.pos, cP)
       }).toMap
     }
+
+    lazy val latJoinOutMap : Map[ExprId, Attribute] =
+      oraPlan.latJoin.map(_.expand.output.map(a => a.exprId -> a).toMap).
+        getOrElse(Map.empty)
 
     case class OutputDetails(projectList : Seq[OraExpression]) {
       /*
@@ -256,13 +330,21 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
 
       val dupExprIds = dupNames.values.flatten.toSet
 
+      /*
+       * Fix names that are duplicates or have more than
+       * 30 characters.
+       */
       val outEIdMap : Map[ExprId, String] = {
         var i: Int = 0
         for((eId, nm) <- eIdMap) yield {
           val oNm = if (dupExprIds.contains(eId)) {
             i += 1
-            s"${nm}_${i}_${NAME_TAG}"
-          } else nm
+            genNm(nm, i)
+          } else {
+            val (j, oNm) = fixOraNmtoSz(nm, i)
+            i = j
+            oNm
+          }
           eId -> oNm
         }
       }
@@ -274,9 +356,9 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
     override def source(id: SourcePos): FixPlan = childPlansMap(id)
 
     override protected def fixInternals: Unit = {
-      def fixOE(oE : OraExpression) : Unit = {
+      def fixOE(oE : OraExpression, applyLJFixes : Boolean) : Unit = {
         oE.foreachUp {
-          case oc : OraColumnRef => inDetails.fixName(oc)
+          case oc : OraColumnRef => inDetails.fixName(oc, applyLJFixes)
           case _ => ()
         }
       }
@@ -303,18 +385,37 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
           val child = childPlansMap(childPos)
           jc.setJoinAlias(child.qualifier)
         }
-        fixOE(jc.onCondition)
+        fixOE(jc.onCondition, false)
+      }
+
+      /* latJoin */
+      if (oraPlan.latJoin.isDefined) {
+        fixLatJoinAliases(inDetails.fixedLJOut)
+        oraPlan.latJoin.get.foreach(oE => fixOE(oE, false))
       }
 
       /* select */
-      oraPlan.select.foreach(fixOE)
+      oraPlan.select.foreach(oE => fixOE(oE, true))
 
       /* where */
-      oraPlan.where.foreach(fixOE)
+      oraPlan.where.foreach(oE => fixOE(oE, true))
 
       /* groupBys */
-      oraPlan.groupBy.foreach(gBys => gBys.foreach(fixOE))
+      oraPlan.groupBy.foreach(gBys => gBys.foreach(oE => fixOE(oE, true)))
 
+    }
+
+    def fixLatJoinAliases(ljOutMap : Map[ExprId, String]) : Unit = {
+      if (oraPlan.latJoin.isDefined) {
+        val headPL = oraPlan.latJoin.get.projections.head
+        for(ljPE <- headPL.projectList if ljPE.outAttr.isDefined) {
+          val outAttr = ljPE.outAttr.get
+          val outNm = ljOutMap(outAttr.exprId)
+          if (outNm != outAttr.name) {
+            ljPE.setOraFixedAlias(outNm)
+          }
+        }
+      }
     }
   }
 

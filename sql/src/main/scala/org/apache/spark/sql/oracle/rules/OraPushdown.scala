@@ -78,22 +78,3 @@ trait OraPushdown {
   }
 
 }
-
-case class ExpandPushDown(inDSScan: DataSourceV2ScanRelation,
-                          inOraScan: OraScan,
-                          inQBlk: OraQueryBlock,
-                          pushdownCatalystOp: Expand,
-                          sparkSession: SparkSession) extends OraPushdown {
-
-  private[rules] def pushdownSQL: Option[OraQueryBlock] = None
-}
-
-case class AggregatePushDown(inDSScan: DataSourceV2ScanRelation,
-                             inOraScan: OraScan,
-                             inQBlk: OraQueryBlock,
-                             pushdownCatalystOp: Aggregate,
-                             sparkSession: SparkSession) extends OraPushdown {
-
-  private[rules] def pushdownSQL: Option[OraQueryBlock] = None
-}
-

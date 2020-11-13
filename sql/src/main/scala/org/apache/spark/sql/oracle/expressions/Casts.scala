@@ -51,7 +51,7 @@ object Casts extends OraSQLImplicits with Logging {
         Casting(cE, oE, nullOnOverflow)
       case CheckOverflow(cE@Cast(OraExpression(oE), _, _), _, nullOnOverflow) =>
         Casting(cE, oE, nullOnOverflow)
-      case PromotePrecision(cE@Cast(OraExpression(oE), _, _)) => Casting(cE, oE, false).translate
+      case PromotePrecision(cE@Cast(OraExpression(oE), _, _)) => Casting(cE, oE, false)
       case cE@Cast(OraExpression(oE), _, _) => Casting(cE, oE, false)
       case _ => null
     }).flatMap {

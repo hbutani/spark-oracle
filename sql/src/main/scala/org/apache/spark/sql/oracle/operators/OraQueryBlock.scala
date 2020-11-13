@@ -62,7 +62,8 @@ case class OraJoinClause(joinType: JoinType,
 
 trait OraQueryBlockState { self: OraQueryBlock =>
 
-  lazy val hasComputedShape: Boolean = select.exists(o => !o.isInstanceOf[OraColumnRef])
+  lazy val hasComputedShape: Boolean =
+    select.exists(o => !o.isInstanceOf[OraColumnRef])
   lazy val hasOuterJoin: Boolean =
     joins.exists(j => Set[JoinType](LeftOuter, RightOuter, FullOuter).contains(j.joinType))
   lazy val hasFilter: Boolean = where.isDefined
@@ -78,14 +79,15 @@ trait OraQueryBlockState { self: OraQueryBlock =>
   }
 
   lazy val hasJoins = joins.nonEmpty
+  lazy val hasLatJoin = latJoin.isDefined
 
   def canApply(plan: LogicalPlan): Boolean = plan match {
     case p: Project => true
     case f: Filter => !(hasOuterJoin || hasAggregate)
     case j@Join(_, _, (LeftOuter | RightOuter | FullOuter), _, _) =>
-      !(hasComputedShape || hasFilter || hasAggregations)
-    case j: Join => !(hasComputedShape || hasAggregations)
-    case e: Expand => !hasComputedShape
+      !(hasComputedShape || hasFilter || hasAggregations || hasLatJoin)
+    case j: Join => !(hasComputedShape || hasAggregations || hasLatJoin)
+    case e: Expand => !(hasComputedShape || hasAggregations || hasLatJoin)
     case a: Aggregate => !(hasComputedShape || hasAggregations)
     case gl : GlobalLimit => !(hasOuterJoin || hasAggregate)
   }
@@ -94,13 +96,15 @@ trait OraQueryBlockState { self: OraQueryBlock =>
 
 trait OraQueryBlockSQLSnippets {self: OraQueryBlock =>
 
+  import OraSQLImplicits._
+
   private var sourceAlias : Option[String] = None
 
   def setSourceAlias(a : String) : Unit = {
     sourceAlias = Some(a)
   }
 
-  private lazy val sourceSnippet : SQLSnippet = {
+  private def sourceSnippet : SQLSnippet = {
     val srcSQL = source match {
       case ot : OraTableScan => SQLSnippet.tableQualId(ot.oraTable)
       case oQ : OraQueryBlock => SQLSnippet.subQuery(oQ.orasql)
@@ -110,15 +114,19 @@ trait OraQueryBlockSQLSnippets {self: OraQueryBlock =>
     srcSQL + qualifier
   }
 
-  lazy val selectListSQL = select.map(_.reifyLiterals.orasql)
+  protected def selectListSQL = select.map(_.reifyLiterals.orasql)
 
-  lazy val sourcesSQL : SQLSnippet = {
-    sourceSnippet ++ joins.map(_.orasql)
+  def sourcesSQL : SQLSnippet = {
+    var ss = sourceSnippet ++ joins.map(_.orasql)
+    if (latJoin.isDefined) {
+      ss = ss + osql" , lateral ( ${latJoin.get.orasql} )"
+    }
+    ss
   }
 
-  lazy val whereConditionSQL = where.map(_.orasql)
+  protected def whereConditionSQL = where.map(_.orasql)
 
-  lazy val groupByListSQL = groupBy.map(_.map(_.reifyLiterals.orasql))
+  protected def groupByListSQL = groupBy.map(_.map(_.reifyLiterals.orasql))
 }
 
 /**
@@ -132,6 +140,7 @@ trait OraQueryBlockSQLSnippets {self: OraQueryBlock =>
  */
 case class OraQueryBlock(source: OraPlan,
                          joins: Seq[OraJoinClause],
+                         latJoin : Option[OraLateralJoin],
                          select: Seq[OraExpression],
                          where: Option[OraExpression],
                          groupBy: Option[Seq[OraExpression]],
@@ -156,7 +165,7 @@ case class OraQueryBlock(source: OraPlan,
    */
   def newBlockOnCurrent: OraQueryBlock = {
     val newOraExprs = OraExpressions.unapplySeq(catalystAttributes).get
-    OraQueryBlock(this, Seq.empty, newOraExprs, None, None, None, catalystAttributes)
+    OraQueryBlock(this, Seq.empty, None, newOraExprs, None, None, None, catalystAttributes)
   }
 
 }

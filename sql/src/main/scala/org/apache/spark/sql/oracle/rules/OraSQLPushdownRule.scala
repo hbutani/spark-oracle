@@ -61,7 +61,7 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
             projections = Seq.empty,
             filter = None,
             partitionFilter = None),
-          Seq.empty, oraProjs, oraFil, None, Some(dsv2), dsv2.output
+          Seq.empty, None, oraProjs, oraFil, None, Some(dsv2), dsv2.output
         )
       case oraQBlck: OraQueryBlock => oraQBlck
     }
@@ -202,14 +202,14 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
           Some(condition),
           sparkSession).pushdown.getOrElse(joinOp)
       case aggOp @ Aggregate(_, _, child @ DataSourceV2ScanRelation(_, oraScan: OraScan, _)) =>
-        AggregatePushDown(
+        AggregatePushdown(
           child,
           oraScan,
           toOraQueryBlock(oraScan.oraPlan, child),
           aggOp,
           sparkSession).pushdown.getOrElse(aggOp)
       case expOp @ Expand(_, _, child @ DataSourceV2ScanRelation(_, oraScan: OraScan, _)) =>
-        ExpandPushDown(
+        ExpandPushdown(
           child,
           oraScan,
           toOraQueryBlock(oraScan.oraPlan, child),

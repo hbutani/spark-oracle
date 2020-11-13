@@ -18,6 +18,7 @@
 package org.apache.spark.sql.oracle.expressions
 
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.oracle.{SQLSnippet, SQLSnippetProvider}
 
 /**
@@ -34,6 +35,9 @@ object Named {
   case class UnQualFixedColNm(nm : String) extends OraFixedColNm {
     def orasql : SQLSnippet = SQLSnippet.colRef(nm)
   }
+
+  val ORA_ALIAS_TAG = TreeNodeTag[String]("_aliasInOraSQL")
+  val ORA_NM_TAG = TreeNodeTag[OraFixedColNm]("_nmInOraSQL")
 
   /**
    * [[OraNamedExpression]] expressions can have a name in oracle-sql
@@ -56,10 +60,9 @@ object Named {
   trait OraNamedExpression extends OraExpression {
     override def catalystExpr: NamedExpression
 
-    protected var _aliasInOraSQL : Option[String] = None
-    def getOraFixedAlias : Option[String] = _aliasInOraSQL
+    def getOraFixedAlias : Option[String] = getTagValue(ORA_ALIAS_TAG)
     def setOraFixedAlias(alias : String) : Unit = {
-      _aliasInOraSQL = Some(alias)
+      setTagValue(ORA_ALIAS_TAG, alias)
     }
 
     def outNmInOraSQL : String
@@ -71,30 +74,28 @@ object Named {
     }
     lazy val children: Seq[OraExpression] = Seq(child)
 
-    def outNmInOraSQL : String = _aliasInOraSQL.getOrElse(catalystExpr.name)
+    def outNmInOraSQL : String = getOraFixedAlias.getOrElse(catalystExpr.name)
   }
 
   case class OraColumnRef(catalystExpr: AttributeReference)
       extends OraNamedExpression
       with OraLeafExpression {
 
-    private var _nmInOraSQL : Option[OraFixedColNm] = None
-
-    def getOraFixedNm : Option[OraFixedColNm] = _nmInOraSQL
+    def getOraFixedNm : Option[OraFixedColNm] = getTagValue(ORA_NM_TAG)
     def setOraFixedNm(nm : OraFixedColNm) : Unit = {
-      _nmInOraSQL = Some(nm)
+      setTagValue(ORA_NM_TAG, nm)
     }
 
     def orasql: SQLSnippet = {
       var sqlSnip = getOraFixedNm.map(_.orasql).getOrElse(SQLSnippet.colRef(catalystExpr.name))
-      if (_aliasInOraSQL.isDefined) {
-        sqlSnip = sqlSnip.as(_aliasInOraSQL.get)
+      if (getOraFixedAlias.isDefined) {
+        sqlSnip = sqlSnip.as(getOraFixedAlias.get)
       }
       sqlSnip
     }
 
     def outNmInOraSQL : String =
-      _aliasInOraSQL.getOrElse(_nmInOraSQL.map(_.nm).getOrElse(catalystExpr.name))
+      getOraFixedAlias.getOrElse(getOraFixedNm.map(_.nm).getOrElse(catalystExpr.name))
 
   }
 

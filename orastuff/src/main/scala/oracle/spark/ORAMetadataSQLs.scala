@@ -18,7 +18,7 @@
 package oracle.spark
 
 import java.sql
-import java.sql.{ResultSet, SQLException, Types}
+import java.sql.{PreparedStatement, ResultSet, SQLException, Types}
 
 import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 
@@ -145,6 +145,41 @@ object ORAMetadataSQLs {
       }
 
       m.toMap
+    }
+  }
+
+  def queryPlan(dsKey: DataSourceKey,
+                sql : String,
+                setStmtParams: PreparedStatement => Unit = ps => ()) : String = {
+    val stat_id = {
+      val s = s"sp_ora_${System.currentTimeMillis()}"
+      s.substring(0, Math.min(s.length(), 30))
+    }
+    val explainQuery =
+      s"""explain plan
+         |set statement_id = '${stat_id}'
+         |for
+         |${sql}""".stripMargin
+    performDSQuery(
+      dsKey,
+      explainQuery,
+      s"running explain for query, stat_id set to ${stat_id}",
+      setStmtParams) { rs =>
+      ()
+    }
+
+    val retrievePlanSQL =
+    s"""select DBMS_XPLAN.DISPLAY_PLAN(
+       |            statement_id => '${stat_id}', type => 'XML'
+       |          ) from dual""".stripMargin
+
+    performDSQuery(
+      dsKey,
+      retrievePlanSQL,
+      s"retriving plan for query, stat_id set to ${stat_id}",
+      ) { rs =>
+      rs.next()
+      rs.getString(1)
     }
   }
 

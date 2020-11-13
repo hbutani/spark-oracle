@@ -134,6 +134,7 @@ object OraExpression {
       case Nulls(oE) => oE
       case Subquery(oE) => oE
       case Casts(oE) => oE
+      case IgnoreExpressions(oE) => oE
       case _ => null
     })
 
