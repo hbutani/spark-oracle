@@ -90,6 +90,12 @@ case class OraPostfixUnaryOpExpression(op: String, catalystExpr: Expression, chi
   override def orasql: SQLSnippet = SQLSnippet.postfixUnaryOp(op, child.orasql)
 }
 
+case class OraNoArgFnExpression(fn: String, catalystExpr: Expression)
+  extends OraExpression {
+  val children: Seq[OraExpression] = Seq.empty
+  override def orasql: SQLSnippet = SQLSnippet.call(fn)
+}
+
 case class OraUnaryFnExpression(fn: String, catalystExpr: Expression, child: OraExpression)
     extends OraExpression {
   val children: Seq[OraExpression] = Seq(child)
@@ -118,7 +124,7 @@ case class OraBinaryFnExpression(
 
 case class OraFnExpression(fn: String, catalystExpr: Expression, children: Seq[OraExpression])
     extends OraExpression {
-  val cSnips = children.map(_.orasql)
+  private def cSnips = children.map(_.orasql)
   override def orasql: SQLSnippet = SQLSnippet.call(fn, cSnips: _*)
 }
 
@@ -134,6 +140,7 @@ object OraExpression {
       case Nulls(oE) => oE
       case Subquery(oE) => oE
       case Casts(oE) => oE
+      case Aggregates(oE) => oE
       case IgnoreExpressions(oE) => oE
       case _ => null
     })

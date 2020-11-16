@@ -32,9 +32,9 @@ case class OraJoinClause(joinType: JoinType,
 
   lazy val joinTypeSQL : SQLSnippet = joinType match {
     case Inner => osql"join"
-    case LeftOuter => osql"left outer"
-    case RightOuter => osql"right outer"
-    case FullOuter => osql"full outer"
+    case LeftOuter => osql"left outer join"
+    case RightOuter => osql"right outer join"
+    case FullOuter => osql"full outer join"
     case _ => null
   }
 
@@ -85,10 +85,10 @@ trait OraQueryBlockState { self: OraQueryBlock =>
     case p: Project => true
     case f: Filter => !(hasOuterJoin || hasAggregate)
     case j@Join(_, _, (LeftOuter | RightOuter | FullOuter), _, _) =>
-      !(hasComputedShape || hasFilter || hasAggregations || hasLatJoin)
-    case j: Join => !(hasComputedShape || hasAggregations || hasLatJoin)
-    case e: Expand => !(hasComputedShape || hasAggregations || hasLatJoin)
-    case a: Aggregate => !(hasComputedShape || hasAggregations)
+      !(hasComputedShape || hasFilter || hasAggregate || hasLatJoin)
+    case j: Join => !(hasComputedShape || hasAggregate || hasLatJoin)
+    case e: Expand => !(hasComputedShape || hasAggregate || hasLatJoin)
+    case a: Aggregate => !(hasComputedShape || hasAggregate)
     case gl : GlobalLimit => !(hasOuterJoin || hasAggregate)
   }
 

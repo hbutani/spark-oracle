@@ -17,21 +17,34 @@
 package org.apache.spark.sql.oracle.rules
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 import org.apache.spark.sql.catalyst.plans.logical.Aggregate
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
+import org.apache.spark.sql.oracle.expressions.OraExpressions
 import org.apache.spark.sql.oracle.operators.OraQueryBlock
 
 case class AggregatePushdown(inDSScan: DataSourceV2ScanRelation,
                              inOraScan: OraScan,
                              inQBlk: OraQueryBlock,
                              pushdownCatalystOp: Aggregate,
-                             sparkSession: SparkSession)  extends OraPushdown with PredicateHelper {
+                             sparkSession: SparkSession
+                            )  extends OraPushdown with ProjectListPushdownHelper {
 
   private[rules] def pushdownSQL: Option[OraQueryBlock] = {
     if (currQBlk.canApply(pushdownCatalystOp)) {
-      None
+      val aggOp = pushdownCatalystOp
+      val pushdownProjList =
+        buildCleanedProjectList(aggOp.aggregateExpressions, currQBlk.catalystProjectList)
+      for(
+        oraGrpExpressions <- OraExpressions.unapplySeq(aggOp.groupingExpressions);
+        oraSelExpressions <- OraExpressions.unapplySeq(pushdownProjList)
+      ) yield {
+        currQBlk.copy(
+          select = oraSelExpressions,
+          groupBy = Some(oraGrpExpressions),
+          catalystOp = Some(aggOp),
+          catalystProjectList = aggOp.aggregateExpressions)
+      }
     } else None
   }
 }

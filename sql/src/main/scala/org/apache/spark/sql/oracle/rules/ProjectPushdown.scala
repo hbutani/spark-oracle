@@ -29,28 +29,7 @@ case class ProjectPushdown(inDSScan: DataSourceV2ScanRelation,
                            inQBlk: OraQueryBlock,
                            pushdownCatalystOp: Project,
                            sparkSession: SparkSession)
-  extends OraPushdown with AliasHelper {
-
-  /**
-   * copied from [[CollapseProject]] rewrite rule.
-   * - substitues refernces to aliases and `trimNonTopLevelAliases`
-   * For example:
-   * {{{
-   *   Project(c + d as e,
-   *           Project(a + b as c, d, DSV2...)
-   *           )
-   *  // becomes
-   *  Project(a + b +d as e, DSV2...)
-   * }}}
-   * @param upper
-   * @param lower
-   * @return
-   */
-  def buildCleanedProjectList(upper: Seq[NamedExpression],
-                              lower: Seq[NamedExpression]): Seq[NamedExpression] = {
-    val aliases = getAliasMap(lower)
-    upper.map(replaceAliasButKeepName(_, aliases))
-  }
+  extends OraPushdown with ProjectListPushdownHelper {
 
   private[rules] def pushdownSQL: Option[OraQueryBlock] = {
     if (currQBlk.canApply(pushdownCatalystOp)) {

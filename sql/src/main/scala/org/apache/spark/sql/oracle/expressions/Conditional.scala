@@ -27,18 +27,16 @@ object Conditional {
 
   case class OraSimpleCase(
       catalystExpr: If,
-      condOE: OraExpression,
       cases: Seq[(OraExpression, OraExpression)],
       elseCase: Option[OraExpression])
       extends OraExpression {
 
-    lazy val orasql: SQLSnippet = SQLSnippet.simpleCase(
-      condOE.orasql,
+    def orasql: SQLSnippet = SQLSnippet.simpleCase(
       cases.map(t => (t._1.orasql, t._2.orasql)),
       elseCase.map(_.orasql))
 
     override def children: Seq[OraExpression] =
-      Seq(condOE) ++ cases.flatMap(t => Seq(t._1, t._2)) ++ elseCase.toSeq
+      cases.flatMap(t => Seq(t._1, t._2)) ++ elseCase.toSeq
   }
 
   case class OraSearchedCase(
@@ -47,7 +45,7 @@ object Conditional {
       elseCase: Option[OraExpression])
       extends OraExpression {
 
-    lazy val orasql: SQLSnippet = SQLSnippet.searchedCase(
+    def orasql: SQLSnippet = SQLSnippet.searchedCase(
       branches.map(t => (t._1.orasql, t._2.orasql)),
       elseCase.map(_.orasql))
 
@@ -72,7 +70,7 @@ object Conditional {
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
       case cE @ If(OraExpression(condOE), OraExpression(trueOE), OraExpression(falseOE)) =>
-        OraSimpleCase(cE, condOE, Seq((condOE, trueOE)), Some(falseOE))
+        OraSimpleCase(cE, Seq((condOE, trueOE)), Some(falseOE))
       case cE @ CaseWhen(CaseBranches(branches @ _*), None) =>
         OraSearchedCase(cE, branches, None)
       case cE @ CaseWhen(CaseBranches(branches @ _*), Some(OraExpression(elseOE))) =>

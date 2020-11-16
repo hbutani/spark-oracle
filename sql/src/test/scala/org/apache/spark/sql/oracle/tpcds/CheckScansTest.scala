@@ -17,10 +17,10 @@
 
 package org.apache.spark.sql.oracle.tpcds
 
-import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.{AbstractTest, PlanTestHelpers}
 import org.apache.spark.sql.oracle.tpcds.TPCDSQueries.TPCDSQuerySpec
 
+// scalastyle:off println
 class CheckScansTest extends AbstractTest with PlanTestHelpers {
 
   def performTest(qNm: String, q: TPCDSQuerySpec): Unit = {
@@ -37,6 +37,44 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
 
     }
   }
+
+//  test("pushdownList") { td =>
+//  val sb = new StringBuilder
+//    for ((qNm, q) <- TPCDSQueries.queries) {
+//      val plan = TestOracleHive.sql(q.sql).queryExecution.optimizedPlan
+//      val oraQueries = collectOraQueryBlocks(plan)
+//      if (oraQueries.size == 1) {
+//        sb.append(
+//          s"""
+//             |Query ${qNm}:
+//             |${plan.treeString}
+//             |oracle sql:
+//             |${oraQueries.head.orasql.sql}
+//             |""".stripMargin
+//        )
+//      }
+//    }
+//    println(sb)
+//  }
+
+//  test("nonPushdownList") { td =>
+//    val sb = new StringBuilder
+//    for ((qNm, q) <- TPCDSQueries.queries) {
+//      val plan = TestOracleHive.sql(q.sql).queryExecution.optimizedPlan
+//      val oraQueries = collectOraQueryBlocks(plan)
+//      if (oraQueries.size > 1) {
+//        sb.append(
+//          s"""
+//             |Query ${qNm}:
+//             |${plan.treeString}
+//             |oracle sqls:
+//             |${oraQueries.map(_.orasql.sql).mkString("\n\n")}
+//             |""".stripMargin
+//        )
+//      }
+//    }
+//    println(sb)
+//  }
 
   for ((qNm, q) <- TPCDSQueries.queries) {
     performTest(qNm, q)

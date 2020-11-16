@@ -144,8 +144,8 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
   private val NAME_TAG = "sparkora"
   private val ORA_NM_MAX_SZ = 30
 
-  private def fixOraNmtoSz(nm : String, i : Int) : (Int, String) = {
-    if (nm.size > ORA_NM_MAX_SZ) {
+  private def fixOraNm(nm : String, i : Int) : (Int, String) = {
+    if (nm.size > ORA_NM_MAX_SZ || replaceNm(nm)) {
       val j = i + 1
       (j, genNm(nm, j))
     } else (i, nm)
@@ -209,7 +209,7 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
          */
         var i : Int = inEIdMap.size
         for ( (eId, a) <- latJoinOutMap.iterator) {
-          val (j, nm) = fixOraNmtoSz(a.name, i)
+          val (j, nm) = fixOraNm(a.name, i)
           i = j
           ab += ((eId, nm))
         }
@@ -341,7 +341,7 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
             i += 1
             genNm(nm, i)
           } else {
-            val (j, oNm) = fixOraNmtoSz(nm, i)
+            val (j, oNm) = fixOraNm(nm, i)
             i = j
             oNm
           }

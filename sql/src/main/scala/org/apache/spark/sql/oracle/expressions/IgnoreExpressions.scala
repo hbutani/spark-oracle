@@ -17,13 +17,14 @@
 package org.apache.spark.sql.oracle.expressions
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.catalyst.expressions.{CheckOverflow, Expression}
+import org.apache.spark.sql.catalyst.expressions.{CheckOverflow, Expression, PromotePrecision}
 import org.apache.spark.sql.oracle.OraSQLImplicits
 
 /**
  *  1. Currently just drop the [[CheckOverflow]] check.
  *     We handle [[CheckOverflow]] if it is on top of a [[Cast]].
  *     See [[Casts.unapply()]]
+ *  2. When evaluating [[PromotePrecision]] is just a pass-through in Spark SQL.
  */
 object IgnoreExpressions extends OraSQLImplicits with Logging {
 
@@ -34,6 +35,8 @@ object IgnoreExpressions extends OraSQLImplicits with Logging {
           s"""Ignoring checkoverflow when translating to oracle sql:
              |  for expression: ${co}""".stripMargin
         )
+        oE
+      case PromotePrecision(OraExpression(oE)) =>
         oE
       case _ => null
     })

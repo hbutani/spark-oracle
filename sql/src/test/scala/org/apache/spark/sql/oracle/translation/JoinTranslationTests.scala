@@ -67,7 +67,7 @@ class JoinTranslationTests extends AbstractTranslationTest {
       |           and wr_order_number = ws_order_number)
       |           """.stripMargin,
     """select "WS_WEB_SITE_SK" AS "wsr_web_site_sk", "WR_RETURNED_DATE_SK" AS "date_sk", "WS_SALES_PRICE" AS "sales_price", "WS_NET_PROFIT" AS "profit", "WR_RETURN_AMT" AS "return_amt", "WR_NET_LOSS" AS "net_loss"
-      |from TPCDS.WEB_RETURNS  left outer ( select "WS_ITEM_SK", "WS_WEB_SITE_SK", "WS_ORDER_NUMBER", "WS_SALES_PRICE", "WS_NET_PROFIT"
+      |from TPCDS.WEB_RETURNS  left outer join ( select "WS_ITEM_SK", "WS_WEB_SITE_SK", "WS_ORDER_NUMBER", "WS_SALES_PRICE", "WS_NET_PROFIT"
       |from TPCDS.WEB_SALES  )  on (("WR_ITEM_SK" = "WS_ITEM_SK") AND ("WR_ORDER_NUMBER" = "WS_ORDER_NUMBER"))""".stripMargin
   )
 
@@ -79,7 +79,7 @@ class JoinTranslationTests extends AbstractTranslationTest {
     |           from web_sales web full outer join store_sales store on (web.ws_item_sk = store.ss_item_sk
     |                                                          and web.ws_sold_date_sk = store.ss_sold_date_sk)""".stripMargin,
   """select CASE WHEN "WS_ITEM_SK" IS NOT NULL THEN "WS_ITEM_SK" ELSE "SS_ITEM_SK" END AS "item_sk", CASE WHEN "WS_SOLD_DATE_SK" IS NOT NULL THEN "WS_SOLD_DATE_SK" ELSE "SS_SOLD_DATE_SK" END AS "d_date", "WS_SALES_PRICE" AS "web_sales", "SS_SALES_PRICE" AS "store_sales"
-    |from TPCDS.WEB_SALES  full outer ( select "SS_SOLD_DATE_SK", "SS_ITEM_SK", "SS_SALES_PRICE"
+    |from TPCDS.WEB_SALES  full outer join ( select "SS_SOLD_DATE_SK", "SS_ITEM_SK", "SS_SALES_PRICE"
     |from TPCDS.STORE_SALES  )  on (("WS_ITEM_SK" = "SS_ITEM_SK") AND ("WS_SOLD_DATE_SK" = "SS_SOLD_DATE_SK"))""".stripMargin)
 
 }

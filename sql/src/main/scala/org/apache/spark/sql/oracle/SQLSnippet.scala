@@ -225,14 +225,13 @@ object SQLSnippet {
   }
 
   def simpleCase(
-      cond: SQLSnippet,
       cases: Seq[(SQLSnippet, SQLSnippet)],
       elseCase: Option[SQLSnippet]): SQLSnippet = {
     val caseSnips = for ((caseCond, caseValue) <- cases) yield {
       WHEN + caseCond + THEN + caseValue
     }
     val elseSnip = elseCase.map(ELSE + _).getOrElse(empty)
-    CASE + cond ++ caseSnips + elseSnip + END
+    CASE ++ caseSnips + elseSnip + END
   }
 
   def searchedCase(

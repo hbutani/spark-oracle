@@ -17,8 +17,7 @@
 package org.apache.spark.sql.oracle.rules
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression}
-import org.apache.spark.sql.catalyst.plans.JoinType
+import org.apache.spark.sql.catalyst.expressions.{AliasHelper, AttributeReference, Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.connector.read.oracle.{OraPushdownScan, OraScan}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
@@ -75,6 +74,30 @@ trait OraPushdown {
         output = pushdownCatalystOp.output.asInstanceOf[Seq[AttributeReference]]
       )
     }
+  }
+}
+
+trait ProjectListPushdownHelper extends AliasHelper {
+
+  /**
+   * copied from [[CollapseProject]] rewrite rule.
+   * - substitues refernces to aliases and `trimNonTopLevelAliases`
+   * For example:
+   * {{{
+   *   Project(c + d as e,
+   *           Project(a + b as c, d, DSV2...)
+   *           )
+   *  // becomes
+   *  Project(a + b +d as e, DSV2...)
+   * }}}
+   * @param upper
+   * @param lower
+   * @return
+   */
+  def buildCleanedProjectList(upper: Seq[NamedExpression],
+                              lower: Seq[NamedExpression]): Seq[NamedExpression] = {
+    val aliases = getAliasMap(lower)
+    upper.map(replaceAliasButKeepName(_, aliases))
   }
 
 }

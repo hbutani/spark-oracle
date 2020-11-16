@@ -17,7 +17,7 @@
 package org.apache.spark.sql.oracle.rules
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Subquery}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.oracle.OraSparkUtils
 
@@ -44,8 +44,16 @@ object OraLogicalRules extends OraLogicalRule {
 
   val RULES = Seq(OraSQLPushdownRule, OraFixColumnNames)
 
-  override def _apply(plan: LogicalPlan)(implicit sparkSession: SparkSession): LogicalPlan = {
-    RULES.foldLeft(plan) {
+  override def _apply(plan: LogicalPlan)(implicit sparkSession: SparkSession): LogicalPlan
+  = plan match {
+    /*
+      [[Subquery]] is a marker operator to signal the child Plan is being
+      optimized during subQuery analysis.
+      Don't apply OraPushdown during this phase. We will apply
+      pushdown after all subquery rewrites are applied.
+    */
+    case sq : Subquery => sq
+    case p => RULES.foldLeft(p) {
       case (plan, r) => r(plan)
     }
   }
