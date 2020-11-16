@@ -83,7 +83,7 @@ object OraLiterals {
     val ora_dt_format = "YYYY-MM-DD"
 
     val UTC = getZoneId("+00:00")
-    val spk_ts_format = "yyyy-MM-DD HH:mm:ss:SSSSSS"
+    val spk_ts_format = "yyyy-MM-dd HH:mm:ss.SSSSSS"
     val spk_ts_fmtter =
       TimestampFormatter(
         spk_ts_format,

@@ -86,7 +86,8 @@ object Subquery {
 
   case class OraSubQuery(catalystExpr : SubqueryExpression,
                          oraPlan : OraPlan) extends OraSubqueryExpression {
-    override def orasql: SQLSnippet = oraPlan.orasql
+    override def orasql: SQLSnippet =
+      osql" ( ${oraPlan} )"
     override val children: Seq[OraExpression] = Seq.empty
   }
 
@@ -98,7 +99,7 @@ object Subquery {
   case class OraNullCheckSubQuery(catalystExpr : Expression,
                                   op : SQLSnippet,
                                   sq : OraSubQuery) extends OraExpression {
-    override def orasql: SQLSnippet = osql"${op}  ( ${sq.orasql} )"
+    override def orasql: SQLSnippet = osql"${op} ${sq.orasql}"
     override val children: Seq[OraExpression] = Seq(sq)
   }
 }

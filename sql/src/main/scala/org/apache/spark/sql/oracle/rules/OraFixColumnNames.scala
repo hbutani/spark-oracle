@@ -178,7 +178,8 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
       lazy val fixedName = QualFixedColNm(source(srcPos).qualifier, name)
     }
 
-    case class InputDetails(inEIdMap : Map[ExprId, QualCol]) {
+    case class InputDetails(inEIdMap : Map[ExprId, QualCol],
+                            oraNamesInScope : Map[SourcePos, Set[String]]) {
       val dupNames: Map[String, Seq[ExprId]] = {
         (for ((eId, qNm) <- inEIdMap.toSeq) yield {
           (qNm.name, eId)
@@ -187,7 +188,28 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
           mapValues(s => s.map(_._2))
       }
 
-      val qualifiedExprIds = dupNames.values.flatten.toSet
+      val dupNamesinScope : Set[String] = {
+        val nmPosMap : Seq[(String, SourcePos)] = (for (
+          (srcPos, names) <- oraNamesInScope.iterator;
+          name <- names.iterator) yield {
+          (name, srcPos)
+        }).toSeq
+
+        nmPosMap.
+          groupBy(t => t._1).
+          filter(t => t._2.size > 1).
+          keySet
+      }
+
+      val exprIdsFromDupNamesInScope : Set[ExprId] = {
+        (for ((eId, qNm) <- inEIdMap.toSeq if (dupNamesinScope.contains(qNm.name))) yield {
+          eId
+        }).toSet
+      }
+
+      val qualifiedExprIdsForDupNames = dupNames.values.flatten.toSet
+
+      val qualifiedExprIds = qualifiedExprIdsForDupNames ++ exprIdsFromDupNamesInScope
 
       val qualifiedInputs : Set[SourcePos] = inEIdMap.filter {
         case (eId, _) => qualifiedExprIds.contains(eId)
@@ -252,12 +274,26 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
           }
         ).reduceLeft(_ ++ _)
 
-      InputDetails(inEIdMap)
+      val oraNamesInScope = (
+        for (srcPos <- (0 until numSources))  yield {
+          (srcPos, source(srcPos).extraOraNamesInScope)
+        }
+      ).toMap
+
+      InputDetails(inEIdMap, oraNamesInScope)
     }
 
     protected def fixInternals : Unit
 
     def outEIdMap : Map[ExprId, String]
+
+    /*
+     * when we translate to ora-sql, we translate
+     * an [[OraTableScan]] into a table reference;
+     * this means that all its columns are in scope in query block
+     * it is contained in. So name de-dupilcation must account for this.
+     */
+    def extraOraNamesInScope : Set[String]
 
     def fixProjectList : Unit = projectList.foreach {
       case oNE : OraNamedExpression =>
@@ -287,6 +323,9 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
 
     override def outEIdMap: Map[ExprId, String] =
       oraPlan.catalystAttributes.map(a => a.exprId -> a.name).toMap
+
+    override def extraOraNamesInScope : Set[String] =
+      oraPlan.oraTable.columns.map(_.name).toSet
   }
 
   case class QBlkFixPlan(oraPlan : OraQueryBlock,
@@ -352,6 +391,7 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
 
     lazy val outDetails = OutputDetails(projectList)
     lazy val outEIdMap : Map[ExprId, String] = outDetails.outEIdMap
+    lazy val extraOraNamesInScope : Set[String] = Set.empty
 
     override def source(id: SourcePos): FixPlan = childPlansMap(id)
 
@@ -363,14 +403,21 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
         }
       }
 
-      /* 0. fix subquery expressions */
-      for (oE <- oraPlan.where) {
+      def fixSubQueryExprs(oE : OraExpression) : Unit = {
         val subQueries = oE.collect {
           case oSE : OraSubqueryExpression => oSE.oraPlan
         }
         for(sQ <- subQueries) {
           OraFixColumnNames.fixNames(sQ)
         }
+      }
+
+      /* 0. fix subquery expressions */
+      for (oE <- oraPlan.where) {
+        fixSubQueryExprs(oE)
+      }
+      for(oE <- oraPlan.select) {
+        fixSubQueryExprs(oE)
       }
 
       /* 1. source and joins */

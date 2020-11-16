@@ -17,7 +17,10 @@
 
 package org.apache.spark.sql.oracle.tpcds
 
-import org.apache.spark.sql.oracle.{AbstractTest, PlanTestHelpers}
+import scala.collection.mutable.ArrayBuffer
+
+import org.apache.spark.sql.hive.test.oracle.TestOracleHive
+import org.apache.spark.sql.oracle.{AbstractTest, OraSparkConfig, OraSparkUtils, PlanTestHelpers}
 import org.apache.spark.sql.oracle.tpcds.TPCDSQueries.TPCDSQuerySpec
 
 // scalastyle:off println
@@ -38,43 +41,94 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
     }
   }
 
-//  test("pushdownList") { td =>
-//  val sb = new StringBuilder
-//    for ((qNm, q) <- TPCDSQueries.queries) {
-//      val plan = TestOracleHive.sql(q.sql).queryExecution.optimizedPlan
-//      val oraQueries = collectOraQueryBlocks(plan)
-//      if (oraQueries.size == 1) {
-//        sb.append(
-//          s"""
-//             |Query ${qNm}:
-//             |${plan.treeString}
-//             |oracle sql:
-//             |${oraQueries.head.orasql.sql}
-//             |""".stripMargin
-//        )
-//      }
-//    }
-//    println(sb)
-//  }
+  /*
+   * Use this test to execute a query
+   */
+  ignore("try_q") {td =>
+    // OraSparkConfig.setConf(OraSparkConfig.ENABLE_ORA_PUSHDOWN, false)
 
-//  test("nonPushdownList") { td =>
-//    val sb = new StringBuilder
-//    for ((qNm, q) <- TPCDSQueries.queries) {
-//      val plan = TestOracleHive.sql(q.sql).queryExecution.optimizedPlan
-//      val oraQueries = collectOraQueryBlocks(plan)
-//      if (oraQueries.size > 1) {
-//        sb.append(
-//          s"""
-//             |Query ${qNm}:
-//             |${plan.treeString}
-//             |oracle sqls:
-//             |${oraQueries.map(_.orasql.sql).mkString("\n\n")}
-//             |""".stripMargin
-//        )
-//      }
-//    }
-//    println(sb)
-//  }
+    showOraQueries("q66", TPCDSQueries.QuerySet1.q66.sql)
+    val df = TestOracleHive.sql(TPCDSQueries.QuerySet1.q66.sql)
+    System.out.println(s"plan is:")
+    System.out.println(df.queryExecution.optimizedPlan.treeString)
+    df.show(1000, false)
+  }
+
+  /*
+   * Use this test to execute all queries
+   * and get a list of failures.
+   */
+  ignore("exec") { td =>
+
+  // Failed queries q66
+
+  TestOracleHive.setConf("spark.sql.catalog.oracle.use_resultset_cache", "false")
+
+    val ab = ArrayBuffer[String]()
+
+    for ((qNm, q) <- TPCDSQueries.queries) {
+      try {
+        println(s"Query ${qNm} : ")
+        val df = TestOracleHive.sql(q.sql)
+        df.show(1000, false)
+      } catch {
+        case t : Throwable =>
+        println(s"executing query ${qNm} FAILED : ")
+        t.printStackTrace()
+        ab += qNm
+      }
+    }
+
+    println(s"Failed queries ${ab.mkString(",")}")
+  }
+
+  /*
+  * Use this test to list queries that
+  * whose pushdown plan has only some
+  * post-processing done in Spark.
+  */
+  ignore("pushdownList") { td =>
+  val sb = new StringBuilder
+    for ((qNm, q) <- TPCDSQueries.queries) {
+      val plan = TestOracleHive.sql(q.sql).queryExecution.optimizedPlan
+      val oraQueries = collectOraQueryBlocks(plan)
+      if (oraQueries.size == 1) {
+        sb.append(
+          s"""
+             |Query ${qNm}:
+             |${plan.treeString}
+             |oracle sql:
+             |${oraQueries.head.orasql.sql}
+             |""".stripMargin
+        )
+      }
+    }
+    println(sb)
+  }
+
+  /*
+ * Use this test to list queries that
+ * whose pushdown plan has significant
+ * processing done in Spark.
+ */
+  ignore("nonPushdownList") { td =>
+    val sb = new StringBuilder
+    for ((qNm, q) <- TPCDSQueries.queries) {
+      val plan = TestOracleHive.sql(q.sql).queryExecution.optimizedPlan
+      val oraQueries = collectOraQueryBlocks(plan)
+      if (oraQueries.size > 1) {
+        sb.append(
+          s"""
+             |Query ${qNm}:
+             |${plan.treeString}
+             |oracle sqls:
+             |${oraQueries.map(_.orasql.sql).mkString("\n\n")}
+             |""".stripMargin
+        )
+      }
+    }
+    println(sb)
+  }
 
   for ((qNm, q) <- TPCDSQueries.queries) {
     performTest(qNm, q)
