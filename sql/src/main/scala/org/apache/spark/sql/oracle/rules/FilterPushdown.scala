@@ -54,7 +54,7 @@ case class FilterPushdown(inDSScan: DataSourceV2ScanRelation,
             OraBinaryOpExpression(AND, And(f.catalystExpr, pushdownCondition), f, oraExpression)
           ).getOrElse(oraExpression)
 
-          currQBlk.copy(
+          currQBlk.copyBlock(
             where = Some(newFil),
             catalystOp = Some(filOp),
             catalystProjectList = filOp.output

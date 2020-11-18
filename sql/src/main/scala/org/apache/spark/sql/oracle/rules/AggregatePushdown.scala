@@ -39,7 +39,7 @@ case class AggregatePushdown(inDSScan: DataSourceV2ScanRelation,
         oraGrpExpressions <- OraExpressions.unapplySeq(aggOp.groupingExpressions);
         oraSelExpressions <- OraExpressions.unapplySeq(pushdownProjList)
       ) yield {
-        currQBlk.copy(
+        currQBlk.copyBlock(
           select = oraSelExpressions,
           groupBy = Some(oraGrpExpressions),
           catalystOp = Some(aggOp),

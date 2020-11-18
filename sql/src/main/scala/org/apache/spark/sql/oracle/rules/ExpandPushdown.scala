@@ -38,7 +38,7 @@ case class ExpandPushdown(
       expand match {
         case OraLateralJoin(olJ, oraOut) =>
           Some(
-            currQBlk.copy(
+            currQBlk.copyBlock(
               select = oraOut,
               latJoin = Some(olJ),
               catalystOp = Some(expand),

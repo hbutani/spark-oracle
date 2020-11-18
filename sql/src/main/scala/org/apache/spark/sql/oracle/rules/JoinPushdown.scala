@@ -75,7 +75,7 @@ case class JoinPushdown(inDSScan: DataSourceV2ScanRelation,
                 })
               }
             }
-            currQBlk.copy(
+            currQBlk.copyBlock(
               select = currQBlk.select ++ rightProjList,
               where = newWhere,
               joins = currQBlk.joins :+ oraJoin,
@@ -84,7 +84,7 @@ case class JoinPushdown(inDSScan: DataSourceV2ScanRelation,
             )
           case _ =>
             val oraJoin = OraJoinClause(joinType, rightQBlk, oraCond)
-            currQBlk.copy(
+            currQBlk.copyBlock(
               select = currQBlk.select ++ rightProjList,
               joins = currQBlk.joins :+ oraJoin,
               catalystOp = Some(joinOp),

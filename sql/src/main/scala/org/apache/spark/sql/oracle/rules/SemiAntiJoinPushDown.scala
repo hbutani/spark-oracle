@@ -198,7 +198,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
         joinOp,
         leftOraExprs,
         SQLSnippet.IN,
-        rightQBlk.copy(select = rightOraExprs))
+        rightQBlk.copyBlock(select = rightOraExprs))
       val newFil = currQBlk.where.map(f =>
         OraBinaryOpExpression(AND,
           And(f.catalystExpr, oraExpression.catalystExpr),
@@ -206,7 +206,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
         )
       ).getOrElse(oraExpression)
 
-      currQBlk.copy(
+      currQBlk.copyBlock(
         select = outProjections,
         where = Some(newFil),
         catalystOp = Some(joinOp),
@@ -234,7 +234,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
         OraBinaryOpExpression(AND, And(f.catalystExpr, rightNullChecks), f, rightOraNotNullExprs)
       ).getOrElse(rightOraNotNullExprs)
 
-      val newRQBlk = rightQBlk.copy(
+      val newRQBlk = rightQBlk.copyBlock(
         select = rightOraExprs,
         where = Some(newRFil)
       )
@@ -254,7 +254,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
         )
       ).getOrElse(oraExpression)
 
-      currQBlk.copy(
+      currQBlk.copyBlock(
         select = outProjections,
         where = Some(newFil),
         catalystOp = Some(joinOp),
@@ -278,7 +278,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
         rightOraExprs <- OraExpressions.unapplySeq(rightKeys ++ notInRkeys);
         outProjections <- OraExpressions.unapplySeq(joinOp.output)
       ) yield {
-        val newRQBlk = rightQBlk.copy(select = rightOraExprs)
+        val newRQBlk = rightQBlk.copyBlock(select = rightOraExprs)
 
         val oraExpression: OraExpression = OraSubQueryJoin(
           joinOp,
@@ -292,7 +292,7 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
           )
         ).getOrElse(oraExpression)
 
-        currQBlk.copy(
+        currQBlk.copyBlock(
           select = outProjections,
           where = Some(newFil),
           catalystOp = Some(joinOp),

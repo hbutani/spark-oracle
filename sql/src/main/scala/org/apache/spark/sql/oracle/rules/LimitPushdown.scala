@@ -45,7 +45,7 @@ case class LimitPushdown(
         .getOrElse(oraExpression)
 
       Some(
-        currQBlk.copy(
+        currQBlk.copyBlock(
           where = Some(newFil),
           catalystOp = Some(limitOp),
           catalystProjectList = limitOp.output)

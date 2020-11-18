@@ -25,7 +25,7 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.connector.read.oracle.{OraPushdownScan, OraScan}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.oracle.expressions.{AND, OraBinaryOpExpression, OraExpression, OraExpressions}
-import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock, OraTableScan}
+import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock, OraSingleQueryBlock, OraTableScan}
 
 object OraSQLPushdownRule extends OraLogicalRule with Logging {
 
@@ -54,7 +54,7 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
           })
         } else None
 
-        OraQueryBlock(
+        OraSingleQueryBlock(
           oraTScan.copy(
             catalystOp = Some(dsv2),
             catalystProjectList = dsv2.output,

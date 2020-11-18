@@ -17,7 +17,6 @@
 package org.apache.spark.sql.oracle.rules
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.{AliasHelper, NamedExpression}
 import org.apache.spark.sql.catalyst.plans.logical.Project
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
@@ -37,7 +36,7 @@ case class ProjectPushdown(inDSScan: DataSourceV2ScanRelation,
       val pushdownProjList =
         buildCleanedProjectList(projOp.projectList, currQBlk.catalystProjectList)
       for(oraExpressions <- OraExpressions.unapplySeq(pushdownProjList)) yield {
-        currQBlk.copy(select = oraExpressions,
+        currQBlk.copyBlock(select = oraExpressions,
           catalystOp = Some(projOp),
           catalystProjectList = projOp.projectList)
       }
