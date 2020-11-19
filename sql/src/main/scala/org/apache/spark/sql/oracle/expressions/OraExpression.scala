@@ -19,13 +19,14 @@ package org.apache.spark.sql.oracle.expressions
 
 import java.util.Locale
 
-import org.apache.spark.sql.catalyst.expressions.{And, Expression}
+import org.apache.spark.sql.catalyst.expressions.{And, Expression, IsNotNull, IsNull}
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.truncatedString
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.oracle.{OraSparkUtils, OraSQLImplicits, SQLSnippet, SQLSnippetProvider}
 import org.apache.spark.sql.sources.Filter
+import org.apache.spark.sql.types.BooleanType
 
 abstract class OraExpression extends TreeNode[OraExpression]
   with OraSQLImplicits with SQLSnippetProvider {
@@ -178,6 +179,34 @@ object OraExpression {
       })
     } else {
       None
+    }
+  }
+
+  /**
+   * @see [[OraBooleanAsInt]]
+   * @param oE
+   * @return
+   */
+  def applyIntConversion(oE : OraExpression) : OraExpression = oE match {
+    case oe if oe.catalystExpr.dataType == BooleanType => OraBooleanAsInt(oe)
+    case oe => oe
+  }
+
+  /**
+   * A `IsNotNull(IsNull(_))` expression gets translated to
+   * something like `"C_INT" IS NULL IS NOT NULL`
+   * which is invalid oracle sql and also unnecessary.
+   * So we simply filter it out.
+   *
+   * @param oEs
+   * @return
+   */
+  def removeInvalidNullCheck(oEs : Seq[OraExpression]) : Seq[OraExpression] = {
+    oEs filterNot { oe =>
+      oe.catalystExpr match {
+        case IsNotNull(IsNull(_)) => true
+        case _ => false
+      }
     }
   }
 }

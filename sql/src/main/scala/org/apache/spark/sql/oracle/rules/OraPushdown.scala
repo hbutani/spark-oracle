@@ -61,7 +61,7 @@ trait OraPushdown {
   lazy val currQBlk = if (inQBlk.canApply(pushdownCatalystOp)) {
     inQBlk
   } else {
-    inQBlk.newBlockOnCurrent
+    OraQueryBlock.newBlockOnCurrent(inQBlk)
   }
 
   private[rules] def pushdownSQL: Option[OraQueryBlock]
@@ -99,5 +99,4 @@ trait ProjectListPushdownHelper extends AliasHelper {
     val aliases = getAliasMap(lower)
     upper.map(replaceAliasButKeepName(_, aliases))
   }
-
 }

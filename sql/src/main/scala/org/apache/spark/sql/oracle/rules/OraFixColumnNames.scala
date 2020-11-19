@@ -28,7 +28,7 @@ import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.oracle.expressions.Named.{OraColumnRef, OraNamedExpression, QualFixedColNm, UnQualFixedColNm}
 import org.apache.spark.sql.oracle.expressions.OraExpression
 import org.apache.spark.sql.oracle.expressions.Subquery.OraSubqueryExpression
-import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock, OraTableScan}
+import org.apache.spark.sql.oracle.operators.{OraCompositeQueryBlock, OraPlan, OraSingleQueryBlock, OraTableScan}
 
 /**
  * Ensure 'correct' column names used in oracle-sql. This entails 3 things:
@@ -228,11 +228,17 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
          *   Expand.out. So we retain a OraLatJoinProjEntry for them.
          *   Then the fixNm logic could end by generating the same name.
          *   (happens for cube test on `d_year + 1`
+         *
+         * why generate names?
+         * - expand projections are mostly column references of the input
+         * - since lateral join in oracle sql includes left(input) projections
+         *   most of the time we get name conflicits.
+         *   - so for now we just introduce new names for expand projections.
          */
         var i : Int = inEIdMap.size
         for ( (eId, a) <- latJoinOutMap.iterator) {
-          val (j, nm) = fixOraNm(a.name, i)
-          i = j
+          val nm = genNm(a.name, i)
+          i = i + 1
           ab += ((eId, nm))
         }
         ab.toMap
@@ -328,7 +334,7 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
       oraPlan.oraTable.columns.map(_.name).toSet
   }
 
-  case class QBlkFixPlan(oraPlan : OraQueryBlock,
+  case class QBlkFixPlan(oraPlan : OraSingleQueryBlock,
                          pos: SourcePos) extends FixPlan {
     val projectList: Seq[OraExpression] = oraPlan.select
     val numSources: SourcePos = 1 + oraPlan.joins.size
@@ -466,11 +472,50 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
     }
   }
 
+  case class CompQBlkFixPlan(oraPlan : OraCompositeQueryBlock,
+                             pos: SourcePos) extends FixPlan {
+
+    /*
+     * oracle sql you are allowed to have:
+     * select "C_INT" AS "val"
+     * ....
+     * union all
+     *  select ("C_INT" + "C_LONG") AS "1_sparkora"
+     * ...
+     * (See SetOpTranslationTest.union1 test)
+     *
+     * So no need to ensure childPlans have the same column names/aliases.
+     */
+
+    val childPlans : Seq[FixPlan] = oraPlan.children.map { oPlan =>
+        val cPlan = FixPlan(oPlan, 0)
+        cPlan.execute
+        cPlan
+    }
+
+    val firstChild = childPlans.head
+
+    override def projectList: Seq[OraExpression] = firstChild.projectList
+
+    override def numSources: SourcePos = firstChild.numSources
+
+    override def source(id: SourcePos): FixPlan = null
+
+    override def latJoinOutMap: Map[ExprId, Attribute] = Map.empty
+
+    override protected def fixInternals: Unit = ()
+
+    override def outEIdMap: Map[ExprId, String] = firstChild.outEIdMap
+
+    override def extraOraNamesInScope: Set[String] = Set.empty
+  }
+
   object FixPlan {
     def apply(oraPlan: OraPlan,
               pos: SourcePos) : FixPlan = oraPlan match {
       case oT : OraTableScan => TableScanFixPlan(oT, pos)
-      case qBlk : OraQueryBlock => QBlkFixPlan(qBlk, pos)
+      case qBlk : OraSingleQueryBlock => QBlkFixPlan(qBlk, pos)
+      case cQBlk : OraCompositeQueryBlock => CompQBlkFixPlan(cQBlk, pos)
       case _ => null
     }
   }

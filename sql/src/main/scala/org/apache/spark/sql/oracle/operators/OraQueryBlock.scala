@@ -21,7 +21,7 @@ import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet, SQLSnippetProvider}
-import org.apache.spark.sql.oracle.expressions.OraExpression
+import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions}
 
 case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onCondition: OraExpression)
     extends SQLSnippetProvider {
@@ -71,7 +71,6 @@ trait OraQueryBlock extends OraPlan with Product {
   def catalystProjectList: Seq[NamedExpression]
 
   def canApply(plan: LogicalPlan): Boolean
-  def newBlockOnCurrent: OraQueryBlock
 
   def getSourceAlias: Option[String] = getTagValue(ORA_SOURCE_ALIAS_TAG)
   def setSourceAlias(alias: String): Unit = {
@@ -88,11 +87,18 @@ trait OraQueryBlock extends OraPlan with Product {
       catalystOp: Option[LogicalPlan] = catalystOp,
       catalystProjectList: Seq[NamedExpression] = catalystProjectList): OraQueryBlock
 
-  def hasComputedShape: Boolean
-  def hasJoins: Boolean
-  def hasAggregate: Boolean
 }
 
 object OraQueryBlock {
   val ORA_SOURCE_ALIAS_TAG = TreeNodeTag[String]("_oraSourceAlias")
+
+  /**
+   * Start a new OraQueryBlock on top of the current block.
+   * @return
+   */
+  def newBlockOnCurrent(currQBlock : OraQueryBlock) : OraQueryBlock = {
+    val newOraExprs = OraExpressions.unapplySeq(currQBlock.catalystAttributes).get
+    OraSingleQueryBlock(currQBlock, Seq.empty, None, newOraExprs,
+      None, None, None, currQBlock.catalystAttributes)
+  }
 }

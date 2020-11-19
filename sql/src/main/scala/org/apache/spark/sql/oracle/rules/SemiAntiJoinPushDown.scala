@@ -186,14 +186,22 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
   override val inOraScan: OraScan = leftOraScan
   override val inQBlk: OraQueryBlock = leftQBlk
 
+  private def dereference(exps : Seq[Expression],
+                         oraQBlock : OraQueryBlock) : Seq[Expression] = {
+    val aliasMap = getAliasMap(oraQBlock.catalystProjectList)
+    exps.map(e => replaceAlias(e, aliasMap))
+  }
+
   private def pushSemiJoin : Option[OraQueryBlock] = {
     val joinOp = pushdownCatalystOp
 
     for (
-      leftOraExprs <- OraExpressions.unapplySeq(leftKeys);
-      rightOraExprs <- OraExpressions.unapplySeq(rightKeys);
+      _leftOraExprs <- OraExpressions.unapplySeq(leftKeys);
+      _rightOraExprs <- OraExpressions.unapplySeq(dereference(rightKeys, rightQBlk));
       outProjections <- OraExpressions.unapplySeq(joinOp.output)
     ) yield {
+      val leftOraExprs = _leftOraExprs.map(OraExpression.applyIntConversion)
+      val rightOraExprs = _rightOraExprs.map(OraExpression.applyIntConversion)
       val oraExpression: OraExpression = OraSubQueryJoin(
         joinOp,
         leftOraExprs,
@@ -217,26 +225,37 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
 
   private def pushNotExists : Option[OraQueryBlock] = {
     val joinOp = pushdownCatalystOp
-    val rightNullChecks : Expression = rightKeys.map(IsNotNull(_)).reduceLeft(And)
+    val rightNullChecks : Seq[Expression] = rightKeys.map(IsNotNull(_))
     for (
-      leftOraExprs <- OraExpressions.unapplySeq(leftKeys);
-      rightOraExprs <- OraExpressions.unapplySeq(rightKeys);
-      rightOraNotNullExprs <- OraExpression.unapply(rightNullChecks);
+      _leftOraExprs <- OraExpressions.unapplySeq(leftKeys);
+      _rightOraExprs <- OraExpressions.unapplySeq(dereference(rightKeys, rightQBlk));
+      _rightOraNotNullExprs <- OraExpressions.unapplySeq(rightNullChecks);
       outProjections <- OraExpressions.unapplySeq(joinOp.output)
     ) yield {
+
+      val leftOraExprs = _leftOraExprs.map(OraExpression.applyIntConversion)
+      val rightOraExprs = _rightOraExprs.map(OraExpression.applyIntConversion)
 
       /*
        * 1. Push is not null checks into right Query Block.
        * - the `rightKeys` are [[AttributeReference]]s on rightQBlock
        * - so pushing conditions w/o any checks or alias substitution.
        */
-      val newRFil = rightQBlk.where.map(f =>
-        OraBinaryOpExpression(AND, And(f.catalystExpr, rightNullChecks), f, rightOraNotNullExprs)
-      ).getOrElse(rightOraNotNullExprs)
+      val rightOraNotNullExprs = OraExpression.removeInvalidNullCheck(_rightOraNotNullExprs)
+      val newRFil = if (rightOraNotNullExprs.nonEmpty) {
+        val filts : Seq[OraExpression] = rightQBlk.where.toSeq ++ rightOraNotNullExprs
+        Some(
+        filts.reduce { (lOE : OraExpression, rOE : OraExpression) =>
+          OraBinaryOpExpression(AND, And(lOE.catalystExpr, rOE.catalystExpr), lOE, rOE)
+        }
+        )
+      } else {
+        rightQBlk.where
+      }
 
       val newRQBlk = rightQBlk.copyBlock(
         select = rightOraExprs,
-        where = Some(newRFil)
+        where = newRFil
       )
 
       /*
@@ -274,10 +293,14 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
     if (notInJoinKeys.isDefined) {
       val (notInLKeys, notInRkeys) = notInJoinKeys.get.unzip
       for (
-        leftOraExprs <- OraExpressions.unapplySeq(leftKeys ++ notInLKeys);
-        rightOraExprs <- OraExpressions.unapplySeq(rightKeys ++ notInRkeys);
+        _leftOraExprs <- OraExpressions.unapplySeq(leftKeys ++ notInLKeys);
+        _rightOraExprs <-
+          OraExpressions.unapplySeq(dereference(rightKeys ++ notInRkeys, rightQBlk));
         outProjections <- OraExpressions.unapplySeq(joinOp.output)
       ) yield {
+        val leftOraExprs = _leftOraExprs.map(OraExpression.applyIntConversion)
+        val rightOraExprs = _rightOraExprs.map(OraExpression.applyIntConversion)
+
         val newRQBlk = rightQBlk.copyBlock(select = rightOraExprs)
 
         val oraExpression: OraExpression = OraSubQueryJoin(

@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.oracle.expressions
 
-import org.apache.spark.sql.catalyst.expressions.{Expression, IsNotNull, IsNull}
+import org.apache.spark.sql.catalyst.expressions.{Coalesce, Expression, IsNotNull, IsNull}
 import org.apache.spark.sql.oracle.SQLSnippet
 import org.apache.spark.sql.oracle.expressions.Subquery.{OraNullCheckSubQuery, OraSubQuery}
 
@@ -38,6 +38,8 @@ object Nulls {
           case sq : OraSubQuery => OraNullCheckSubQuery(cE, SQLSnippet.EXISTS, sq)
           case _ => OraPostfixUnaryOpExpression(ISNOTNULL, cE, child)
         }
+      case ca @ Coalesce(OraExpressions(oEs @ _*)) =>
+        OraFnExpression(COALESCE, ca, oEs)
       case _ => null
     })
 

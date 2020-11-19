@@ -23,7 +23,7 @@ import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.oracle.expressions.{AND, EQ, OraBinaryOpExpression, OraExpression, OraExpressions}
-import org.apache.spark.sql.oracle.operators.{OraJoinClause, OraPlan, OraQueryBlock, OraTableScan}
+import org.apache.spark.sql.oracle.operators.{OraJoinClause, OraQueryBlock, OraSingleQueryBlock, OraTableScan}
 
 case class JoinPushdown(inDSScan: DataSourceV2ScanRelation,
                         leftOraScan: OraScan,
@@ -117,7 +117,7 @@ object JoinPushdown {
           - in this case applying filter of right attributes after join is
             semantically equivalent, since right side is not null producing.
       */
-      case (None, Inner, qBlk: OraQueryBlock) =>
+      case (None, Inner, qBlk: OraSingleQueryBlock) =>
         import qBlk._
         val canCollapse: Boolean = {
           if (!hasComputedShape && !hasJoins && !hasAggregate) {

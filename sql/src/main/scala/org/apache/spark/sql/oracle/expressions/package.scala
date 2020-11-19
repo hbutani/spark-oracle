@@ -38,6 +38,7 @@ package object expressions {
   private[expressions] val ISNOTNULL = "IS NOT NULL"
   private[expressions]val IGNORE_NULLS = "ignore nulls"
   private[expressions] val RESPECT_NULLS = "respect nulls"
+  private[expressions] val COALESCE = "COALESCE"
 
   private[expressions] val AVG = "AVG"
   private[expressions] val SUM = "SUM"

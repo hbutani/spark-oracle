@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.oracle
 
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+
 package object operators {
 
   object IllegalAction extends UnSupportedActionHelper[OraPlan] { self: OraPlan =>
@@ -27,6 +29,11 @@ package object operators {
   object InternalFailure extends UnSupportedActionHelper[OraPlan] { self: OraPlan =>
     lazy val unsupportVerb = "Internal Failure"
     lazy val actionKind: String = "OraPlan build action"
+  }
+
+  object InternalTranslationFailure extends UnSupportedActionHelper[LogicalPlan] { self: OraPlan =>
+    lazy val unsupportVerb = "Internal Translation Failure"
+    lazy val actionKind: String = "translation"
   }
 
 }

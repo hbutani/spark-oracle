@@ -24,6 +24,7 @@ import org.apache.spark.sql.catalyst.plans.{ExistenceJoin, LeftAnti, LeftSemi}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.connector.read.oracle.{OraPushdownScan, OraScan}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
+import org.apache.spark.sql.oracle.OraSparkUtils
 import org.apache.spark.sql.oracle.expressions.{AND, OraBinaryOpExpression, OraExpression, OraExpressions}
 import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock, OraSingleQueryBlock, OraTableScan}
 
@@ -223,6 +224,45 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
           toOraQueryBlock(oraScan.oraPlan, dsV2),
           gl,
           sparkSession).pushdown.getOrElse(gl)
+      case u @ Union(OraScans(childScans @ _*), false, false) =>
+        import org.apache.spark.sql.oracle.OraSQLImplicits._
+        val (dsv2s, oraScans) = childScans.unzip
+        val childOraPlans = childScans map {
+          case (dsV2, oraScan) => toOraQueryBlock(oraScan.oraPlan, dsV2)
+        }
+        SetOpPushdown(dsv2s.head, oraScans.head, childOraPlans,
+          u, osql"UNION ALL", sparkSession
+        ).pushdown.getOrElse(u)
+      case e @ Except(
+      leftChild @ DataSourceV2ScanRelation(_, oraScanL: OraScan, _),
+      rightChild @ DataSourceV2ScanRelation(_, oraScanR: OraScan, _),
+      false) =>
+        import org.apache.spark.sql.oracle.OraSQLImplicits._
+        SetOpPushdown(leftChild, oraScanL,
+          Seq(toOraQueryBlock(oraScanL.oraPlan, leftChild),
+            toOraQueryBlock(oraScanR.oraPlan, rightChild)),
+          e, osql"MINUS", sparkSession
+        ).pushdown.getOrElse(e)
+      case i @ Intersect(
+      leftChild @ DataSourceV2ScanRelation(_, oraScanL: OraScan, _),
+      rightChild @ DataSourceV2ScanRelation(_, oraScanR: OraScan, _),
+      false) =>
+        import org.apache.spark.sql.oracle.OraSQLImplicits._
+        SetOpPushdown(leftChild, oraScanL,
+          Seq(toOraQueryBlock(oraScanL.oraPlan, leftChild),
+            toOraQueryBlock(oraScanR.oraPlan, rightChild)),
+          i, osql"INTERSECT", sparkSession
+        ).pushdown.getOrElse(i)
     }
+  }
+
+  object OraScans {
+    def unapplySeq(plans: Seq[LogicalPlan]): Option[Seq[(DataSourceV2ScanRelation, OraScan)]] =
+      OraSparkUtils.sequence( plans map {
+        case dsv2 @ DataSourceV2ScanRelation(_, oraScan: OraScan, _) =>
+          Some((dsv2, oraScan)).asInstanceOf[Option[(DataSourceV2ScanRelation, OraScan)]]
+        case _ => None
+      }
+      )
   }
 }
