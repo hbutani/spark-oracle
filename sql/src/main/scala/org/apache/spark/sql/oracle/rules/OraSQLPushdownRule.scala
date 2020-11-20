@@ -20,13 +20,23 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{ExtractEquiJoinKeys, PhysicalOperation}
-import org.apache.spark.sql.catalyst.plans.{ExistenceJoin, LeftAnti, LeftSemi}
+import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.connector.read.oracle.{OraPushdownScan, OraScan}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.oracle.OraSparkUtils
-import org.apache.spark.sql.oracle.expressions.{AND, OraBinaryOpExpression, OraExpression, OraExpressions}
-import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock, OraSingleQueryBlock, OraTableScan}
+import org.apache.spark.sql.oracle.expressions.{
+  AND,
+  OraBinaryOpExpression,
+  OraExpression,
+  OraExpressions
+}
+import org.apache.spark.sql.oracle.operators.{
+  OraPlan,
+  OraQueryBlock,
+  OraSingleQueryBlock,
+  OraTableScan
+}
 
 object OraSQLPushdownRule extends OraLogicalRule with Logging {
 
@@ -153,11 +163,11 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
             rightChild @ DataSourceV2ScanRelation(_, oraScanR: OraScan, _),
             _) =>
         joinType match {
-            /*
+          /*
              - for example tpcds q10, q35
              - TODO: how to handle exists boolean attribute on top of the join operator
-             */
-          case _ : ExistenceJoin => joinOp
+           */
+          case _: ExistenceJoin => joinOp
           case LeftAnti | LeftSemi =>
             SemiAntiJoinPushDown(
               leftChild,
@@ -183,6 +193,23 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
               condition,
               sparkSession).pushdown.getOrElse(joinOp)
         }
+      case joinOp @ Join(
+            leftChild @ DataSourceV2ScanRelation(_, oraScanL: OraScan, _),
+            rightChild @ DataSourceV2ScanRelation(_, oraScanR: OraScan, _),
+            Inner | Cross,
+            None,
+            _) =>
+        JoinPushdown(
+          leftChild,
+          oraScanL,
+          toOraQueryBlock(oraScanL.oraPlan, leftChild),
+          toOraQueryBlock(oraScanR.oraPlan, rightChild),
+          joinOp,
+          joinOp.joinType,
+          Seq.empty,
+          Seq.empty,
+          None,
+          sparkSession).pushdown.getOrElse(joinOp)
       // in case of a LeftAnti, ExtractEquiJoin doesn't pattern match
       // NotInJoinPattern. See note in NotInJoinPattern.scala
       case joinOp @ Join(
@@ -217,7 +244,7 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
           expOp,
           sparkSession).pushdown.getOrElse(expOp)
       case gl @ GlobalLimit(_,
-      LocalLimit(_, dsV2@DataSourceV2ScanRelation(_, oraScan: OraScan, _))) =>
+            LocalLimit(_, dsV2 @ DataSourceV2ScanRelation(_, oraScan: OraScan, _))) =>
         LimitPushdown(
           dsV2,
           oraScan,
@@ -234,9 +261,9 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
           u, osql"UNION ALL", sparkSession
         ).pushdown.getOrElse(u)
       case e @ Except(
-      leftChild @ DataSourceV2ScanRelation(_, oraScanL: OraScan, _),
-      rightChild @ DataSourceV2ScanRelation(_, oraScanR: OraScan, _),
-      false) =>
+            leftChild @ DataSourceV2ScanRelation(_, oraScanL: OraScan, _),
+            rightChild @ DataSourceV2ScanRelation(_, oraScanR: OraScan, _),
+            false) =>
         import org.apache.spark.sql.oracle.OraSQLImplicits._
         SetOpPushdown(leftChild, oraScanL,
           Seq(toOraQueryBlock(oraScanL.oraPlan, leftChild),
@@ -244,9 +271,9 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
           e, osql"MINUS", sparkSession
         ).pushdown.getOrElse(e)
       case i @ Intersect(
-      leftChild @ DataSourceV2ScanRelation(_, oraScanL: OraScan, _),
-      rightChild @ DataSourceV2ScanRelation(_, oraScanR: OraScan, _),
-      false) =>
+            leftChild @ DataSourceV2ScanRelation(_, oraScanL: OraScan, _),
+            rightChild @ DataSourceV2ScanRelation(_, oraScanR: OraScan, _),
+            false) =>
         import org.apache.spark.sql.oracle.OraSQLImplicits._
         SetOpPushdown(leftChild, oraScanL,
           Seq(toOraQueryBlock(oraScanL.oraPlan, leftChild),
@@ -258,7 +285,7 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
 
   object OraScans {
     def unapplySeq(plans: Seq[LogicalPlan]): Option[Seq[(DataSourceV2ScanRelation, OraScan)]] =
-      OraSparkUtils.sequence( plans map {
+      OraSparkUtils.sequence(plans map {
         case dsv2 @ DataSourceV2ScanRelation(_, oraScan: OraScan, _) =>
           Some((dsv2, oraScan)).asInstanceOf[Option[(DataSourceV2ScanRelation, OraScan)]]
         case _ => None

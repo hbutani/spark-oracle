@@ -23,11 +23,13 @@ import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet, SQLSnippetProvider}
 import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions}
 
-case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onCondition: OraExpression)
+case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onCondition: Option[OraExpression])
     extends SQLSnippetProvider {
   import OraSQLImplicits._
 
   lazy val joinTypeSQL: SQLSnippet = joinType match {
+    case Cross => osql"cross join"
+    case Inner if !onCondition.isDefined => osql"cross join"
     case Inner => osql"join"
     case LeftOuter => osql"left outer join"
     case RightOuter => osql"right outer join"
@@ -35,10 +37,8 @@ case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onCondition: OraE
     case _ => null
   }
 
-  private var joinAlias: Option[String] = None
-
   def setJoinAlias(a: String): Unit = {
-    joinAlias = Some(a)
+    joinSrc.setTagValue(OraQueryBlock.ORA_JOIN_ALIAS_TAG, a)
   }
 
   lazy val joinSrcSQL: SQLSnippet = {
@@ -48,13 +48,18 @@ case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onCondition: OraE
     }
 
     val qualifier: SQLSnippet =
-      joinAlias.map(jA => SQLSnippet.colRef(jA)).getOrElse(SQLSnippet.empty)
+      joinSrc.getTagValue(OraQueryBlock.ORA_JOIN_ALIAS_TAG).
+        map(jA => SQLSnippet.colRef(jA)).getOrElse(SQLSnippet.empty)
 
     srcSQL + qualifier
 
   }
 
-  lazy val orasql: SQLSnippet = osql"${joinTypeSQL + joinSrcSQL} on ${onCondition.reifyLiterals}"
+  lazy val orasql: SQLSnippet = if (onCondition.isDefined) {
+    osql"${joinTypeSQL + joinSrcSQL} on ${onCondition.get.reifyLiterals}"
+  } else {
+    osql"${joinTypeSQL + joinSrcSQL}"
+  }
 }
 
 trait OraQueryBlock extends OraPlan with Product {
@@ -101,4 +106,6 @@ object OraQueryBlock {
     OraSingleQueryBlock(currQBlock, Seq.empty, None, newOraExprs,
       None, None, None, currQBlock.catalystAttributes)
   }
+
+  val ORA_JOIN_ALIAS_TAG = TreeNodeTag[String]("_joinAlias")
 }

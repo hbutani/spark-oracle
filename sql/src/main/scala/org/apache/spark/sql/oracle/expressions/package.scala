@@ -39,6 +39,9 @@ package object expressions {
   private[expressions]val IGNORE_NULLS = "ignore nulls"
   private[expressions] val RESPECT_NULLS = "respect nulls"
   private[expressions] val COALESCE = "COALESCE"
+  private[expressions] val SUBSTR = "SUBSTR"
+  private[expressions] val LIKE = "LIKE"
+  private[expressions] val CONCAT = "CONCAT"
 
   private[expressions] val AVG = "AVG"
   private[expressions] val SUM = "SUM"

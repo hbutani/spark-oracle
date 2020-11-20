@@ -68,13 +68,11 @@ object Predicates {
          * OE list
          */
         Try {
-          val lits: Seq[Expression] = hset.map(Literal.fromObject(_): Expression).toSeq
-          OraExpressions
-            .unapplySeq(lits)
-            .map { inList =>
+          val lits: Seq[Expression] =
+            hset.map(Literal.fromObject(_, cE.child.dataType): Expression).toSeq
+          OraExpressions.unapplySeq(lits).map { inList =>
               OraIn(cE, value, inList)
-            }
-            .orNull
+            }.orNull
         }.getOrElse(null)
       case cE @ And(OraExpression(left), OraExpression(right)) =>
         OraBinaryOpExpression(AND, cE, left, right)

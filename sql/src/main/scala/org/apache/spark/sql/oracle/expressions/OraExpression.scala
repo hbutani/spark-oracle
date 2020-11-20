@@ -135,6 +135,7 @@ object OraExpression {
     Option(e match {
       case OraLiterals(oE) => oE
       case Arithmetic(oE) => oE
+      case Strings(oE) => oE
       case Conditional(oE) => oE
       case Named(oE) => oE
       case Predicates(oE) => oE

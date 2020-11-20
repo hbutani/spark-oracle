@@ -438,7 +438,9 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
           val child = childPlansMap(childPos)
           jc.setJoinAlias(child.qualifier)
         }
-        fixOE(jc.onCondition, false)
+        if (jc.onCondition.isDefined) {
+          fixOE(jc.onCondition.get, false)
+        }
       }
 
       /* latJoin */

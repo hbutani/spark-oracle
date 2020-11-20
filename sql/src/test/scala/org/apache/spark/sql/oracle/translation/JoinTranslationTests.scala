@@ -82,4 +82,14 @@ class JoinTranslationTests extends AbstractTranslationTest {
     |from TPCDS.WEB_SALES  full outer join ( select "SS_SOLD_DATE_SK", "SS_ITEM_SK", "SS_SALES_PRICE"
     |from TPCDS.STORE_SALES  )  on (("WS_ITEM_SK" = "SS_ITEM_SK") AND ("WS_SOLD_DATE_SK" = "SS_SOLD_DATE_SK"))""".stripMargin)
 
+  testPushdown("x-join",
+    """
+      |select a.c_int
+      |from sparktest.unit_test a cross join sparktest.unit_test b
+      |     join sparktest.unit_test c on a.c_int = c.c_int
+      |where a.c_int between 100000 and 7000000 and
+      |      b.c_int between 100000 and 7000000 and
+      |      c.c_int between 100000 and 7000000""".stripMargin
+  )
+
 }
