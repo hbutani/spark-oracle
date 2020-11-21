@@ -69,6 +69,7 @@ object OracleTestConf {
     .set("spark.sql.catalog.oracle.log_and_time_sql.log_level", "info")
     .set("spark.sql.catalog.oracle.use_resultset_cache", "true")
     .set("spark.sql.catalog.oracle.resultset_cache_loc", "src/test/resources/resultset_cache")
+    .set("spark.sql.catalog.oracle.fetchSize", "100000")
     // .set("spark.sql.oracle.max_string_size", "32767")
 
   lazy val localConf: SparkConf = {
@@ -91,6 +92,8 @@ object OracleTestConf {
           System.getProperty(SPARK_ORACLE_DB_WALLET_LOC) != null,
           s"Use of mammoth instance requires setting ${SPARK_ORACLE_DB_WALLET_LOC} system property")
         conf = mammoth_medium(conf)
+      case "scale1_tpcds" =>
+        conf = scale1_tpcds(conf)
       // scalastyle:off
       case _ => ???
       // scalastyle:on
@@ -112,7 +115,7 @@ object OracleTestConf {
 
   def local_tpcds(conf: SparkConf): SparkConf =
     conf
-      .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@hbutani-Mac:1521/orclpdb1")
+      .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@192.168.1.49:1521/orclpdb1")
       .set("spark.sql.catalog.oracle.user", "tpcds")
       .set("spark.sql.catalog.oracle.password", "Performance_1234")
 
@@ -126,6 +129,13 @@ object OracleTestConf {
         "spark.sql.catalog.oracle.net.tns_admin",
         System.getProperty(SPARK_ORACLE_DB_WALLET_LOC))
       .set("spark.sql.catalog.oracle.oci_credential_name", "OS_EXT_OCI")
+
+  def scale1_tpcds(conf: SparkConf): SparkConf =
+    conf
+      .set("spark.sql.catalog.oracle.url",
+        "jdbc:oracle:thin:@slcaa334:1531/cdb1_pdb7.regress.rdbms.dev.us.oracle.com")
+      .set("spark.sql.catalog.oracle.user", "tpcds")
+      .set("spark.sql.catalog.oracle.password", "tpcds")
 
   def testMaster: String = "local[*]"
 

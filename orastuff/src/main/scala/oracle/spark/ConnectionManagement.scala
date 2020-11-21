@@ -70,6 +70,18 @@ object ConnectionManagement extends DataSources with Logging {
     }
   }
 
+  /**
+   * Not used, but if the strategy of closing the connection
+   * as part of Task completion/failure( see [[OraPartitionReader.ConnectionCloser]])
+   * has issue, than an alternate is to get a new connection for each oracle statement
+   * executed on a Executor slot/thread.
+   */
+  private def getConnectionOnExecutor(dsKey: DataSourceKey, pds: PoolDataSource): Connection = {
+    logDebug(s"Connection request for ${dsKey} on ${Thread.currentThread().getName}")
+    val conn: Connection = pds.getConnection()
+    conn
+  }
+
   private def _setupPool(dsKey: DataSourceKey, connInfo: ConnectionInfo): PoolDataSource = {
 
     val createPDS = new java.util.function.Function[DataSourceKey, PoolDataSource] {
@@ -98,6 +110,11 @@ object ConnectionManagement extends DataSources with Logging {
   def getConnection(dsInfo: DataSourceInfo): Connection = {
     val pds = _setupPool(dsInfo.key, dsInfo.connInfo)
     attachAndGetConnection(dsInfo.key, pds)
+  }
+
+  def getConnectionOnExecutor(dsInfo: DataSourceInfo): Connection = {
+    val pds = _setupPool(dsInfo.key, dsInfo.connInfo)
+    getConnectionOnExecutor(dsInfo.key, pds)
   }
 
   def reset(): Unit = synchronized {

@@ -21,6 +21,7 @@ import java.sql.{Connection, PreparedStatement, ResultSet}
 import oracle.spark.{ConnectionManagement, DataSourceInfo}
 import scala.util.control.NonFatal
 
+import org.apache.spark.TaskContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{Attribute, Literal, SpecificInternalRow}
@@ -29,7 +30,7 @@ import org.apache.spark.sql.connector.read.oracle.OraPartition.OraQueryAccumulat
 import org.apache.spark.sql.oracle.OracleCatalogOptions
 import org.apache.spark.sql.oracle.expressions.OraLiterals.{jdbcGetSet, JDBCGetSet}
 import org.apache.spark.sql.oracle.sqlexec.SparkOraStatement
-import org.apache.spark.util.{DoubleAccumulator, NextIterator}
+import org.apache.spark.util.{DoubleAccumulator, NextIterator, TaskCompletionListener, TaskFailureListener}
 
 case class OraPartitionReader(
     oraPart: OraPartition,
@@ -93,6 +94,47 @@ case class OraPartitionReader(
     } catch {
       case e: Exception => logWarning("Exception closing statement", e)
     }
+    /*
+     * Connection closing handled by ConnectionCloser
+     */
+    closed = true
+  }
+
+}
+
+/**
+ * Spark setups [[ZippedPartitionsRDD2]] whose partition [[ZippedPartitionsPartition]]
+ * contains the partitions of its contained [[RDD]]s. This can be recursive:
+ * a [[ZippedPartitionsRDD2]] may contain [[ZippedPartitionsRDD2]].
+ * So we could end up with a [[ZippedPartitionsPartition]] that contains several
+ * oracle [[org.apache.spark.sql.execution.datasources.v2.DataSourceRDD]].
+ *
+ * Each [[ZippedPartitionsRDD2]]'s [[ZippedPartitionsPartition]] is evaluated
+ * as 1 Task, which is performed on 1 executor thread. So you end up with a
+ * situation where an Executor Thread is simultaneously executing multiple
+ * oracle sqls.
+ *
+ * In this case sharing the connection causes issues, because
+ * we issue a `Statement, Connection` close when the `NextIterator` in the
+ * [[OraPartitionReader]] is finished. Closing the Connection closes all statements
+ * associated with the Connection, causing subsequent `ResultSet.next` calls in this
+ * Task against the other statements) to fail.
+ *
+ * Where does the [[ZippedPartitionsRDD2]] get setup?
+ * - see [[org.apache.spark.sql.execution.WholeStageCodegenExec.doExecute]] method.
+ *   - line 764, if there are 2 child RDDs they are zipped.
+ *   - in case of a [[org.apache.spark.sql.execution.joins.SortMergeJoinExec]] there
+ *     are 2 input/child RDDs which share the same data distribution and numOfPartitions.
+ *
+ * So we close the connection when the Task finishes/fails and not when the
+ * resultset is finished.
+ *
+ * @param conn
+ */
+case class ConnectionCloser(conn : Connection)
+  extends TaskCompletionListener with TaskFailureListener with Logging {
+
+  private def close : Unit = {
     try {
       if (null != conn) {
         if (!conn.isClosed && !conn.getAutoCommit) {
@@ -108,9 +150,10 @@ case class OraPartitionReader(
     } catch {
       case e: Exception => logWarning("Exception closing connection", e)
     }
-    closed = true
   }
 
+  override def onTaskCompletion(context: TaskContext): Unit = close
+  override def onTaskFailure(context: TaskContext, error: Throwable): Unit = close
 }
 
 case class OraQueryStatement(oraPart: OraPartition, timeToExecute: DoubleAccumulator)
@@ -125,7 +168,20 @@ case class OraQueryStatement(oraPart: OraPartition, timeToExecute: DoubleAccumul
   lazy val datasourceInfo : DataSourceInfo = dsInfo
 
   lazy val underlying: PreparedStatement = {
-    conn = ConnectionManagement.getConnectionInExecutor(dsInfo)
+    conn = {
+      val c = ConnectionManagement.getConnectionInExecutor(dsInfo)
+      val tc = TaskContext.get()
+      if (tc != null) {
+        val l = ConnectionCloser(c)
+        tc.addTaskCompletionListener(l)
+        tc.addTaskFailureListener(l)
+      } else {
+        throw new IllegalStateException(
+          "setting up a OraQueryStatement.preparedStatement on a thread with no TaskContext"
+        )
+      }
+      c
+    }
     val ps =
       conn.prepareStatement(sqlTemplate, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
     ps.setFetchSize(dsInfo.catalogOptions.fetchSize)
