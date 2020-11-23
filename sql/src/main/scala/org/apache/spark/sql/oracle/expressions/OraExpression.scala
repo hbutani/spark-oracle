@@ -136,6 +136,7 @@ object OraExpression {
       case OraLiterals(oE) => oE
       case Arithmetic(oE) => oE
       case Strings(oE) => oE
+      case DateTime(oE) => oE
       case Conditional(oE) => oE
       case Named(oE) => oE
       case Predicates(oE) => oE

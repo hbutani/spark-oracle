@@ -14,28 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.spark.sql.oracle.expressions
 
-import org.apache.spark.sql.catalyst.expressions.{Concat, Expression, StartsWith, Substring, Upper}
+import org.apache.spark.sql.catalyst.expressions.{DateAdd, DateSub, Expression}
 
 /**
- * Conversions for expressions in ''stringExpressions.scala''
+ * Conversions for expressions in ''datetimeExpressions.scala''
  */
-
-object Strings {
+object DateTime {
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
-      case cE @ Substring(OraExpression(s), OraExpression(pos), OraExpression(len)) =>
-        OraFnExpression(SUBSTR, cE, Seq(s, pos, len))
-      case cE @ Concat(OraExpressions(oEs @ _*)) =>
-        oEs.reduceLeft { (conE : OraExpression, oE : OraExpression) =>
-          OraBinaryFnExpression(CONCAT, cE, conE, oE)
-        }
-      case cE @ StartsWith(OraExpression(left), sE@OraExpression(right)) =>
-        OraBinaryOpExpression(LIKE, cE, left,
-          OraBinaryFnExpression(CONCAT, sE, right, new OraLiteralSql("'%'"))
-        )
-      case cE@Upper(OraExpression(oE)) => OraUnaryFnExpression(UPPER, cE, oE)
+      case cE@DateAdd(OraExpression(left), OraExpression(right)) =>
+        OraBinaryOpExpression(PLUS, cE, left, right)
+      case cE@DateSub(OraExpression(left), OraExpression(right)) =>
+        OraBinaryOpExpression(MINUS, cE, left, right)
       case _ => null
     })
 }

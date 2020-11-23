@@ -49,10 +49,10 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
 
     showOraQueries("q66", TPCDSQueries.QuerySet1.q66.sql)
     val df = TestOracleHive.sql(TPCDSQueries.QuerySet1.q66.sql)
-    System.out.println(s"plan is:")
-    System.out.println(df.queryExecution.optimizedPlan.treeString)
-    df.show(1000, false)
-  }
+      System.out.println(s"plan is:")
+      System.out.println(df.queryExecution.optimizedPlan.treeString)
+      df.show(1000, false)
+    }
 
   /*
    * Use this test to execute all queries
@@ -66,11 +66,18 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
 
     val ab = ArrayBuffer[String]()
 
-    for ((qNm, q) <- TPCDSQueries.queries) {
+    val excludeSet = Set("q14-1", "q14-2", "q23-2", "q24-1", "q24-2")
+
+    val resList = ArrayBuffer[(String, Long)]()
+
+    for ((qNm, q) <- TPCDSQueries.queries if !excludeSet.contains(qNm)) {
       try {
         println(s"Query ${qNm} : ")
         val df = TestOracleHive.sql(q.sql)
-        df.show(1000, false)
+        val sTime = System.currentTimeMillis()
+        df.show(10000000, false)
+        val eTime = System.currentTimeMillis()
+        resList += ((qNm, (eTime-sTime)))
       } catch {
         case t : Throwable =>
         println(s"executing query ${qNm} FAILED : ")
@@ -79,6 +86,7 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
       }
     }
 
+    resList.foreach {t => println(s"${t._1} = ${t._2 / 1000.0} secs")}
     println(s"Failed queries ${ab.mkString(",")}")
   }
 

@@ -20,6 +20,7 @@ package org.apache.spark.sql.oracle.expressions
 import org.apache.spark.sql.catalyst.expressions.{CumeDist, DenseRank, Expression, NthValue, NTile, PercentRank, Rank, RowNumber}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.oracle.SQLSnippet
+import org.apache.spark.sql.oracle.SQLSnippet.{comma, join, literalSnippet}
 
 object Aggregates {
 
@@ -34,6 +35,16 @@ object Aggregates {
       this(fn,
         if (ignoreNulls) new OraLiteralSql(IGNORE_NULLS) else new OraLiteralSql(RESPECT_NULLS)
       )
+  }
+
+  case class OraAggDistinct(aggFnName : String,
+                            catalystExpr: Expression,
+                            children: Seq[OraExpression])
+    extends OraExpression {
+    val fnSnip = literalSnippet(aggFnName)
+    private def args = children.map(_.orasql)
+    override def orasql: SQLSnippet =
+      osql"$fnSnip(DISTINCT ${join(args, comma, true)})"
   }
 
   def unapply(e: Expression): Option[OraExpression] =
@@ -67,6 +78,11 @@ object Aggregates {
       case cE @ Corr(OraExpression(lE), OraExpression(rE), _) =>
         OraBinaryFnExpression(CORR, cE, lE, rE)
       case AggregateExpression(OraExpression(oE), Complete, false, None, _) => oE
+      case AggregateExpression(OraExpression(oE), Complete, true, None, _) => oE match {
+        case OraFnExpression(COUNT, cE, oEs) => OraAggDistinct(COUNT, cE, oEs)
+        case OraFnExpression(SUM, cE, oEs) => OraAggDistinct(SUM, cE, oEs)
+        case _ => null
+      }
       case _ => null
     })
 
