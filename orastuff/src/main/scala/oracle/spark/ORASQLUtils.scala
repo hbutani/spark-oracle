@@ -46,7 +46,10 @@ object ORASQLUtils extends Logging {
     }
   }
 
-  private def getConnection(dsKey: DataSourceKey): Connection = {
+  /*
+   * public for testing purposes only
+   */
+  def getConnection(dsKey: DataSourceKey): Connection = {
     try {
       ConnectionManagement.getConnection(dsKey)
     } catch {

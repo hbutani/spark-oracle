@@ -43,6 +43,10 @@ package object expressions {
   private[expressions] val LIKE = "LIKE"
   private[expressions] val CONCAT = "CONCAT"
   private[expressions] val UPPER = "UPPER"
+  private[expressions] val TRIM = "TRIM"
+  private[expressions] val LEADING = "LEADING"
+  private[expressions] val TRAILING = "TRAILING"
+  private[expressions] val BOTH = "BOTH"
 
   private[expressions] val AVG = "AVG"
   private[expressions] val SUM = "SUM"
