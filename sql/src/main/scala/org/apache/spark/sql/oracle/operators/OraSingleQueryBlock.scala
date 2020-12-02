@@ -23,6 +23,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Expand, Filter, G
 import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet}
 import org.apache.spark.sql.oracle.expressions.{OraExpression, OraLiteralSql}
 import org.apache.spark.sql.oracle.expressions.Named.OraColumnRef
+import org.apache.spark.sql.oracle.querysplit.OraSplitStrategy
 
 trait OraQueryBlockState { self: OraSingleQueryBlock =>
 
@@ -104,7 +105,8 @@ trait OraQueryBlockSQLSnippets {self: OraSingleQueryBlock =>
       Seq(new OraLiteralSql("1").orasql)
     }
 
-  def sourcesSQL : SQLSnippet = {
+  def sourcesSQL(implicit srcSnipOverride : OraTableScan => Option[SQLSnippet] = t => None)
+  : SQLSnippet = {
     var ss = sourceSnippet ++ joins.map(_.orasql)
     if (latJoin.isDefined) {
       ss = ss + osql" , lateral ( ${latJoin.get.orasql} )"
@@ -143,6 +145,14 @@ case class OraSingleQueryBlock(source: OraPlan,
   override def orasql: SQLSnippet = {
     SQLSnippet.select(selectListSQL : _*).
       from(sourcesSQL).
+      where(whereConditionSQL).
+      groupBy(groupByListSQL)
+  }
+
+  override def splitOraSQL(dbSplitId : Int, splitStrategy : OraSplitStrategy)
+  : SQLSnippet = {
+    SQLSnippet.select(selectListSQL : _*).
+      from(sourcesSQL(ot => splitStrategy.splitOraSQL(ot, dbSplitId))).
       where(whereConditionSQL).
       groupBy(groupByListSQL)
   }

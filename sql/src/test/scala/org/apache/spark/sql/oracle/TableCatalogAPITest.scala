@@ -33,10 +33,9 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
 
   test("createTable") { td =>
     /*
-    1. On Spark, don't specify table as external.
-       Parse fails because external tables not supported for DS v2.
+    1. Valid table creation, but no yet implemented
      */
-    intercept[ParseException] {
+    intercept[UnsupportedAction] {
       TestOracleHive.sql(s"""
            |create external table t2(id long, p string) 
            |using parquet 

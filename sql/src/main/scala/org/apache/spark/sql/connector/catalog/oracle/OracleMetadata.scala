@@ -19,7 +19,7 @@ package org.apache.spark.sql.connector.catalog.oracle
 
 import java.nio.charset.StandardCharsets.UTF_8
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, Stack}
 
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
@@ -173,6 +173,7 @@ object OracleMetadata {
     }
   }
 
+  @SerialVersionUID(-7332993419881053598L)
   case class OraTable(
       schema: String,
       name: String,
@@ -220,15 +221,36 @@ object OracleMetadata {
         StructType(catalystSchema.fields.filterNot(f => partCols.contains(f.name))),
         StructType(catalystSchema.fields.filter(f => partCols.contains(f.name))))
     }
+
+    @transient private lazy val partitionNameIdxSeq : Seq[String] = {
+      val ab = ArrayBuffer[String]()
+      val s = Stack[OraTablePartition]()
+      s.pushAll(partitions.reverse)
+      while(s.nonEmpty) {
+        val p = s.pop()
+        if (p.subPartitions.nonEmpty) {
+          s.pushAll(p.subPartitions.reverse)
+        } else {
+          ab += p.name
+        }
+      }
+      ab.toIndexedSeq
+    }
+
+    /**
+     * Numbering starts at 1. Return partitions in the subrange(s,e)
+     * both ends are inclusive.
+     *
+     * @param start
+     * @param end
+     * @return
+     */
+    def partitions(start : Int, end : Int) : Seq[String] = {
+      partitionNameIdxSeq.slice(start-1, `end`)
+    }
   }
 
   private[oracle] val NAMESPACES_CACHE_KEY = "__namespaces__".getBytes(UTF_8)
   private[oracle] val TABLE_LIST_CACHE_KEY = "__tables_list__".getBytes(UTF_8)
-
-  /*
- * Todo
- *  - test suite: 30 tables: tpcds + av tables in adw instance + our hand created tables
- *
- */
 
 }

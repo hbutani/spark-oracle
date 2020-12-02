@@ -19,9 +19,8 @@ package oracle.spark
 
 import java.sql.{CallableStatement, Connection, PreparedStatement, ResultSet, Statement}
 
-import scala.util.Try
-
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Try
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.oracle.OraSparkUtils

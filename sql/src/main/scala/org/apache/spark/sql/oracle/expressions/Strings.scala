@@ -63,15 +63,15 @@ object Strings {
       case cE@Upper(OraExpression(oE)) => OraUnaryFnExpression(UPPER, cE, oE)
       case cE@StringTrimLeft(OraExpression(trimSrc), None) =>
         OraStringTrim(cE, TRIM_LEADING, None, trimSrc)
-      case cE@StringTrimLeft(OraExpression(trimSrc), OraExpression(trimChar)) =>
+      case cE@StringTrimLeft(OraExpression(trimSrc), Some(OraExpression(trimChar))) =>
         OraStringTrim(cE, TRIM_LEADING, Some(trimChar), trimSrc)
       case cE@StringTrimRight(OraExpression(trimSrc), None) =>
         OraStringTrim(cE, TRIM_TRAILING, None, trimSrc)
-      case cE@StringTrimRight(OraExpression(trimSrc), OraExpression(trimChar)) =>
+      case cE@StringTrimRight(OraExpression(trimSrc), Some(OraExpression(trimChar))) =>
         OraStringTrim(cE, TRIM_TRAILING, Some(trimChar), trimSrc)
       case cE@StringTrim(OraExpression(trimSrc), None) =>
         OraStringTrim(cE, TRIM_BOTH, None, trimSrc)
-      case cE@StringTrim(OraExpression(trimSrc), OraExpression(trimChar)) =>
+      case cE@StringTrim(OraExpression(trimSrc), Some(OraExpression(trimChar))) =>
         OraStringTrim(cE, TRIM_BOTH, Some(trimChar), trimSrc)
       case _ => null
     })

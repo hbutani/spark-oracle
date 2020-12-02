@@ -19,9 +19,11 @@ package org.apache.spark.sql.oracle.operators
 
 import org.apache.spark.sql.catalyst.expressions.{And, Attribute}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
 import org.apache.spark.sql.oracle.{expressions, SQLSnippet}
 import org.apache.spark.sql.oracle.expressions.{OraBinaryOpExpression, OraExpression}
+import org.apache.spark.sql.oracle.querysplit.OraSplitStrategy
 
 case class OraTableScan(
                          oraTable: OraTable,
@@ -77,5 +79,17 @@ case class OraTableScan(
 
     SQLSnippet.select(projections.map(_.orasql): _*).from(oraTable).where(filOpt)
   }
+
+  override def splitOraSQL(dbSplitId : Int, splitStrategy : OraSplitStrategy): SQLSnippet = orasql
+
+  def isQuerySplitCandidate: Boolean =
+    getTagValue(OraTableScan.ORA_QUERY_SPLIT_CANDIDATE_TAG).getOrElse(false)
+  def setQuerySplitCandidate : Unit = {
+    setTagValue(OraTableScan.ORA_QUERY_SPLIT_CANDIDATE_TAG, true)
+  }
+}
+
+object OraTableScan {
+  val ORA_QUERY_SPLIT_CANDIDATE_TAG = TreeNodeTag[Boolean]("_oraQuerySplitCandidate")
 }
 

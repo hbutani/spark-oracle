@@ -20,6 +20,7 @@ import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.oracle.SQLSnippet
 import org.apache.spark.sql.oracle.expressions.OraExpression
+import org.apache.spark.sql.oracle.querysplit.OraSplitStrategy
 
 case class OraCompositeQueryBlock(children : Seq[OraQueryBlock],
                                   catalystOp: Option[LogicalPlan],
@@ -60,4 +61,7 @@ case class OraCompositeQueryBlock(children : Seq[OraQueryBlock],
     InternalFailure("attempt to call copyBlock on a composite query block", this)
 
   override def orasql: SQLSnippet = SQLSnippet.join(children.map(_.orasql), oraCompOp)
+
+  override def splitOraSQL(dbSplitId : Int, splitStrategy : OraSplitStrategy): SQLSnippet
+  = SQLSnippet.join(children.map(c => c.splitOraSQL(dbSplitId, splitStrategy)), oraCompOp)
 }

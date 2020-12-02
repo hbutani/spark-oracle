@@ -24,6 +24,7 @@ import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
 import org.apache.spark.sql.oracle.{SQLSnippet, SQLSnippetProvider}
 import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions}
+import org.apache.spark.sql.oracle.querysplit.OraSplitStrategy
 import org.apache.spark.sql.sources.Filter
 
 /**
@@ -61,6 +62,15 @@ abstract class OraPlan extends TreeNode[OraPlan] with SQLSnippetProvider {
   lazy val catalystAttributes : Seq[Attribute] = catalystProjectList.map(_.toAttribute)
 
   def orasql: SQLSnippet
+
+  /**
+   * Generate the SQL for the given dbSplitId and splitStrategy
+   *
+   * @param dbSplitId
+   * @param splitStrategy
+   * @return
+   */
+  def splitOraSQL(dbSplitId : Int, splitStrategy : OraSplitStrategy) : SQLSnippet
 
   override def simpleStringWithNodeId(): String = {
     val operatorId = catalystOp

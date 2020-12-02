@@ -19,9 +19,9 @@ package org.apache.spark.sql.connector.read.oracle
 
 import java.util.{Locale, OptionalLong}
 
-import oracle.hcat.db.split.OracleDBSplit
-import oracle.spark.DataSourceKey
 import scala.collection.JavaConverters._
+
+import oracle.spark.DataSourceKey
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.Expression
@@ -31,6 +31,7 @@ import org.apache.spark.sql.execution.datasources.{FilePartition, InMemoryFileIn
 import org.apache.spark.sql.execution.datasources.v2.FileScan
 import org.apache.spark.sql.internal.connector.SupportsMetadata
 import org.apache.spark.sql.oracle.operators.{OraPlan, OraTableScan}
+import org.apache.spark.sql.oracle.querysplit.OraSplitStrategy
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 
@@ -47,29 +48,18 @@ trait OraScan {
   def dsKey: DataSourceKey
   def oraPlan: OraPlan
 
-  @transient protected lazy val (dbSplits: Array[OracleDBSplit], partitioning: Partitioning) =
-    OraQuerySplitting.generateSplits(dsKey, oraPlan)
+  @transient protected lazy val splitStrategy : OraSplitStrategy =
+    OraSplitStrategy.generateSplits(dsKey, oraPlan)(sparkSession)
 
   override def planInputPartitions(): Array[InputPartition] = {
-    /*
-     - need to return Array of OraPartition
-     - start with OraPlan + dsKey
-     - ask OraQuerySplitting to generate Array[OracleDBSplit]
-     - for each split
-         ask OraQuerySplitting to applySplit to OraPlan -> to get OraPlan for split
-         call OraPlan.generateOraSQL to generate sql + bindValues for OraPlan for split
-         call OraQuerySplitting.preferedLocations to get preferred Locs for split
-         call OraPartition.apply  passing idx, dsKey, oraSQL,  bindVals
-     */
-
-    for ((dbSplit, i) <- dbSplits.zipWithIndex) yield {
-      val splitOraPlan = OraQuerySplitting.applySplit(oraPlan, dbSplit)
-      val prefLocs = OraQuerySplitting.preferedLocations(dbSplit)
-      OraPartition(dsKey, i, splitOraPlan, prefLocs)
-    }
+    (for (i <- splitStrategy.splitIds) yield {
+      val orasql = oraPlan.splitOraSQL(i, splitStrategy)
+      val prefLocs = splitStrategy.preferredLocs(i)
+      OraPartition(dsKey, i, orasql, prefLocs)
+    }).toArray
   }
 
-  override def outputPartitioning(): Partitioning = partitioning
+  override def outputPartitioning(): Partitioning = splitStrategy.partitioning
 
   override def createReaderFactory(): PartitionReaderFactory = {
     OraPartitionReaderFactory(

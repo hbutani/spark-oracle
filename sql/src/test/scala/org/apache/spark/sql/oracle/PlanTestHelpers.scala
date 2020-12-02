@@ -23,7 +23,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
-import org.apache.spark.sql.oracle.operators.{OraQueryBlock, OraTableScanValidator}
+import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock, OraTableScanValidator}
 import org.apache.spark.sql.oracle.operators.OraTableScanValidator.ScanDetails
 
 trait PlanTestHelpers {
@@ -96,21 +96,32 @@ trait PlanTestHelpers {
     scanV.validateScans(reqdScans)
   }
 
-  def collectOraQueryBlocks(plan : LogicalPlan) : Seq[OraQueryBlock] = plan collect {
+  def collectOraPlans(plan : LogicalPlan,
+                      filter : OraScan => Boolean) : Seq[OraPlan] = plan collect {
     case dsv2@DataSourceV2ScanRelation(_, oraScan: OraScan, _)
-    if oraScan.oraPlan.isInstanceOf[OraQueryBlock] => oraScan.oraPlan.asInstanceOf[OraQueryBlock]
+      if filter(oraScan) => oraScan.oraPlan
   }
 
-  def showOraQueries(qNm : String,
+  def collectOraQueryBlocks(plan : LogicalPlan) : Seq[OraQueryBlock] =
+    collectOraPlans(plan, _.oraPlan.isInstanceOf[OraQueryBlock]).asInstanceOf[Seq[OraQueryBlock]]
+
+  def showOraPlans(qNm : String,
                      sqlStat: String,
+                   filter : OraScan => Boolean,
                      out: PrintStream = System.out): Unit = {
     val plan = TestOracleHive.sql(sqlStat).queryExecution.optimizedPlan
-    val oraQueries = collectOraQueryBlocks(plan)
+    val oraQueries = collectOraPlans(plan, filter)
     out.println(s"Query '${qNm}':")
     out.println(s"Spark SQL is:")
     out.println(sqlStat)
     out.println("oracle sqls generated:")
     out.println(oraQueries.map(_.orasql.sql).mkString("\n\n"))
+  }
+
+  def showOraQueries(qNm : String,
+                     sqlStat: String,
+                     out: PrintStream = System.out): Unit = {
+    showOraPlans(qNm, sqlStat, _.oraPlan.isInstanceOf[OraQueryBlock], out)
   }
   // scalastyle:on println
 

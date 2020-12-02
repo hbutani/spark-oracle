@@ -23,8 +23,7 @@ import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet, SQLSnippetProvider}
 import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions}
 
-case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onCondition: Option[OraExpression])
-    extends SQLSnippetProvider {
+case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onCondition: Option[OraExpression]) {
   import OraSQLImplicits._
 
   lazy val joinTypeSQL: SQLSnippet = joinType match {
@@ -40,22 +39,25 @@ case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onCondition: Opti
   def setJoinAlias(a: String): Unit = {
     joinSrc.setTagValue(OraQueryBlock.ORA_JOIN_ALIAS_TAG, a)
   }
+  def getJoinAlias: Option[String] =
+    joinSrc.getTagValue(OraQueryBlock.ORA_JOIN_ALIAS_TAG)
 
-  lazy val joinSrcSQL: SQLSnippet = {
+  def joinSrcSQL(implicit srcSnipOverride : OraTableScan => Option[SQLSnippet] = t => None)
+  : SQLSnippet = {
     val srcSQL = joinSrc match {
-      case ot: OraTableScan => SQLSnippet.tableQualId(ot.oraTable)
+      case ot: OraTableScan => srcSnipOverride(ot).getOrElse(SQLSnippet.tableQualId(ot.oraTable))
       case oQ: OraQueryBlock => SQLSnippet.subQuery(oQ.orasql)
     }
 
     val qualifier: SQLSnippet =
-      joinSrc.getTagValue(OraQueryBlock.ORA_JOIN_ALIAS_TAG).
-        map(jA => SQLSnippet.colRef(jA)).getOrElse(SQLSnippet.empty)
+      getJoinAlias.map(jA => SQLSnippet.colRef(jA)).getOrElse(SQLSnippet.empty)
 
     srcSQL + qualifier
 
   }
 
-  lazy val orasql: SQLSnippet = if (onCondition.isDefined) {
+  def orasql(implicit srcSnipOverride : OraTableScan => Option[SQLSnippet] = t => None) : SQLSnippet
+  = if (onCondition.isDefined) {
     osql"${joinTypeSQL + joinSrcSQL} on ${onCondition.get.reifyLiterals}"
   } else {
     osql"${joinTypeSQL + joinSrcSQL}"
