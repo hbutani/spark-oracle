@@ -1,0 +1,7 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [CheckOverflow((promote_precision(cast(sum_sales#14300 as decimal(38,17))) - promote_precision(cast(avg_monthly_sales#14301 as decimal(38,17)))), DecimalType(38,17), true) ASC NULLS FIRST, s_store_name#14380 ASC NULLS FIRST], true
+      +- Project [i_category#14314, i_class#14312, i_brand#14310, s_store_name#14380, s_company_name#14392, d_moy#14355, sum_sales#14300, avg_monthly_sales#14301]
+         +- Filter (CASE WHEN NOT (avg_monthly_sales#14301 = 0E-22) THEN CheckOverflow((promote_precision(cast(abs(CheckOverflow((promote_precision(cast(sum_sales#14300 as decimal(38,17))) - promote_precision(cast(avg_monthly_sales#14301 as decimal(38,17)))), DecimalType(38,17), true)) as decimal(38,22))) / promote_precision(avg_monthly_sales#14301)), DecimalType(38,6), true) ELSE null END > 0.100000)
+            +- Window [avg(_w0#14407) windowspecdefinition(i_category#14314, i_brand#14310, s_store_name#14380, s_company_name#14392, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS avg_monthly_sales#14301], [i_category#14314, i_brand#14310, s_store_name#14380, s_company_name#14392]
+               +- RelationV2[i_category#14314, i_class#14312, i_brand#14310, s_store_name#14380, s_company_name#14392, d_moy#14355, sum_sales#14300, _w0#14407] TPCDS.ITEM

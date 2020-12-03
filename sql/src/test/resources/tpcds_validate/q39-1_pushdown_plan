@@ -1,0 +1,2 @@
+Sort [w_warehouse_sk#72562 ASC NULLS FIRST, i_item_sk#72540 ASC NULLS FIRST, d_moy#72584 ASC NULLS FIRST, mean#72534 ASC NULLS FIRST, cov#72535 ASC NULLS FIRST, d_moy_2#72530 ASC NULLS FIRST, mean_2#72531 ASC NULLS FIRST, cov_2#72532 ASC NULLS FIRST], true
++- RelationV2[w_warehouse_sk#72562, i_item_sk#72540, d_moy#72584, mean#72534, cov#72535, w_warehouse_sk_2#72528, i_item_sk_2#72529, d_moy_2#72530, mean_2#72531, cov_2#72532] TPCDS.INVENTORY

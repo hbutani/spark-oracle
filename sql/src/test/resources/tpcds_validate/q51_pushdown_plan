@@ -1,0 +1,13 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [item_sk#78835 ASC NULLS FIRST, d_date#78836 ASC NULLS FIRST], true
+      +- Filter ((isnotnull(web_cumulative#78839) AND isnotnull(store_cumulative#78840)) AND (web_cumulative#78839 > store_cumulative#78840))
+         +- Window [max(web_sales#78837) windowspecdefinition(item_sk#78835, d_date#78836 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS web_cumulative#78839, max(store_sales#78838) windowspecdefinition(item_sk#78835, d_date#78836 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS store_cumulative#78840], [item_sk#78835], [d_date#78836 ASC NULLS FIRST]
+            +- Project [CASE WHEN isnotnull(item_sk#78841) THEN item_sk#78841 ELSE item_sk#78843 END AS item_sk#78835, CASE WHEN isnotnull(d_date#78881) THEN d_date#78881 ELSE d_date#78932 END AS d_date#78836, cume_sales#78842 AS web_sales#78837, cume_sales#78844 AS store_sales#78838]
+               +- Join FullOuter, ((item_sk#78841 = item_sk#78843) AND (d_date#78881 = d_date#78932))
+                  :- Project [item_sk#78841, d_date#78881, cume_sales#78842]
+                  :  +- Window [sum(_w0#78962) windowspecdefinition(ws_item_sk#78848, d_date#78881 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS cume_sales#78842], [ws_item_sk#78848], [d_date#78881 ASC NULLS FIRST]
+                  :     +- RelationV2[item_sk#78841, d_date#78881, _w0#78962, ws_item_sk#78848] TPCDS.WEB_SALES
+                  +- Project [item_sk#78843, d_date#78932, cume_sales#78844]
+                     +- Window [sum(_w0#78963) windowspecdefinition(ss_item_sk#78909, d_date#78932 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS cume_sales#78844], [ss_item_sk#78909], [d_date#78932 ASC NULLS FIRST]
+                        +- RelationV2[item_sk#78843, d_date#78932, _w0#78963, ss_item_sk#78909] TPCDS.STORE_SALES

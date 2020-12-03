@@ -17,6 +17,7 @@
 package org.apache.spark.sql.oracle.tpcds
 
 import java.io.{File, IOException, PrintWriter}
+import java.util.Date
 
 import scala.collection.mutable.ArrayBuffer
 import org.apache.spark.internal.Logging
@@ -25,7 +26,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.plans.logical.{LocalRelation, LogicalPlan}
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.{OraSparkConfig, OraSparkUtils, SparkSessionExtensions}
-import org.apache.spark.sql.types.{DataType, StructType}
+import org.apache.spark.sql.types.{DataType, StringType, StructType}
 
 /**
  * A tool for validating TPCDSQuery results
@@ -64,11 +65,11 @@ object TPCDSValidator extends App {
     def planFilePath(qNm : String, isPushdown : Boolean) : String =
       s"${outPath}/${planFileNm(qNm, isPushdown)}"
 
-    def reportFileNm(t : String) : String =
-      s"${t}_report"
+    def reportFileNm : String =
+      s"validation_report"
 
     def reportFilePath : String =
-      s"${outPath}/${reportFileNm(System.currentTimeMillis().toString)}"
+      s"${outPath}/${reportFileNm}"
   }
 
   private case class ADiff(reason : String,
@@ -85,7 +86,7 @@ object TPCDSValidator extends App {
     }
   }
 
-  private class ResultDiff(qNm : String) {
+  private class ResultDiff(val qNm : String) {
     private val diffs : ArrayBuffer[ADiff] = ArrayBuffer[ADiff]()
 
     private var push_Result : () => String = null
@@ -303,18 +304,25 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
     }
   }
 
-  private def outputReport(qDiffs : Seq[ResultDiff]) : Unit = {
+  private def outputReport(qDiffs : Seq[ResultDiff],
+                           skippedQueries : Set[String]) : Unit = {
     val buf = new StringBuilder
 
     val totCount = qDiffs.size
     val passCount = qDiffs.filter(_.isSame).size
     val warningCount = qDiffs.filter(d => !d.isSame && d.onlyWarnings).size
-    val failCount = qDiffs.filter(d => !d.isSame && !d.onlyWarnings).size
+    val failedQueries = qDiffs.filter(d => !d.isSame && !d.onlyWarnings)
+    val failCount = failedQueries.size
+    val failQNms = failedQueries.map(_.qNm)
+
 
     // scalastyle:off println
-    println(
-      s"""Validation Report:
+    buf.append(
+      s"""Validation Report (generated on ${new Date()}):
         |  num_queries= (total=${totCount}, pass=${passCount}, warn=${warningCount}, fail=${failCount})
+        |  skipped queries= ${skippedQueries.toList.sorted.mkString(",")}
+        |  failed queries= ${failQNms.mkString(",")}
+        |
         |""".stripMargin
     )
     qDiffs.foreach(_.dump(buf))
@@ -422,22 +430,35 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
 
               resultDiff(
                 s"values in row $i, column $j don't match",
-                s"value=${res2}",
+                s"value=${res1}",
                 s"value=${res2}"
               )
             }
-          } else if ((OraSparkUtils.isApproximateNumeric(pushDF.schema(j).dataType) &&
-            (Math.abs(res1.asInstanceOf[Double] - res2.asInstanceOf[Double]) >
-              devAllowedInAproxNumeric)) ||
-            (!OraSparkUtils.isApproximateNumeric(pushDF.schema(j).dataType) && res1 != res2)) {
-
+          } else if (!valuesEq(pushDF.schema(j).dataType, devAllowedInAproxNumeric, res1, res2)) {
             resultDiff(s"values in row $i, column $j don't match",
-              s"push_value=${res2}",
+              s"push_value=${res1}",
               s"nonPushValue=${res2}"
             )
           }
         }
       }
+    }
+  }
+
+  private def valuesEq(dt : DataType,
+                       devAllowedInAproxNumeric: Double,
+                       v1 : Any,
+                       v2 : Any) : Boolean = {
+    if (OraSparkUtils.isApproximateNumeric(dt)) {
+      Math.abs(v1.asInstanceOf[Double] - v2.asInstanceOf[Double]) <= devAllowedInAproxNumeric
+    } else if (v1 != null && v2 != null) {
+      if (dt == StringType) {
+        v1.toString.trim == v2.toString.trim
+      } else {
+        v1 == v2
+      }
+    } else {
+      v1 == null && v2 == null
     }
   }
 
@@ -490,14 +511,16 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
     }
   }
 
+  val excludeSet = Set("q14-1", "q14-2", "q23-2", "q24-1", "q24-2")
+
   def run : Unit = {
     initializeSpark
 
-    val results = for (qNm <- args.queries) yield {
+    val results = for (qNm <- args.queries if !excludeSet.contains(qNm)) yield {
       validateQuery(qNm)
     }
 
-    outputReport(results)
+    outputReport(results, excludeSet)
   }
 }
 

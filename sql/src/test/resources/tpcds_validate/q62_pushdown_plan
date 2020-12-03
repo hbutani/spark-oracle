@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [substr(w_warehouse_name, 1, 20)#86638 ASC NULLS FIRST, sm_type#86580 ASC NULLS FIRST, web_name#86588 ASC NULLS FIRST], true
+      +- RelationV2[substr(w_warehouse_name, 1, 20)#86638, sm_type#86580, web_name#86588, 30_days#86525L, 31_60_days#86526L, 61_90_days#86527L, 91_120_days#86528L, above120_days#86529L] TPCDS.WEB_SALES

@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [c_customer_id#66257 ASC NULLS FIRST, c_salutation#66263 ASC NULLS FIRST, c_first_name#66264 ASC NULLS FIRST, c_last_name#66265 ASC NULLS FIRST, c_preferred_cust_flag#66266 ASC NULLS FIRST, c_birth_day#66267 ASC NULLS FIRST, c_birth_month#66268 ASC NULLS FIRST, c_birth_year#66269 ASC NULLS FIRST, c_birth_country#66270 ASC NULLS FIRST, c_login#66271 ASC NULLS FIRST, c_email_address#66272 ASC NULLS FIRST, c_last_review_date_sk#66273 ASC NULLS FIRST, ctr_total_return#66177 ASC NULLS FIRST], true
+      +- RelationV2[c_customer_id#66257, c_salutation#66263, c_first_name#66264, c_last_name#66265, c_preferred_cust_flag#66266, c_birth_day#66267, c_birth_month#66268, c_birth_year#66269, c_birth_country#66270, c_login#66271, c_email_address#66272, c_last_review_date_sk#66273, ctr_total_return#66177] TPCDS.WEB_RETURNS

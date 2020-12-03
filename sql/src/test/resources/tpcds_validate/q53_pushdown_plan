@@ -1,0 +1,7 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [avg_quarterly_sales#5497 ASC NULLS FIRST, sum_sales#5496 ASC NULLS FIRST, i_manufact_id#5511 ASC NULLS FIRST], true
+      +- Project [i_manufact_id#5511, sum_sales#5496, avg_quarterly_sales#5497]
+         +- Filter (CASE WHEN (avg_quarterly_sales#5497 > 0E-22) THEN CheckOverflow((promote_precision(cast(abs(CheckOverflow((promote_precision(cast(sum_sales#5496 as decimal(38,17))) - promote_precision(cast(avg_quarterly_sales#5497 as decimal(38,17)))), DecimalType(38,17), true)) as decimal(38,22))) / promote_precision(avg_quarterly_sales#5497)), DecimalType(38,6), true) ELSE null END > 0.100000)
+            +- Window [avg(_w0#5603) windowspecdefinition(i_manufact_id#5511, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS avg_quarterly_sales#5497], [i_manufact_id#5511]
+               +- RelationV2[i_manufact_id#5511, sum_sales#5496, _w0#5603] TPCDS.ITEM

@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [segment#6039 ASC NULLS FIRST, num_customers#6028L ASC NULLS FIRST], true
+      +- RelationV2[segment#6039, num_customers#6028L, segment_base#6029] TPCDS.CATALOG_SALES

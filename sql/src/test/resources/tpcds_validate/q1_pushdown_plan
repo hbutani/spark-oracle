@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [c_customer_id#35112 ASC NULLS FIRST], true
+      +- RelationV2[c_customer_id#35112] TPCDS.STORE_RETURNS

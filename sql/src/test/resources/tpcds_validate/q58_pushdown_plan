@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [item_id#83346 ASC NULLS FIRST, ss_item_rev#83347 ASC NULLS FIRST], true
+      +- RelationV2[item_id#83346, ss_item_rev#83347, ss_dev#83340, cs_item_rev#83351, cs_dev#83341, ws_item_rev#83355, ws_dev#83342, average#83343] TPCDS.STORE_SALES

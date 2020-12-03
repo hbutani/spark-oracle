@@ -1,0 +1,16 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [lochierarchy#93580 DESC NULLS LAST, CASE WHEN (lochierarchy#93580 = 0) THEN s_state#93766 END ASC NULLS FIRST, rank_within_parent#93581 ASC NULLS FIRST], true
+      +- Project [total_sum#93579, s_state#93766, s_county#93767, lochierarchy#93580, rank_within_parent#93581]
+         +- Window [rank(_w3#93782) windowspecdefinition(_w1#93780, _w2#93781, _w3#93782 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rank_within_parent#93581], [_w1#93780, _w2#93781], [_w3#93782 DESC NULLS LAST]
+            +- Aggregate [s_state#93766, s_county#93767, spark_grouping_id#93765L], [sum(ss_net_profit#93604) AS total_sum#93579, s_state#93766, s_county#93767, (cast((shiftright(spark_grouping_id#93765L, 1) & 1) as tinyint) + cast((shiftright(spark_grouping_id#93765L, 0) & 1) as tinyint)) AS lochierarchy#93580, (cast((shiftright(spark_grouping_id#93765L, 1) & 1) as tinyint) + cast((shiftright(spark_grouping_id#93765L, 0) & 1) as tinyint)) AS _w1#93780, CASE WHEN (cast((shiftright(spark_grouping_id#93765L, 0) & 1) as tinyint) = 0) THEN s_state#93766 END AS _w2#93781, sum(ss_net_profit#93604) AS _w3#93782]
+               +- Expand [List(SS_NET_PROFIT#93604, s_state#93657, s_county#93656, 0), List(SS_NET_PROFIT#93604, s_state#93657, null, 1), List(SS_NET_PROFIT#93604, null, null, 3)], [SS_NET_PROFIT#93604, s_state#93766, s_county#93767, spark_grouping_id#93765L]
+                  +- Project [SS_NET_PROFIT#93604, s_state#93657, s_county#93656]
+                     +- Join Inner, (s_store_sk#93633 = ss_store_sk#93589)
+                        :- RelationV2[SS_STORE_SK#93589, SS_NET_PROFIT#93604] TPCDS.STORE_SALES
+                        +- Join LeftSemi, (S_STATE#93657 = s_state#93576)
+                           :- RelationV2[S_STORE_SK#93633, S_COUNTY#93656, S_STATE#93657] TPCDS.STORE
+                           +- Project [s_state#93576]
+                              +- Filter (isnotnull(ranking#93577) AND (ranking#93577 <= 5))
+                                 +- Window [rank(_w2#93754) windowspecdefinition(s_state#93711, _w2#93754 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS ranking#93577], [s_state#93711], [_w2#93754 DESC NULLS LAST]
+                                    +- RelationV2[s_state#93576, s_state#93711, _w2#93754] TPCDS.STORE_SALES

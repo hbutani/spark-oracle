@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [sum(ss_ext_sales_price)#74068 DESC NULLS LAST, d_year#74000 ASC NULLS FIRST, i_category_id#74056 ASC NULLS FIRST, i_category#74057 ASC NULLS FIRST], true
+      +- RelationV2[d_year#74000, i_category_id#74056, i_category#74057, sum(ss_ext_sales_price)#74068] TPCDS.DATE_DIM

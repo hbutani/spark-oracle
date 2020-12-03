@@ -1,0 +1,2 @@
+Sort [Excess_Discount_Amount#109873 ASC NULLS FIRST], true
++- RelationV2[Excess_Discount_Amount#109873] TPCDS.WEB_SALES

@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [item_id#13124 ASC NULLS FIRST, sr_item_qty#13125 ASC NULLS FIRST], true
+      +- RelationV2[item_id#13124, sr_item_qty#13125, sr_dev#13118, cr_item_qty#13129, cr_dev#13119, wr_item_qty#13133, wr_dev#13120, average#13121] TPCDS.STORE_RETURNS

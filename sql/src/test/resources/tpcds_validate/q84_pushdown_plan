@@ -1,0 +1,5 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Project [customer_id#105387, customername#105388]
+      +- Sort [c_customer_id#105390 ASC NULLS FIRST], true
+         +- RelationV2[customer_id#105387, customername#105388, c_customer_id#105390] TPCDS.CUSTOMER

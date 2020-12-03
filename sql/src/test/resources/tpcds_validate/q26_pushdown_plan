@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [i_item_id#3378 ASC NULLS FIRST], true
+      +- RelationV2[i_item_id#3378, agg1#3302, agg2#3303, agg3#3304, agg4#3305] TPCDS.CATALOG_SALES

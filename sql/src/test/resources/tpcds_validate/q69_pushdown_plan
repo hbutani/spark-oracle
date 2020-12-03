@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [cd_gender#92373 ASC NULLS FIRST, cd_marital_status#92374 ASC NULLS FIRST, cd_education_status#92375 ASC NULLS FIRST, cd_purchase_estimate#92376 ASC NULLS FIRST, cd_credit_rating#92377 ASC NULLS FIRST], true
+      +- RelationV2[cd_gender#92373, cd_marital_status#92374, cd_education_status#92375, cnt1#92338L, cd_purchase_estimate#92376, cnt2#92339L, cd_credit_rating#92377, cnt3#92340L] TPCDS.CUSTOMER

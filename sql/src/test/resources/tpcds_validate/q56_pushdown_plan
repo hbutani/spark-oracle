@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [total_sales#6893 ASC NULLS FIRST], true
+      +- RelationV2[i_item_id#6965, total_sales#6893] TPCDS.STORE_SALES

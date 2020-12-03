@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [cnt#205L ASC NULLS FIRST], true
+      +- RelationV2[state#204, cnt#205L] TPCDS.CUSTOMER_ADDRESS

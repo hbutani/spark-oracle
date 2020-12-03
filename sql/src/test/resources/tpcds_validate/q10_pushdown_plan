@@ -1,0 +1,17 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [cd_gender#44251 ASC NULLS FIRST, cd_marital_status#44252 ASC NULLS FIRST, cd_education_status#44253 ASC NULLS FIRST, cd_purchase_estimate#44254 ASC NULLS FIRST, cd_credit_rating#44255 ASC NULLS FIRST, cd_dep_count#44256 ASC NULLS FIRST, cd_dep_employed_count#44257 ASC NULLS FIRST, cd_dep_college_count#44258 ASC NULLS FIRST], true
+      +- Aggregate [cd_gender#44251, cd_marital_status#44252, cd_education_status#44253, cd_purchase_estimate#44254, cd_credit_rating#44255, cd_dep_count#44256, cd_dep_employed_count#44257, cd_dep_college_count#44258], [cd_gender#44251, cd_marital_status#44252, cd_education_status#44253, count(1) AS cnt1#44213L, cd_purchase_estimate#44254, count(1) AS cnt2#44214L, cd_credit_rating#44255, count(1) AS cnt3#44215L, cd_dep_count#44256, count(1) AS cnt4#44216L, cd_dep_employed_count#44257, count(1) AS cnt5#44217L, cd_dep_college_count#44258, count(1) AS cnt6#44218L]
+         +- Project [CD_GENDER#44251, CD_MARITAL_STATUS#44252, CD_EDUCATION_STATUS#44253, CD_PURCHASE_ESTIMATE#44254, CD_CREDIT_RATING#44255, CD_DEP_COUNT#44256, CD_DEP_EMPLOYED_COUNT#44257, CD_DEP_COLLEGE_COUNT#44258]
+            +- Join Inner, (cd_demo_sk#44250 = c_current_cdemo_sk#44221)
+               :- Project [C_CURRENT_CDEMO_SK#44221]
+               :  +- Join Inner, (c_current_addr_sk#44223 = ca_address_sk#44237)
+               :     :- Project [C_CURRENT_CDEMO_SK#44221, C_CURRENT_ADDR_SK#44223]
+               :     :  +- Filter (exists#44832 OR exists#44833)
+               :     :     +- Join ExistenceJoin(exists#44833), (C_CUSTOMER_SK#44219 = cs_ship_customer_sk#44385)
+               :     :        :- Join ExistenceJoin(exists#44832), (C_CUSTOMER_SK#44219 = ws_bill_customer_sk#44320)
+               :     :        :  :- RelationV2[C_CUSTOMER_SK#44219, C_CURRENT_CDEMO_SK#44221, C_CURRENT_ADDR_SK#44223] TPCDS.CUSTOMER
+               :     :        :  +- RelationV2[WS_BILL_CUSTOMER_SK#44320] TPCDS.WEB_SALES
+               :     :        +- RelationV2[CS_SHIP_CUSTOMER_SK#44385] TPCDS.CATALOG_SALES
+               :     +- RelationV2[CA_ADDRESS_SK#44237] TPCDS.CUSTOMER_ADDRESS
+               +- RelationV2[CD_DEMO_SK#44250, CD_GENDER#44251, CD_MARITAL_STATUS#44252, CD_EDUCATION_STATUS#44253, CD_PURCHASE_ESTIMATE#44254, CD_CREDIT_RATING#44255, CD_DEP_COUNT#44256, CD_DEP_EMPLOYED_COUNT#44257, CD_DEP_COLLEGE_COUNT#44258] TPCDS.CUSTOMER_DEMOGRAPHICS

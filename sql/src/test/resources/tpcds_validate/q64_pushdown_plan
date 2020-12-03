@@ -1,0 +1,2 @@
+Sort [product_name#9709 ASC NULLS FIRST, store_name#9711 ASC NULLS FIRST, cnt_2#9706L ASC NULLS FIRST], true
++- RelationV2[product_name#9709, store_name#9711, store_zip#9712, b_street_number#9713, b_street_name#9714, b_city#9715, b_zip#9716, c_street_number#9717, c_street_name#9718, c_city#9719, c_zip#9720, syear#9721, cnt#9724L, s11#9699, s21#9700, s31#9701, s12#9702, s22#9703, s32#9704, syear_2#9705, cnt_2#9706L] TPCDS.STORE_SALES

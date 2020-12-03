@@ -1,0 +1,2 @@
+Sort [count(1)#111892L ASC NULLS FIRST], true
++- RelationV2[count(1)#111892L] TPCDS.STORE_SALES

@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [d_year#36086 ASC NULLS FIRST, sum_agg#36079 DESC NULLS LAST, brand_id#36077 ASC NULLS FIRST], true
+      +- RelationV2[d_year#36086, brand_id#36077, brand#36078, sum_agg#36079] TPCDS.DATE_DIM

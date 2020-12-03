@@ -1,0 +1,2 @@
+Sort [c_last_name#5110 ASC NULLS FIRST, c_first_name#5109 ASC NULLS FIRST, c_salutation#5108 ASC NULLS FIRST, c_preferred_cust_flag#5111 DESC NULLS LAST, ss_ticket_number#5025 ASC NULLS FIRST], true
++- RelationV2[c_last_name#5110, c_first_name#5109, c_salutation#5108, c_preferred_cust_flag#5111, ss_ticket_number#5025, cnt#5015L] TPCDS.STORE_SALES

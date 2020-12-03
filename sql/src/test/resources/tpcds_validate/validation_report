@@ -1,0 +1,1290 @@
+Validation Report (generated on Thu Dec 03 10:55:13 PST 2020):
+  num_queries= (total=98, pass=0, warn=94, fail=4)
+  skipped queries= q14-1,q14-2,q23-2,q24-1,q24-2
+  failed queries= q38,q54,q72,q87
+Query q1 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0] TPCDS.STORE_RETURNS
+
+  Warning: Schema's are different
+    push : StructField(c_customer_id,StringType,false)
+    non-push : StructField(c_customer_id,StringType,true)
+
+===========================================
+Query q2 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0 ASC NULLS FIRST], true
++- Project [none#0, round(CheckOverflow((none#1 / none#9), DecimalType(38,6), true), 2) AS #0, round(CheckOverflow((none#2 / none#10), DecimalType(38,6), true), 2) AS #1, round(CheckOverflow((none#3 / none#11), DecimalType(38,6), true), 2) AS #2, round(CheckOverflow((none#4 / none#12), DecimalType(38,6), true), 2) AS #3, round(CheckOverflow((none#5 / none#13), DecimalType(38,6), true), 2) AS #4, round(CheckOverflow((none#6 / none#14), DecimalType(38,6), true), 2) AS #5, round(CheckOverflow((none#7 / none#15), DecimalType(38,6), true), 2) AS #6]
+   +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10, none#11, none#12, none#13, none#14, none#15] TPCDS.WEB_SALES
+
+
+===========================================
+Query q3 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#3 DESC NULLS LAST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.DATE_DIM
+
+
+===========================================
+Query q4 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.CUSTOMER
+
+  Warning: Schema's are different
+    push : StructField(customer_id,StringType,false)StructField(customer_first_name,StringType,true)StructField(customer_last_name,StringType,true)StructField(customer_preferred_cust_flag,StringType,true)
+    non-push : StructField(customer_id,StringType,true)StructField(customer_first_name,StringType,true)StructField(customer_last_name,StringType,true)StructField(customer_preferred_cust_flag,StringType,true)
+
+===========================================
+Query q5 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.STORE_SALES
+
+
+===========================================
+Query q6 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#1L ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1L] TPCDS.CUSTOMER_ADDRESS
+
+  Warning: Schema's are different
+    push : StructField(state,StringType,true)StructField(cnt,LongType,false)
+    non-push : StructField(state,StringType,true)StructField(cnt,LongType,true)
+
+===========================================
+Query q7 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(agg1,DecimalType(38,22),true)StructField(agg2,DecimalType(38,22),true)StructField(agg3,DecimalType(38,22),true)StructField(agg4,DecimalType(38,22),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(agg1,DecimalType(38,22),true)StructField(agg2,DecimalType(38,22),true)StructField(agg3,DecimalType(38,22),true)StructField(agg4,DecimalType(38,22),true)
+
+===========================================
+Query q8 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+
+
+===========================================
+Query q9 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.REASON
+
+
+===========================================
+Query q10 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : 'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#6 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#10 ASC NULLS FIRST, none#12 ASC NULLS FIRST], true
+      +- 'Aggregate [none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7], [none#0, none#1, none#2, count(1) AS #0L, none#3, count(1) AS #1L, none#4, count(1) AS #2L, none#5, count(1) AS #3L, none#6, count(1) AS #4L, none#7, count(1) AS #5L]
+         +- 'Project [none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9]
+            +- 'Join Inner, (none#0 = none#1)
+               :- 'Project [none#0]
+               :  +- 'Join Inner, (none#1 = none#2)
+               :     :- 'Project [none#1, none#2]
+               :     :  +- 'Filter (none#3 OR none#4)
+               :     :     +- 'Join ExistenceJoin(exists#4853), (none#0 = none#4)
+               :     :        :- 'Join ExistenceJoin(exists#4852), (none#0 = none#3)
+               :     :        :  :- RelationV2[none#0, none#1, none#2] TPCDS.CUSTOMER
+               :     :        :  +- RelationV2[none#0] TPCDS.WEB_SALES
+               :     :        +- RelationV2[none#0] TPCDS.CATALOG_SALES
+               :     +- RelationV2[none#0] TPCDS.CUSTOMER_ADDRESS
+               +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8] TPCDS.CUSTOMER_DEMOGRAPHICS
+
+  Warning: Schema's are different
+    push : StructField(cd_gender,StringType,true)StructField(cd_marital_status,StringType,true)StructField(cd_education_status,StringType,true)StructField(cnt1,LongType,false)StructField(cd_purchase_estimate,DecimalType(38,18),true)StructField(cnt2,LongType,false)StructField(cd_credit_rating,StringType,true)StructField(cnt3,LongType,false)StructField(cd_dep_count,DecimalType(38,18),true)StructField(cnt4,LongType,false)StructField(cd_dep_employed_count,DecimalType(38,18),true)StructField(cnt5,LongType,false)StructField(cd_dep_college_count,DecimalType(38,18),true)StructField(cnt6,LongType,false)
+    non-push : StructField(cd_gender,StringType,true)StructField(cd_marital_status,StringType,true)StructField(cd_education_status,StringType,true)StructField(cnt1,LongType,true)StructField(cd_purchase_estimate,DecimalType(38,18),true)StructField(cnt2,LongType,true)StructField(cd_credit_rating,StringType,true)StructField(cnt3,LongType,true)StructField(cd_dep_count,DecimalType(38,18),true)StructField(cnt4,LongType,true)StructField(cd_dep_employed_count,DecimalType(38,18),true)StructField(cnt5,LongType,true)StructField(cd_dep_college_count,DecimalType(38,18),true)StructField(cnt6,LongType,true)
+
+===========================================
+Query q11 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.CUSTOMER
+
+  Warning: Schema's are different
+    push : StructField(customer_id,StringType,false)StructField(customer_first_name,StringType,true)StructField(customer_last_name,StringType,true)StructField(customer_preferred_cust_flag,StringType,true)
+    non-push : StructField(customer_id,StringType,true)StructField(customer_first_name,StringType,true)StructField(customer_last_name,StringType,true)StructField(customer_preferred_cust_flag,StringType,true)
+
+===========================================
+Query q12 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- !Sort [none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#6 ASC NULLS FIRST], true
+      +- !Project [none#0, none#1, none#2, none#3, none#4, none#5, CheckOverflow((cast(CheckOverflow((100.000000000000000000 * none#6), DecimalType(38,14), true) as decimal(38,18)) / none#8), DecimalType(38,6), true) AS #0]
+         +- Window [sum(none#7) windowspecdefinition(none#3, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#3]
+            +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.WEB_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(i_item_desc,StringType,true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(i_current_price,DecimalType(38,18),true)StructField(itemrevenue,DecimalType(38,18),true)StructField(revenueratio,DecimalType(38,6),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(i_item_desc,StringType,true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(i_current_price,DecimalType(38,18),true)StructField(itemrevenue,DecimalType(38,18),true)StructField(revenueratio,DecimalType(38,6),true)
+
+===========================================
+Query q13 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : RelationV2[none#0, none#1, none#2, none#3] TPCDS.STORE_SALES
+
+
+===========================================
+Query q15 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1] TPCDS.CATALOG_SALES
+
+
+===========================================
+Query q16 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : 'Sort [none#0L ASC NULLS FIRST], true
++- 'Aggregate [count(distinct none#0) AS #0L, sum(none#1) AS #1, sum(none#2) AS #2]
+   +- 'Project [none#1, none#2, none#3]
+      +- 'Join Inner, (none#0 = none#4)
+         :- 'Project [none#1, none#2, none#3, none#4]
+         :  +- 'Join Inner, (none#0 = none#5)
+         :     :- 'Project [none#1, none#2, none#3, none#4, none#5]
+         :     :  +- 'Join Inner, (none#0 = none#6)
+         :     :     :- 'Join LeftAnti, (none#3 = none#6)
+         :     :     :  :- 'Project [none#0, none#1, none#2, none#4, none#5, none#6]
+         :     :     :  :  +- 'Join LeftSemi, ((none#4 = none#8) AND NOT (none#3 = none#7))
+         :     :     :  :     :- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.CATALOG_SALES
+         :     :     :  :     +- RelationV2[none#0, none#1] TPCDS.CATALOG_SALES
+         :     :     :  +- RelationV2[none#0] TPCDS.CATALOG_RETURNS
+         :     :     +- RelationV2[none#0] TPCDS.DATE_DIM
+         :     +- RelationV2[none#0] TPCDS.CUSTOMER_ADDRESS
+         +- RelationV2[none#0] TPCDS.CALL_CENTER
+
+  Warning: Schema's are different
+    push : StructField(order_count,LongType,false)StructField(total_shipping_cost,DecimalType(38,18),true)StructField(total_net_profit,DecimalType(38,18),true)
+    non-push : StructField(order_count,LongType,true)StructField(total_shipping_cost,DecimalType(38,18),true)StructField(total_net_profit,DecimalType(38,18),true)
+
+===========================================
+Query q17 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3L, none#4, none#5, none#6, none#7L, none#8, none#9, none#10, none#11L, none#12, none#13, none#14] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(i_item_desc,StringType,true)StructField(s_state,StringType,true)StructField(store_sales_quantitycount,LongType,false)StructField(store_sales_quantityave,DecimalType(38,22),true)StructField(store_sales_quantitystdev,DoubleType,true)StructField(store_sales_quantitycov,DoubleType,true)StructField(store_returns_quantitycount,LongType,false)StructField(store_returns_quantityave,DecimalType(38,22),true)StructField(store_returns_quantitystdev,DoubleType,true)StructField(store_returns_quantitycov,DoubleType,true)StructField(catalog_sales_quantitycount,LongType,false)StructField(catalog_sales_quantityave,DecimalType(38,22),true)StructField(catalog_sales_quantitystdev,DoubleType,true)StructField(catalog_sales_quantitycov,DoubleType,true)
+    non-push : StructField(i_item_id,StringType,true)StructField(i_item_desc,StringType,true)StructField(s_state,StringType,true)StructField(store_sales_quantitycount,LongType,true)StructField(store_sales_quantityave,DecimalType(38,22),true)StructField(store_sales_quantitystdev,DoubleType,true)StructField(store_sales_quantitycov,DoubleType,true)StructField(store_returns_quantitycount,LongType,true)StructField(store_returns_quantityave,DecimalType(38,22),true)StructField(store_returns_quantitystdev,DoubleType,true)StructField(store_returns_quantitycov,DoubleType,true)StructField(catalog_sales_quantitycount,LongType,true)StructField(catalog_sales_quantityave,DecimalType(38,22),true)StructField(catalog_sales_quantitystdev,DoubleType,true)StructField(catalog_sales_quantitycov,DoubleType,true)
+
+===========================================
+Query q18 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10] TPCDS.CATALOG_SALES
+
+
+===========================================
+Query q19 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#4 DESC NULLS LAST, none#1 ASC NULLS FIRST, none#0 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.DATE_DIM
+
+
+===========================================
+Query q20 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- !Sort [none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#6 ASC NULLS FIRST], true
+      +- !Project [none#0, none#1, none#2, none#3, none#4, none#5, CheckOverflow((cast(CheckOverflow((100.000000000000000000 * none#6), DecimalType(38,14), true) as decimal(38,18)) / none#8), DecimalType(38,6), true) AS #0]
+         +- Window [sum(none#7) windowspecdefinition(none#3, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#3]
+            +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.CATALOG_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(i_item_desc,StringType,true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(i_current_price,DecimalType(38,18),true)StructField(itemrevenue,DecimalType(38,18),true)StructField(revenueratio,DecimalType(38,6),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(i_item_desc,StringType,true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(i_current_price,DecimalType(38,18),true)StructField(itemrevenue,DecimalType(38,18),true)StructField(revenueratio,DecimalType(38,6),true)
+
+===========================================
+Query q21 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.INVENTORY
+
+  Warning: Schema's are different
+    push : StructField(w_warehouse_name,StringType,true)StructField(i_item_id,StringType,false)StructField(inv_before,DecimalType(38,18),true)StructField(inv_after,DecimalType(38,18),true)
+    non-push : StructField(w_warehouse_name,StringType,true)StructField(i_item_id,StringType,true)StructField(inv_before,DecimalType(38,18),true)StructField(inv_after,DecimalType(38,18),true)
+
+===========================================
+Query q22 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#4 ASC NULLS FIRST, none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.INVENTORY
+
+
+===========================================
+Query q23-1 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : RelationV2[none#0] TPCDS.CATALOG_SALES
+
+
+===========================================
+Query q25 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(i_item_desc,StringType,true)StructField(s_store_id,StringType,false)StructField(s_store_name,StringType,true)StructField(store_sales_profit,DecimalType(38,18),true)StructField(store_returns_loss,DecimalType(38,18),true)StructField(catalog_sales_profit,DecimalType(38,18),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(i_item_desc,StringType,true)StructField(s_store_id,StringType,true)StructField(s_store_name,StringType,true)StructField(store_sales_profit,DecimalType(38,18),true)StructField(store_returns_loss,DecimalType(38,18),true)StructField(catalog_sales_profit,DecimalType(38,18),true)
+
+===========================================
+Query q26 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.CATALOG_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(agg1,DecimalType(38,22),true)StructField(agg2,DecimalType(38,22),true)StructField(agg3,DecimalType(38,22),true)StructField(agg4,DecimalType(38,22),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(agg1,DecimalType(38,22),true)StructField(agg2,DecimalType(38,22),true)StructField(agg3,DecimalType(38,22),true)StructField(agg4,DecimalType(38,22),true)
+
+===========================================
+Query q27 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- Aggregate [none#4, none#5, none#6L], [none#4, none#5, cast((shiftright(none#6L, 0) & 1) as tinyint) AS #0, avg(none#0) AS #1, avg(none#1) AS #2, avg(none#3) AS #3, avg(none#2) AS #4]
+         +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6L] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,true)StructField(s_state,StringType,true)StructField(g_state,ByteType,false)StructField(agg1,DecimalType(38,22),true)StructField(agg2,DecimalType(38,22),true)StructField(agg3,DecimalType(38,22),true)StructField(agg4,DecimalType(38,22),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(s_state,StringType,true)StructField(g_state,ByteType,true)StructField(agg1,DecimalType(38,22),true)StructField(agg2,DecimalType(38,22),true)StructField(agg3,DecimalType(38,22),true)StructField(agg4,DecimalType(38,22),true)
+
+===========================================
+Query q28 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : RelationV2[none#0, none#1L, none#2L, none#3, none#4L, none#5L, none#6, none#7L, none#8L, none#9, none#10L, none#11L, none#12, none#13L, none#14L, none#15, none#16L, none#17L] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(B1_LP,DecimalType(38,22),true)StructField(B1_CNT,LongType,false)StructField(B1_CNTD,LongType,false)StructField(B2_LP,DecimalType(38,22),true)StructField(B2_CNT,LongType,false)StructField(B2_CNTD,LongType,false)StructField(B3_LP,DecimalType(38,22),true)StructField(B3_CNT,LongType,false)StructField(B3_CNTD,LongType,false)StructField(B4_LP,DecimalType(38,22),true)StructField(B4_CNT,LongType,false)StructField(B4_CNTD,LongType,false)StructField(B5_LP,DecimalType(38,22),true)StructField(B5_CNT,LongType,false)StructField(B5_CNTD,LongType,false)StructField(B6_LP,DecimalType(38,22),true)StructField(B6_CNT,LongType,false)StructField(B6_CNTD,LongType,false)
+    non-push : StructField(B1_LP,DecimalType(38,22),true)StructField(B1_CNT,LongType,true)StructField(B1_CNTD,LongType,true)StructField(B2_LP,DecimalType(38,22),true)StructField(B2_CNT,LongType,true)StructField(B2_CNTD,LongType,true)StructField(B3_LP,DecimalType(38,22),true)StructField(B3_CNT,LongType,true)StructField(B3_CNTD,LongType,true)StructField(B4_LP,DecimalType(38,22),true)StructField(B4_CNT,LongType,true)StructField(B4_CNTD,LongType,true)StructField(B5_LP,DecimalType(38,22),true)StructField(B5_CNT,LongType,true)StructField(B5_CNTD,LongType,true)StructField(B6_LP,DecimalType(38,22),true)StructField(B6_CNT,LongType,true)StructField(B6_CNTD,LongType,true)
+
+===========================================
+Query q29 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(i_item_desc,StringType,true)StructField(s_store_id,StringType,false)StructField(s_store_name,StringType,true)StructField(store_sales_quantity,DecimalType(38,18),true)StructField(store_returns_quantity,DecimalType(38,18),true)StructField(catalog_sales_quantity,DecimalType(38,18),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(i_item_desc,StringType,true)StructField(s_store_id,StringType,true)StructField(s_store_name,StringType,true)StructField(store_sales_quantity,DecimalType(38,18),true)StructField(store_returns_quantity,DecimalType(38,18),true)StructField(catalog_sales_quantity,DecimalType(38,18),true)
+
+===========================================
+Query q30 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST, none#6 ASC NULLS FIRST, none#7 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#9 ASC NULLS FIRST, none#10 ASC NULLS FIRST, none#11 ASC NULLS FIRST, none#12 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10, none#11, none#12] TPCDS.WEB_RETURNS
+
+  Warning: Schema's are different
+    push : StructField(c_customer_id,StringType,false)StructField(c_salutation,StringType,true)StructField(c_first_name,StringType,true)StructField(c_last_name,StringType,true)StructField(c_preferred_cust_flag,StringType,true)StructField(c_birth_day,DecimalType(38,18),true)StructField(c_birth_month,DecimalType(38,18),true)StructField(c_birth_year,DecimalType(38,18),true)StructField(c_birth_country,StringType,true)StructField(c_login,StringType,true)StructField(c_email_address,StringType,true)StructField(c_last_review_date_sk,DecimalType(38,18),true)StructField(ctr_total_return,DecimalType(38,18),true)
+    non-push : StructField(c_customer_id,StringType,true)StructField(c_salutation,StringType,true)StructField(c_first_name,StringType,true)StructField(c_last_name,StringType,true)StructField(c_preferred_cust_flag,StringType,true)StructField(c_birth_day,DecimalType(38,18),true)StructField(c_birth_month,DecimalType(38,18),true)StructField(c_birth_year,DecimalType(38,18),true)StructField(c_birth_country,StringType,true)StructField(c_login,StringType,true)StructField(c_email_address,StringType,true)StructField(c_last_review_date_sk,DecimalType(38,18),true)StructField(ctr_total_return,DecimalType(38,18),true)
+
+===========================================
+Query q31 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0 ASC NULLS FIRST], true
++- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.STORE_SALES
+
+
+===========================================
+Query q32 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : RelationV2[none#0] TPCDS.CATALOG_SALES
+
+
+===========================================
+Query q33 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+
+
+===========================================
+Query q34 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 DESC NULLS LAST, none#4 ASC NULLS FIRST], true
++- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5L] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(c_last_name,StringType,true)StructField(c_first_name,StringType,true)StructField(c_salutation,StringType,true)StructField(c_preferred_cust_flag,StringType,true)StructField(ss_ticket_number,DecimalType(38,18),false)StructField(cnt,LongType,false)
+    non-push : StructField(c_last_name,StringType,true)StructField(c_first_name,StringType,true)StructField(c_salutation,StringType,true)StructField(c_preferred_cust_flag,StringType,true)StructField(ss_ticket_number,DecimalType(38,18),true)StructField(cnt,LongType,true)
+
+===========================================
+Query q35 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : 'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#13 ASC NULLS FIRST], true
+      +- 'Aggregate [none#0, none#1, none#2, none#3, none#4, none#5], [none#0, none#1, none#2, none#3, count(1) AS #0L, min(none#3) AS #1, max(none#3) AS #2, avg(none#3) AS #3, none#4, count(1) AS #4L, min(none#4) AS #5, max(none#4) AS #6, avg(none#4) AS #7, none#5, count(1) AS #8L, min(none#5) AS #9, max(none#5) AS #10, avg(none#5) AS #11]
+         +- 'Project [none#1, none#3, none#4, none#5, none#6, none#7]
+            +- 'Join Inner, (none#0 = none#2)
+               :- 'Project [none#0, none#3]
+               :  +- 'Join Inner, (none#1 = none#2)
+               :     :- 'Project [none#1, none#2]
+               :     :  +- 'Filter (none#3 OR none#4)
+               :     :     +- 'Join ExistenceJoin(exists#12416), (none#0 = none#4)
+               :     :        :- 'Join ExistenceJoin(exists#12415), (none#0 = none#3)
+               :     :        :  :- RelationV2[none#0, none#1, none#2] TPCDS.CUSTOMER
+               :     :        :  +- RelationV2[none#0] TPCDS.WEB_SALES
+               :     :        +- RelationV2[none#0] TPCDS.CATALOG_SALES
+               :     +- RelationV2[none#0, none#1] TPCDS.CUSTOMER_ADDRESS
+               +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.CUSTOMER_DEMOGRAPHICS
+
+  Warning: Schema's are different
+    push : StructField(ca_state,StringType,true)StructField(cd_gender,StringType,true)StructField(cd_marital_status,StringType,true)StructField(cd_dep_count,DecimalType(38,18),true)StructField(cnt1,LongType,false)StructField(min(cd_dep_count),DecimalType(38,18),true)StructField(max(cd_dep_count),DecimalType(38,18),true)StructField(avg(cd_dep_count),DecimalType(38,22),true)StructField(cd_dep_employed_count,DecimalType(38,18),true)StructField(cnt2,LongType,false)StructField(min(cd_dep_employed_count),DecimalType(38,18),true)StructField(max(cd_dep_employed_count),DecimalType(38,18),true)StructField(avg(cd_dep_employed_count),DecimalType(38,22),true)StructField(cd_dep_college_count,DecimalType(38,18),true)StructField(cnt3,LongType,false)StructField(min(cd_dep_college_count),DecimalType(38,18),true)StructField(max(cd_dep_college_count),DecimalType(38,18),true)StructField(avg(cd_dep_college_count),DecimalType(38,22),true)
+    non-push : StructField(ca_state,StringType,true)StructField(cd_gender,StringType,true)StructField(cd_marital_status,StringType,true)StructField(cd_dep_count,DecimalType(38,18),true)StructField(cnt1,LongType,true)StructField(min(cd_dep_count),DecimalType(38,18),true)StructField(max(cd_dep_count),DecimalType(38,18),true)StructField(avg(cd_dep_count),DecimalType(38,22),true)StructField(cd_dep_employed_count,DecimalType(38,18),true)StructField(cnt2,LongType,true)StructField(min(cd_dep_employed_count),DecimalType(38,18),true)StructField(max(cd_dep_employed_count),DecimalType(38,18),true)StructField(avg(cd_dep_employed_count),DecimalType(38,22),true)StructField(cd_dep_college_count,DecimalType(38,18),true)StructField(cnt3,LongType,true)StructField(min(cd_dep_college_count),DecimalType(38,18),true)StructField(max(cd_dep_college_count),DecimalType(38,18),true)StructField(avg(cd_dep_college_count),DecimalType(38,22),true)
+
+===========================================
+Query q36 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- !Sort [none#3 DESC NULLS LAST, CASE WHEN (none#3 = 0) THEN none#1 END ASC NULLS FIRST, none#4 ASC NULLS FIRST], true
+      +- !Project [none#0, none#1, none#2, none#3, none#7]
+         +- !Window [rank(none#6) windowspecdefinition(none#4, none#5, none#6 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#4, none#5], [none#6 ASC NULLS FIRST]
+            +- Aggregate [none#2, none#3, none#4L], [CheckOverflow((sum(none#1) / sum(none#0)), DecimalType(38,6), true) AS #0, none#2, none#3, (cast((shiftright(none#4L, 1) & 1) as tinyint) + cast((shiftright(none#4L, 0) & 1) as tinyint)) AS #1, (cast((shiftright(none#4L, 1) & 1) as tinyint) + cast((shiftright(none#4L, 0) & 1) as tinyint)) AS #2, CASE WHEN (0 = cast((shiftright(none#4L, 0) & 1) as tinyint)) THEN none#2 END AS #3, CheckOverflow((sum(none#1) / sum(none#0)), DecimalType(38,6), true) AS #4]
+               +- RelationV2[none#0, none#1, none#2, none#3, none#4L] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(gross_margin,DecimalType(38,6),true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(lochierarchy,ByteType,false)StructField(rank_within_parent,IntegerType,true)
+    non-push : StructField(gross_margin,DecimalType(38,6),true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(lochierarchy,ByteType,true)StructField(rank_within_parent,IntegerType,true)
+
+===========================================
+Query q37 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2] TPCDS.ITEM
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(i_item_desc,StringType,true)StructField(i_current_price,DecimalType(38,18),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(i_item_desc,StringType,true)StructField(i_current_price,DecimalType(38,18),true)
+
+===========================================
+Query q38 validation failed:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : RelationV2[none#0L] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(count(1),LongType,false)
+    non-push : StructField(count(1),LongType,true)
+  values in row 0, column 0 don't match
+    push : push_value=0.0
+    non-push : nonPushValue=107.0
+
+===========================================
+Query q39-1 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#7 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#9 ASC NULLS FIRST], true
++- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9] TPCDS.INVENTORY
+
+  Warning: Schema's are different
+    push : StructField(w_warehouse_sk,DecimalType(38,18),false)StructField(i_item_sk,DecimalType(38,18),false)StructField(d_moy,DecimalType(38,18),true)StructField(mean,DecimalType(38,22),true)StructField(cov,DoubleType,true)StructField(w_warehouse_sk_2,DecimalType(38,18),false)StructField(i_item_sk_2,DecimalType(38,18),false)StructField(d_moy_2,DecimalType(38,18),true)StructField(mean_2,DecimalType(38,22),true)StructField(cov_2,DoubleType,true)
+    non-push : StructField(w_warehouse_sk,DecimalType(38,18),true)StructField(i_item_sk,DecimalType(38,18),true)StructField(d_moy,DecimalType(38,18),true)StructField(mean,DecimalType(38,22),true)StructField(cov,DoubleType,true)StructField(w_warehouse_sk_2,DecimalType(38,18),true)StructField(i_item_sk_2,DecimalType(38,18),true)StructField(d_moy_2,DecimalType(38,18),true)StructField(mean_2,DecimalType(38,22),true)StructField(cov_2,DoubleType,true)
+
+===========================================
+Query q39-2 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#7 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#9 ASC NULLS FIRST], true
++- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9] TPCDS.INVENTORY
+
+  Warning: Schema's are different
+    push : StructField(w_warehouse_sk,DecimalType(38,18),false)StructField(i_item_sk,DecimalType(38,18),false)StructField(d_moy,DecimalType(38,18),true)StructField(mean,DecimalType(38,22),true)StructField(cov,DoubleType,true)StructField(w_warehouse_sk_2,DecimalType(38,18),false)StructField(i_item_sk_2,DecimalType(38,18),false)StructField(d_moy_2,DecimalType(38,18),true)StructField(mean_2,DecimalType(38,22),true)StructField(cov_2,DoubleType,true)
+    non-push : StructField(w_warehouse_sk,DecimalType(38,18),true)StructField(i_item_sk,DecimalType(38,18),true)StructField(d_moy,DecimalType(38,18),true)StructField(mean,DecimalType(38,22),true)StructField(cov,DoubleType,true)StructField(w_warehouse_sk_2,DecimalType(38,18),true)StructField(i_item_sk_2,DecimalType(38,18),true)StructField(d_moy_2,DecimalType(38,18),true)StructField(mean_2,DecimalType(38,22),true)StructField(cov_2,DoubleType,true)
+
+===========================================
+Query q40 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.CATALOG_SALES
+
+  Warning: Schema's are different
+    push : StructField(w_state,StringType,true)StructField(i_item_id,StringType,false)StructField(sales_before,DecimalType(38,18),true)StructField(sales_after,DecimalType(38,18),true)
+    non-push : StructField(w_state,StringType,true)StructField(i_item_id,StringType,true)StructField(sales_before,DecimalType(38,18),true)StructField(sales_after,DecimalType(38,18),true)
+
+===========================================
+Query q41 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0] TPCDS.ITEM
+
+
+===========================================
+Query q42 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#3 DESC NULLS LAST, none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.DATE_DIM
+
+
+===========================================
+Query q43 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST, none#6 ASC NULLS FIRST, none#7 ASC NULLS FIRST, none#8 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8] TPCDS.DATE_DIM
+
+  Warning: Schema's are different
+    push : StructField(s_store_name,StringType,true)StructField(s_store_id,StringType,false)StructField(sun_sales,DecimalType(38,18),true)StructField(mon_sales,DecimalType(38,18),true)StructField(tue_sales,DecimalType(38,18),true)StructField(wed_sales,DecimalType(38,18),true)StructField(thu_sales,DecimalType(38,18),true)StructField(fri_sales,DecimalType(38,18),true)StructField(sat_sales,DecimalType(38,18),true)
+    non-push : StructField(s_store_name,StringType,true)StructField(s_store_id,StringType,true)StructField(sun_sales,DecimalType(38,18),true)StructField(mon_sales,DecimalType(38,18),true)StructField(tue_sales,DecimalType(38,18),true)StructField(wed_sales,DecimalType(38,18),true)StructField(thu_sales,DecimalType(38,18),true)StructField(fri_sales,DecimalType(38,18),true)StructField(sat_sales,DecimalType(38,18),true)
+
+===========================================
+Query q44 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : 'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [none#0 ASC NULLS FIRST], true
+      +- 'Project [none#0, none#2 AS #0, none#4 AS #1]
+         +- 'Join Inner, (none#1 = none#3)
+            :- 'Project [none#1, none#2, none#4]
+            :  +- 'Join Inner, (none#0 = none#3)
+            :     :- 'Project [none#0, none#1, none#2]
+            :     :  +- 'Join Inner, (none#1 = none#3)
+            :     :     :- !Project [none#0, none#2]
+            :     :     :  +- !Filter ((11 > none#2) AND isnotnull(none#2))
+            :     :     :     +- Window [rank(none#1) windowspecdefinition(none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1 ASC NULLS FIRST]
+            :     :     :        +- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+            :     :     +- !Project [none#0, none#2]
+            :     :        +- !Filter ((11 > none#2) AND isnotnull(none#2))
+            :     :           +- Window [rank(none#1) windowspecdefinition(none#1 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1 DESC NULLS LAST]
+            :     :              +- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+            :     +- RelationV2[none#0, none#1] TPCDS.ITEM
+            +- RelationV2[none#0, none#1] TPCDS.ITEM
+
+
+===========================================
+Query q45 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : 'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- 'Aggregate [none#2, none#1], [none#2, none#1, sum(none#0) AS #0]
+         +- 'Project [none#0, none#1, none#2]
+            +- 'Filter (substr(none#2, 1, 5) IN (85460,83405,85392,81792,86475,86197,85669,88274,80348) OR none#4)
+               +- 'Join ExistenceJoin(exists#14854), (none#3 = none#4)
+                  :- RelationV2[none#0, none#1, none#2, none#3] TPCDS.WEB_SALES
+                  +- RelationV2[none#0] TPCDS.ITEM
+
+
+===========================================
+Query q46 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(c_last_name,StringType,true)StructField(c_first_name,StringType,true)StructField(ca_city,StringType,true)StructField(bought_city,StringType,true)StructField(ss_ticket_number,DecimalType(38,18),false)StructField(amt,DecimalType(38,18),true)StructField(profit,DecimalType(38,18),true)
+    non-push : StructField(c_last_name,StringType,true)StructField(c_first_name,StringType,true)StructField(ca_city,StringType,true)StructField(bought_city,StringType,true)StructField(ss_ticket_number,DecimalType(38,18),true)StructField(amt,DecimalType(38,18),true)StructField(profit,DecimalType(38,18),true)
+
+===========================================
+Query q47 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : 'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [CheckOverflow((cast(none#7 as decimal(38,17)) - cast(none#6 as decimal(38,17))), DecimalType(38,17), true) ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
+      +- 'Project [none#0, none#1, none#2, none#3, none#4, none#5, none#7, none#6, none#9 AS #0, none#14 AS #1]
+         +- 'Join Inner, (((((none#3 = none#13) AND (none#0 = none#10)) AND (none#1 = none#11)) AND ((none#15 - 1) = none#8)) AND (none#2 = none#12))
+            :- 'Project [none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#13]
+            :  +- 'Join Inner, (((((none#0 = none#9) AND (none#2 = none#11)) AND (none#3 = none#12)) AND ((1 + none#14) = none#8)) AND (none#1 = none#10))
+            :     :- !Filter ((((((0.100000 < CASE WHEN (0E-22 < none#7) THEN CheckOverflow((cast(abs(CheckOverflow((cast(none#6 as decimal(38,17)) - cast(none#7 as decimal(38,17))), DecimalType(38,17), true)) as decimal(38,22)) / none#7), DecimalType(38,6), true) ELSE null END) AND isnotnull(none#8)) AND (0E-22 < none#7)) AND isnotnull(none#4)) AND isnotnull(none#7)) AND (1999.000000000000000000 = none#4))
+            :     :  +- Window [rank(none#4, none#5) windowspecdefinition(none#0, none#1, none#2, none#3, none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0, none#1, none#2, none#3], [none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST]
+            :     :     +- !Project [none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#8]
+            :     :        +- Window [avg(none#7) windowspecdefinition(none#0, none#1, none#2, none#3, none#4, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#0, none#1, none#2, none#3, none#4]
+            :     :           +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.ITEM
+            :     +- !Project [none#0, none#1, none#2, none#3, none#6, none#7]
+            :        +- !Filter isnotnull(none#7)
+            :           +- Window [rank(none#4, none#5) windowspecdefinition(none#0, none#1, none#2, none#3, none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0, none#1, none#2, none#3], [none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST]
+            :              +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.ITEM
+            +- !Project [none#0, none#1, none#2, none#3, none#6, none#7]
+               +- !Filter isnotnull(none#7)
+                  +- Window [rank(none#4, none#5) windowspecdefinition(none#0, none#1, none#2, none#3, none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0, none#1, none#2, none#3], [none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST]
+                     +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.ITEM
+
+
+===========================================
+Query q48 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : RelationV2[none#0] TPCDS.STORE_SALES
+
+
+===========================================
+Query q49 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST], true
+      +- !Aggregate [none#0, none#1, none#2, none#3, none#4], [none#0, none#1, none#2, none#3, none#4]
+         +- Union false, false
+            :- !Project [web AS #0, none#0, none#1, none#3, none#4]
+            :  +- !Filter ((10 >= none#3) OR (10 >= none#4))
+            :     +- Window [rank(none#2) windowspecdefinition(none#2 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#2 ASC NULLS FIRST]
+            :        +- Window [rank(none#1) windowspecdefinition(none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1 ASC NULLS FIRST]
+            :           +- RelationV2[none#0, none#1, none#2] TPCDS.WEB_SALES
+            :- !Project [catalog AS #0, none#0, none#1, none#3, none#4]
+            :  +- !Filter ((10 >= none#3) OR (10 >= none#4))
+            :     +- Window [rank(none#2) windowspecdefinition(none#2 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#2 ASC NULLS FIRST]
+            :        +- Window [rank(none#1) windowspecdefinition(none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1 ASC NULLS FIRST]
+            :           +- RelationV2[none#0, none#1, none#2] TPCDS.CATALOG_SALES
+            +- !Project [store AS #0, none#0, none#1, none#3, none#4]
+               +- !Filter ((10 >= none#3) OR (10 >= none#4))
+                  +- Window [rank(none#2) windowspecdefinition(none#2 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#2 ASC NULLS FIRST]
+                     +- Window [rank(none#1) windowspecdefinition(none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1 ASC NULLS FIRST]
+                        +- RelationV2[none#0, none#1, none#2] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(channel,StringType,false)StructField(item,DecimalType(38,18),false)StructField(return_ratio,DecimalType(35,20),true)StructField(return_rank,IntegerType,true)StructField(currency_rank,IntegerType,true)
+    non-push : StructField(channel,StringType,true)StructField(item,DecimalType(38,18),true)StructField(return_ratio,DecimalType(35,20),true)StructField(return_rank,IntegerType,true)StructField(currency_rank,IntegerType,true)
+
+===========================================
+Query q50 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST, none#6 ASC NULLS FIRST, none#7 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#9 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10L, none#11L, none#12L, none#13L, none#14L] TPCDS.STORE_SALES
+
+
+===========================================
+Query q51 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : 'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- 'Filter ((isnotnull(none#5) AND (none#4 > none#5)) AND isnotnull(none#4))
+         +- 'Window [max(none#2) windowspecdefinition(none#0, none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0, max(none#3) windowspecdefinition(none#0, none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #1], [none#0], [none#1 ASC NULLS FIRST]
+            +- 'Project [CASE WHEN isnotnull(none#0) THEN none#0 ELSE none#3 END AS #0, CASE WHEN isnotnull(none#1) THEN none#1 ELSE none#4 END AS #1, none#2 AS #2, none#5 AS #3]
+               +- 'Join FullOuter, ((none#1 = none#4) AND (none#0 = none#3))
+                  :- !Project [none#0, none#1, none#4]
+                  :  +- Window [sum(none#2) windowspecdefinition(none#3, none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#3], [none#1 ASC NULLS FIRST]
+                  :     +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.WEB_SALES
+                  +- !Project [none#0, none#1, none#4]
+                     +- Window [sum(none#2) windowspecdefinition(none#3, none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#3], [none#1 ASC NULLS FIRST]
+                        +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.STORE_SALES
+
+
+===========================================
+Query q52 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#3 DESC NULLS LAST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.DATE_DIM
+
+
+===========================================
+Query q53 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- !Sort [none#2 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#0 ASC NULLS FIRST], true
+      +- !Project [none#0, none#1, none#3]
+         +- !Filter (0.100000 < CASE WHEN (0E-22 < none#3) THEN CheckOverflow((cast(abs(CheckOverflow((cast(none#1 as decimal(38,17)) - cast(none#3 as decimal(38,17))), DecimalType(38,17), true)) as decimal(38,22)) / none#3), DecimalType(38,6), true) ELSE null END)
+            +- Window [avg(none#2) windowspecdefinition(none#0, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#0]
+               +- RelationV2[none#0, none#1, none#2] TPCDS.ITEM
+
+
+===========================================
+Query q54 validation failed:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1L ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1L, none#2] TPCDS.CATALOG_SALES
+
+  Warning: Schema's are different
+    push : StructField(segment,IntegerType,true)StructField(num_customers,LongType,false)StructField(segment_base,IntegerType,true)
+    non-push : StructField(segment,IntegerType,true)StructField(num_customers,LongType,true)StructField(segment_base,IntegerType,true)
+  values in row 0, column 2 don't match
+    push : push_value=593017.0
+    non-push : nonPushValue=593000.0
+
+===========================================
+Query q55 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#2 DESC NULLS LAST, none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2] TPCDS.DATE_DIM
+
+
+===========================================
+Query q56 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(total_sales,DecimalType(38,18),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(total_sales,DecimalType(38,18),true)
+
+===========================================
+Query q57 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : 'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [CheckOverflow((cast(none#6 as decimal(38,17)) - cast(none#5 as decimal(38,17))), DecimalType(38,17), true) ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
+      +- 'Project [none#0, none#1, none#2, none#3, none#4, none#6, none#5, none#8 AS #0, none#12 AS #1]
+         +- 'Join Inner, ((((none#0 = none#9) AND (none#2 = none#11)) AND ((none#13 - 1) = none#7)) AND (none#1 = none#10))
+            :- 'Project [none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#11]
+            :  +- 'Join Inner, ((((none#0 = none#8) AND (none#1 = none#9)) AND ((1 + none#12) = none#7)) AND (none#2 = none#10))
+            :     :- !Filter (((((isnotnull(none#7) AND (CASE WHEN (0E-22 < none#6) THEN CheckOverflow((cast(abs(CheckOverflow((cast(none#5 as decimal(38,17)) - cast(none#6 as decimal(38,17))), DecimalType(38,17), true)) as decimal(38,22)) / none#6), DecimalType(38,6), true) ELSE null END > 0.100000)) AND (1999.000000000000000000 = none#3)) AND isnotnull(none#3)) AND isnotnull(none#6)) AND (0E-22 < none#6))
+            :     :  +- Window [rank(none#3, none#4) windowspecdefinition(none#0, none#1, none#2, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0, none#1, none#2], [none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST]
+            :     :     +- !Project [none#0, none#1, none#2, none#3, none#4, none#5, none#7]
+            :     :        +- Window [avg(none#6) windowspecdefinition(none#0, none#1, none#2, none#3, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#0, none#1, none#2, none#3]
+            :     :           +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.ITEM
+            :     +- !Project [none#0, none#1, none#2, none#5, none#6]
+            :        +- !Filter isnotnull(none#6)
+            :           +- Window [rank(none#3, none#4) windowspecdefinition(none#0, none#1, none#2, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0, none#1, none#2], [none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST]
+            :              +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.ITEM
+            +- !Project [none#0, none#1, none#2, none#5, none#6]
+               +- !Filter isnotnull(none#6)
+                  +- Window [rank(none#3, none#4) windowspecdefinition(none#0, none#1, none#2, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0, none#1, none#2], [none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST]
+                     +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.ITEM
+
+
+===========================================
+Query q58 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(item_id,StringType,false)StructField(ss_item_rev,DecimalType(38,18),true)StructField(ss_dev,DecimalType(38,6),true)StructField(cs_item_rev,DecimalType(38,18),true)StructField(cs_dev,DecimalType(38,6),true)StructField(ws_item_rev,DecimalType(38,18),true)StructField(ws_dev,DecimalType(38,6),true)StructField(average,DecimalType(38,16),true)
+    non-push : StructField(item_id,StringType,true)StructField(ss_item_rev,DecimalType(38,18),true)StructField(ss_dev,DecimalType(38,6),true)StructField(cs_item_rev,DecimalType(38,18),true)StructField(cs_dev,DecimalType(38,6),true)StructField(ws_item_rev,DecimalType(38,18),true)StructField(ws_dev,DecimalType(38,6),true)StructField(average,DecimalType(38,16),true)
+
+===========================================
+Query q59 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(s_store_name1,StringType,true)StructField(s_store_id1,StringType,false)StructField(d_week_seq1,DecimalType(38,18),true)StructField((sun_sales1 / sun_sales2),DecimalType(38,6),true)StructField((mon_sales1 / mon_sales2),DecimalType(38,6),true)StructField((tue_sales1 / tue_sales2),DecimalType(38,6),true)StructField((wed_sales1 / wed_sales2),DecimalType(38,6),true)StructField((thu_sales1 / thu_sales2),DecimalType(38,6),true)StructField((fri_sales1 / fri_sales2),DecimalType(38,6),true)StructField((sat_sales1 / sat_sales2),DecimalType(38,6),true)
+    non-push : StructField(s_store_name1,StringType,true)StructField(s_store_id1,StringType,true)StructField(d_week_seq1,DecimalType(38,18),true)StructField((sun_sales1 / sun_sales2),DecimalType(38,6),true)StructField((mon_sales1 / mon_sales2),DecimalType(38,6),true)StructField((tue_sales1 / tue_sales2),DecimalType(38,6),true)StructField((wed_sales1 / wed_sales2),DecimalType(38,6),true)StructField((thu_sales1 / thu_sales2),DecimalType(38,6),true)StructField((fri_sales1 / fri_sales2),DecimalType(38,6),true)StructField((sat_sales1 / sat_sales2),DecimalType(38,6),true)
+
+===========================================
+Query q60 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(total_sales,DecimalType(38,18),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(total_sales,DecimalType(38,18),true)
+
+===========================================
+Query q61 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2] TPCDS.STORE_SALES
+
+
+===========================================
+Query q62 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3L, none#4L, none#5L, none#6L, none#7L] TPCDS.WEB_SALES
+
+
+===========================================
+Query q63 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- !Sort [none#0 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- !Project [none#0, none#1, none#3]
+         +- !Filter (0.100000 < CASE WHEN (0E-22 < none#3) THEN CheckOverflow((cast(abs(CheckOverflow((cast(none#1 as decimal(38,17)) - cast(none#3 as decimal(38,17))), DecimalType(38,17), true)) as decimal(38,22)) / none#3), DecimalType(38,6), true) ELSE null END)
+            +- Window [avg(none#2) windowspecdefinition(none#0, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#0]
+               +- RelationV2[none#0, none#1, none#2] TPCDS.ITEM
+
+
+===========================================
+Query q64 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#20L ASC NULLS FIRST], true
++- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10, none#11, none#12L, none#13, none#14, none#15, none#16, none#17, none#18, none#19, none#20L] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(product_name,StringType,true)StructField(store_name,StringType,true)StructField(store_zip,StringType,true)StructField(b_street_number,StringType,true)StructField(b_street_name,StringType,true)StructField(b_city,StringType,true)StructField(b_zip,StringType,true)StructField(c_street_number,StringType,true)StructField(c_street_name,StringType,true)StructField(c_city,StringType,true)StructField(c_zip,StringType,true)StructField(syear,DecimalType(38,18),true)StructField(cnt,LongType,false)StructField(s11,DecimalType(38,18),true)StructField(s21,DecimalType(38,18),true)StructField(s31,DecimalType(38,18),true)StructField(s12,DecimalType(38,18),true)StructField(s22,DecimalType(38,18),true)StructField(s32,DecimalType(38,18),true)StructField(syear_2,DecimalType(38,18),true)StructField(cnt_2,LongType,false)
+    non-push : StructField(product_name,StringType,true)StructField(store_name,StringType,true)StructField(store_zip,StringType,true)StructField(b_street_number,StringType,true)StructField(b_street_name,StringType,true)StructField(b_city,StringType,true)StructField(b_zip,StringType,true)StructField(c_street_number,StringType,true)StructField(c_street_name,StringType,true)StructField(c_city,StringType,true)StructField(c_zip,StringType,true)StructField(syear,DecimalType(38,18),true)StructField(cnt,LongType,true)StructField(s11,DecimalType(38,18),true)StructField(s21,DecimalType(38,18),true)StructField(s31,DecimalType(38,18),true)StructField(s12,DecimalType(38,18),true)StructField(s22,DecimalType(38,18),true)StructField(s32,DecimalType(38,18),true)StructField(syear_2,DecimalType(38,18),true)StructField(cnt_2,LongType,true)
+
+===========================================
+Query q65 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.STORE
+
+
+===========================================
+Query q66 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10, none#11, none#12, none#13, none#14, none#15, none#16, none#17, none#18, none#19, none#20, none#21, none#22, none#23, ... 20 more fields] TPCDS.WEB_SALES
+
+  Warning: Schema's are different
+    push : StructField(w_warehouse_name,StringType,true)StructField(w_warehouse_sq_ft,DecimalType(38,18),true)StructField(w_city,StringType,true)StructField(w_county,StringType,true)StructField(w_state,StringType,true)StructField(w_country,StringType,true)StructField(ship_carriers,StringType,false)StructField(year,DecimalType(38,18),true)StructField(jan_sales,DecimalType(38,6),true)StructField(feb_sales,DecimalType(38,6),true)StructField(mar_sales,DecimalType(38,6),true)StructField(apr_sales,DecimalType(38,6),true)StructField(may_sales,DecimalType(38,6),true)StructField(jun_sales,DecimalType(38,6),true)StructField(jul_sales,DecimalType(38,6),true)StructField(aug_sales,DecimalType(38,6),true)StructField(sep_sales,DecimalType(38,6),true)StructField(oct_sales,DecimalType(38,6),true)StructField(nov_sales,DecimalType(38,6),true)StructField(dec_sales,DecimalType(38,6),true)StructField(jan_sales_per_sq_foot,DecimalType(38,6),true)StructField(feb_sales_per_sq_foot,DecimalType(38,6),true)StructField(mar_sales_per_sq_foot,DecimalType(38,6),true)StructField(apr_sales_per_sq_foot,DecimalType(38,6),true)StructField(may_sales_per_sq_foot,DecimalType(38,6),true)StructField(jun_sales_per_sq_foot,DecimalType(38,6),true)StructField(jul_sales_per_sq_foot,DecimalType(38,6),true)StructField(aug_sales_per_sq_foot,DecimalType(38,6),true)StructField(sep_sales_per_sq_foot,DecimalType(38,6),true)StructField(oct_sales_per_sq_foot,DecimalType(38,6),true)StructField(nov_sales_per_sq_foot,DecimalType(38,6),true)StructField(dec_sales_per_sq_foot,DecimalType(38,6),true)StructField(jan_net,DecimalType(38,6),true)StructField(feb_net,DecimalType(38,6),true)StructField(mar_net,DecimalType(38,6),true)StructField(apr_net,DecimalType(38,6),true)StructField(may_net,DecimalType(38,6),true)StructField(jun_net,DecimalType(38,6),true)StructField(jul_net,DecimalType(38,6),true)StructField(aug_net,DecimalType(38,6),true)StructField(sep_net,DecimalType(38,6),true)StructField(oct_net,DecimalType(38,6),true)StructField(nov_net,DecimalType(38,6),true)StructField(dec_net,DecimalType(38,6),true)
+    non-push : StructField(w_warehouse_name,StringType,true)StructField(w_warehouse_sq_ft,DecimalType(38,18),true)StructField(w_city,StringType,true)StructField(w_county,StringType,true)StructField(w_state,StringType,true)StructField(w_country,StringType,true)StructField(ship_carriers,StringType,true)StructField(year,DecimalType(38,18),true)StructField(jan_sales,DecimalType(38,6),true)StructField(feb_sales,DecimalType(38,6),true)StructField(mar_sales,DecimalType(38,6),true)StructField(apr_sales,DecimalType(38,6),true)StructField(may_sales,DecimalType(38,6),true)StructField(jun_sales,DecimalType(38,6),true)StructField(jul_sales,DecimalType(38,6),true)StructField(aug_sales,DecimalType(38,6),true)StructField(sep_sales,DecimalType(38,6),true)StructField(oct_sales,DecimalType(38,6),true)StructField(nov_sales,DecimalType(38,6),true)StructField(dec_sales,DecimalType(38,6),true)StructField(jan_sales_per_sq_foot,DecimalType(38,6),true)StructField(feb_sales_per_sq_foot,DecimalType(38,6),true)StructField(mar_sales_per_sq_foot,DecimalType(38,6),true)StructField(apr_sales_per_sq_foot,DecimalType(38,6),true)StructField(may_sales_per_sq_foot,DecimalType(38,6),true)StructField(jun_sales_per_sq_foot,DecimalType(38,6),true)StructField(jul_sales_per_sq_foot,DecimalType(38,6),true)StructField(aug_sales_per_sq_foot,DecimalType(38,6),true)StructField(sep_sales_per_sq_foot,DecimalType(38,6),true)StructField(oct_sales_per_sq_foot,DecimalType(38,6),true)StructField(nov_sales_per_sq_foot,DecimalType(38,6),true)StructField(dec_sales_per_sq_foot,DecimalType(38,6),true)StructField(jan_net,DecimalType(38,6),true)StructField(feb_net,DecimalType(38,6),true)StructField(mar_net,DecimalType(38,6),true)StructField(apr_net,DecimalType(38,6),true)StructField(may_net,DecimalType(38,6),true)StructField(jun_net,DecimalType(38,6),true)StructField(jul_net,DecimalType(38,6),true)StructField(aug_net,DecimalType(38,6),true)StructField(sep_net,DecimalType(38,6),true)StructField(oct_net,DecimalType(38,6),true)StructField(nov_net,DecimalType(38,6),true)StructField(dec_net,DecimalType(38,6),true)
+
+===========================================
+Query q67 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- !Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST, none#6 ASC NULLS FIRST, none#7 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#9 ASC NULLS FIRST], true
+      +- !Filter (isnotnull(none#9) AND (100 >= none#9))
+         +- Window [rank(none#8) windowspecdefinition(none#0, none#8 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0], [none#8 DESC NULLS LAST]
+            +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8] TPCDS.STORE_SALES
+
+
+===========================================
+Query q68 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#4 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(c_last_name,StringType,true)StructField(c_first_name,StringType,true)StructField(ca_city,StringType,true)StructField(bought_city,StringType,true)StructField(ss_ticket_number,DecimalType(38,18),false)StructField(extended_price,DecimalType(38,18),true)StructField(extended_tax,DecimalType(38,18),true)StructField(list_price,DecimalType(38,18),true)
+    non-push : StructField(c_last_name,StringType,true)StructField(c_first_name,StringType,true)StructField(ca_city,StringType,true)StructField(bought_city,StringType,true)StructField(ss_ticket_number,DecimalType(38,18),true)StructField(extended_price,DecimalType(38,18),true)StructField(extended_tax,DecimalType(38,18),true)StructField(list_price,DecimalType(38,18),true)
+
+===========================================
+Query q69 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#6 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3L, none#4, none#5L, none#6, none#7L] TPCDS.CUSTOMER
+
+  Warning: Schema's are different
+    push : StructField(cd_gender,StringType,true)StructField(cd_marital_status,StringType,true)StructField(cd_education_status,StringType,true)StructField(cnt1,LongType,false)StructField(cd_purchase_estimate,DecimalType(38,18),true)StructField(cnt2,LongType,false)StructField(cd_credit_rating,StringType,true)StructField(cnt3,LongType,false)
+    non-push : StructField(cd_gender,StringType,true)StructField(cd_marital_status,StringType,true)StructField(cd_education_status,StringType,true)StructField(cnt1,LongType,true)StructField(cd_purchase_estimate,DecimalType(38,18),true)StructField(cnt2,LongType,true)StructField(cd_credit_rating,StringType,true)StructField(cnt3,LongType,true)
+
+===========================================
+Query q70 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : 'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [none#3 DESC NULLS LAST, CASE WHEN (none#3 = 0) THEN none#1 END ASC NULLS FIRST, none#4 ASC NULLS FIRST], true
+      +- 'Project [none#0, none#1, none#2, none#3, none#7]
+         +- 'Window [rank(none#6) windowspecdefinition(none#4, none#5, none#6 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#4, none#5], [none#6 DESC NULLS LAST]
+            +- 'Aggregate [none#1, none#2, none#3L], [sum(none#0) AS #0, none#1, none#2, (cast((shiftright(none#3L, 1) & 1) as tinyint) + cast((shiftright(none#3L, 0) & 1) as tinyint)) AS #1, (cast((shiftright(none#3L, 1) & 1) as tinyint) + cast((shiftright(none#3L, 0) & 1) as tinyint)) AS #2, CASE WHEN (0 = cast((shiftright(none#3L, 0) & 1) as tinyint)) THEN none#1 END AS #3, sum(none#0) AS #4]
+               +- 'Expand [List(none#0, none#1, none#2, 0), List(none#0, none#1, null, 1), List(none#0, null, null, 3)], [none#0, none#0, none#1, none#2L]
+                  +- 'Project [none#1, none#4, none#3]
+                     +- 'Join Inner, (none#0 = none#2)
+                        :- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+                        +- 'Join LeftSemi, (none#2 = none#3)
+                           :- RelationV2[none#0, none#1, none#2] TPCDS.STORE
+                           +- Project [none#0]
+                              +- !Filter ((5 >= none#3) AND isnotnull(none#3))
+                                 +- Window [rank(none#2) windowspecdefinition(none#1, none#2 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1], [none#2 DESC NULLS LAST]
+                                    +- RelationV2[none#0, none#1, none#2] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(total_sum,DecimalType(38,18),true)StructField(s_state,StringType,true)StructField(s_county,StringType,true)StructField(lochierarchy,ByteType,false)StructField(rank_within_parent,IntegerType,true)
+    non-push : StructField(total_sum,DecimalType(38,18),true)StructField(s_state,StringType,true)StructField(s_county,StringType,true)StructField(lochierarchy,ByteType,true)StructField(rank_within_parent,IntegerType,true)
+
+===========================================
+Query q71 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#4 DESC NULLS LAST, none#0 ASC NULLS FIRST], true
++- RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.ITEM
+
+
+===========================================
+Query q72 validation failed:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#5L DESC NULLS LAST, none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3L, none#4L, none#5L] TPCDS.CATALOG_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_desc,StringType,true)StructField(w_warehouse_name,StringType,true)StructField(d_week_seq,DecimalType(38,18),true)StructField(no_promo,LongType,true)StructField(promo,LongType,true)StructField(total_cnt,LongType,false)
+    non-push : StructField(i_item_desc,StringType,true)StructField(w_warehouse_name,StringType,true)StructField(d_week_seq,DecimalType(38,18),true)StructField(no_promo,LongType,true)StructField(promo,LongType,true)StructField(total_cnt,LongType,true)
+  values in row 18, column 1 don't match
+    push : value=Bad cards must make.
+    non-push : value=null
+  values in row 18, column 2 don't match
+    push : push_value=5203.0
+    non-push : nonPushValue=5206.0
+  values in row 19, column 1 don't match
+    push : push_value=Doors canno
+    non-push : nonPushValue=Bad cards must make.
+  values in row 20, column 1 don't match
+    push : push_value=null
+    non-push : nonPushValue=Doors canno
+  values in row 20, column 2 don't match
+    push : push_value=5206.0
+    non-push : nonPushValue=5203.0
+
+===========================================
+Query q73 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#5L DESC NULLS LAST, none#0 ASC NULLS FIRST], true
++- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5L] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(c_last_name,StringType,true)StructField(c_first_name,StringType,true)StructField(c_salutation,StringType,true)StructField(c_preferred_cust_flag,StringType,true)StructField(ss_ticket_number,DecimalType(38,18),false)StructField(cnt,LongType,false)
+    non-push : StructField(c_last_name,StringType,true)StructField(c_first_name,StringType,true)StructField(c_salutation,StringType,true)StructField(c_preferred_cust_flag,StringType,true)StructField(ss_ticket_number,DecimalType(38,18),true)StructField(cnt,LongType,true)
+
+===========================================
+Query q74 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#0 ASC NULLS FIRST, none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2] TPCDS.CUSTOMER
+
+  Warning: Schema's are different
+    push : StructField(customer_id,StringType,false)StructField(customer_first_name,StringType,true)StructField(customer_last_name,StringType,true)
+    non-push : StructField(customer_id,StringType,true)StructField(customer_first_name,StringType,true)StructField(customer_last_name,StringType,true)
+
+===========================================
+Query q75 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#8 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9] TPCDS.CATALOG_SALES
+
+
+===========================================
+Query q76 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5L, none#6] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(channel,StringType,false)StructField(col_name,StringType,false)StructField(d_year,DecimalType(38,18),true)StructField(d_qoy,DecimalType(38,18),true)StructField(i_category,StringType,true)StructField(sales_cnt,LongType,false)StructField(sales_amt,DecimalType(38,18),true)
+    non-push : StructField(channel,StringType,true)StructField(col_name,StringType,true)StructField(d_year,DecimalType(38,18),true)StructField(d_qoy,DecimalType(38,18),true)StructField(i_category,StringType,true)StructField(sales_cnt,LongType,true)StructField(sales_amt,DecimalType(38,18),true)
+
+===========================================
+Query q77 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.STORE_SALES
+
+
+===========================================
+Query q78 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- !Project [none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9]
+      +- !Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#10 DESC NULLS LAST, none#11 DESC NULLS LAST, none#12 DESC NULLS LAST, none#7 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#9 ASC NULLS FIRST, round(CheckOverflow((none#10 / cast(coalesce(CheckOverflow((cast(none#14 as decimal(38,17)) + cast(none#13 as decimal(38,17))), DecimalType(38,17), true), 1.00000000000000000) as decimal(38,18))), DecimalType(38,6), true), 2) ASC NULLS FIRST], true
+         +- Project [none#0, none#1, none#2, round(CheckOverflow((none#3 / cast(CheckOverflow((cast(coalesce(none#6, 0E-18) as decimal(38,17)) + cast(coalesce(none#12, 0E-18) as decimal(38,17))), DecimalType(38,17), true) as decimal(38,18))), DecimalType(38,6), true), 2) AS #0, none#3 AS #1, none#4 AS #2, none#5 AS #3, CheckOverflow((cast(coalesce(none#6, 0E-18) as decimal(38,17)) + cast(coalesce(none#12, 0E-18) as decimal(38,17))), DecimalType(38,17), true) AS #4, CheckOverflow((cast(coalesce(none#7, 0E-18) as decimal(38,17)) + cast(coalesce(none#13, 0E-18) as decimal(38,17))), DecimalType(38,17), true) AS #5, CheckOverflow((cast(coalesce(none#8, 0E-18) as decimal(38,17)) + cast(coalesce(none#14, 0E-18) as decimal(38,17))), DecimalType(38,17), true) AS #6, none#3, none#4, none#5, none#6, none#12]
+            +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10, none#11, none#12, none#13, none#14] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(ss_sold_year,DecimalType(38,18),true)StructField(ss_item_sk,DecimalType(38,18),false)StructField(ss_customer_sk,DecimalType(38,18),true)StructField(ratio,DecimalType(38,2),true)StructField(store_qty,DecimalType(38,18),true)StructField(store_wholesale_cost,DecimalType(38,18),true)StructField(store_sales_price,DecimalType(38,18),true)StructField(other_chan_qty,DecimalType(38,17),true)StructField(other_chan_wholesale_cost,DecimalType(38,17),true)StructField(other_chan_sales_price,DecimalType(38,17),true)
+    non-push : StructField(ss_sold_year,DecimalType(38,18),true)StructField(ss_item_sk,DecimalType(38,18),true)StructField(ss_customer_sk,DecimalType(38,18),true)StructField(ratio,DecimalType(38,2),true)StructField(store_qty,DecimalType(38,18),true)StructField(store_wholesale_cost,DecimalType(38,18),true)StructField(store_sales_price,DecimalType(38,18),true)StructField(other_chan_qty,DecimalType(38,17),true)StructField(other_chan_wholesale_cost,DecimalType(38,17),true)StructField(other_chan_sales_price,DecimalType(38,17),true)
+
+===========================================
+Query q79 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Project [none#0, none#1, none#2, none#3, none#4, none#5]
+      +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, substr(none#6, 1, 30) ASC NULLS FIRST, none#5 ASC NULLS FIRST], true
+         +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(c_last_name,StringType,true)StructField(c_first_name,StringType,true)StructField(substr(s_city, 1, 30),StringType,true)StructField(ss_ticket_number,DecimalType(38,18),false)StructField(amt,DecimalType(38,18),true)StructField(profit,DecimalType(38,18),true)
+    non-push : StructField(c_last_name,StringType,true)StructField(c_first_name,StringType,true)StructField(substr(s_city, 1, 30),StringType,true)StructField(ss_ticket_number,DecimalType(38,18),true)StructField(amt,DecimalType(38,18),true)StructField(profit,DecimalType(38,18),true)
+
+===========================================
+Query q80 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.STORE_SALES
+
+
+===========================================
+Query q81 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST, none#6 ASC NULLS FIRST, none#7 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#9 ASC NULLS FIRST, none#10 ASC NULLS FIRST, none#11 ASC NULLS FIRST, none#12 ASC NULLS FIRST, none#13 ASC NULLS FIRST, none#14 ASC NULLS FIRST, none#15 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10, none#11, none#12, none#13, none#14, none#15] TPCDS.CATALOG_RETURNS
+
+  Warning: Schema's are different
+    push : StructField(c_customer_id,StringType,false)StructField(c_salutation,StringType,true)StructField(c_first_name,StringType,true)StructField(c_last_name,StringType,true)StructField(ca_street_number,StringType,true)StructField(ca_street_name,StringType,true)StructField(ca_street_type,StringType,true)StructField(ca_suite_number,StringType,true)StructField(ca_city,StringType,true)StructField(ca_county,StringType,true)StructField(ca_state,StringType,true)StructField(ca_zip,StringType,true)StructField(ca_country,StringType,true)StructField(ca_gmt_offset,DecimalType(5,2),true)StructField(ca_location_type,StringType,true)StructField(ctr_total_return,DecimalType(38,18),true)
+    non-push : StructField(c_customer_id,StringType,true)StructField(c_salutation,StringType,true)StructField(c_first_name,StringType,true)StructField(c_last_name,StringType,true)StructField(ca_street_number,StringType,true)StructField(ca_street_name,StringType,true)StructField(ca_street_type,StringType,true)StructField(ca_suite_number,StringType,true)StructField(ca_city,StringType,true)StructField(ca_county,StringType,true)StructField(ca_state,StringType,true)StructField(ca_zip,StringType,true)StructField(ca_country,StringType,true)StructField(ca_gmt_offset,DecimalType(5,2),true)StructField(ca_location_type,StringType,true)StructField(ctr_total_return,DecimalType(38,18),true)
+
+===========================================
+Query q82 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2] TPCDS.ITEM
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(i_item_desc,StringType,true)StructField(i_current_price,DecimalType(38,18),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(i_item_desc,StringType,true)StructField(i_current_price,DecimalType(38,18),true)
+
+===========================================
+Query q83 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.STORE_RETURNS
+
+  Warning: Schema's are different
+    push : StructField(item_id,StringType,false)StructField(sr_item_qty,DecimalType(38,18),true)StructField(sr_dev,DecimalType(38,6),true)StructField(cr_item_qty,DecimalType(38,18),true)StructField(cr_dev,DecimalType(38,6),true)StructField(wr_item_qty,DecimalType(38,18),true)StructField(wr_dev,DecimalType(38,6),true)StructField(average,DecimalType(38,15),true)
+    non-push : StructField(item_id,StringType,true)StructField(sr_item_qty,DecimalType(38,18),true)StructField(sr_dev,DecimalType(38,6),true)StructField(cr_item_qty,DecimalType(38,18),true)StructField(cr_dev,DecimalType(38,6),true)StructField(wr_item_qty,DecimalType(38,18),true)StructField(wr_dev,DecimalType(38,6),true)StructField(average,DecimalType(38,15),true)
+
+===========================================
+Query q84 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Project [none#0, none#1]
+      +- Sort [none#2 ASC NULLS FIRST], true
+         +- RelationV2[none#0, none#1, none#2] TPCDS.CUSTOMER
+
+  Warning: Schema's are different
+    push : StructField(customer_id,StringType,false)StructField(customername,StringType,true)
+    non-push : StructField(customer_id,StringType,true)StructField(customername,StringType,true)
+
+===========================================
+Query q85 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.WEB_SALES
+
+
+===========================================
+Query q86 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- !Sort [none#3 DESC NULLS LAST, CASE WHEN (none#3 = 0) THEN none#1 END ASC NULLS FIRST, none#4 ASC NULLS FIRST], true
+      +- !Project [none#0, none#1, none#2, none#3, none#7]
+         +- !Window [rank(none#6) windowspecdefinition(none#4, none#5, none#6 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#4, none#5], [none#6 DESC NULLS LAST]
+            +- Aggregate [none#1, none#2, none#3L], [sum(none#0) AS #0, none#1, none#2, (cast((shiftright(none#3L, 1) & 1) as tinyint) + cast((shiftright(none#3L, 0) & 1) as tinyint)) AS #1, (cast((shiftright(none#3L, 1) & 1) as tinyint) + cast((shiftright(none#3L, 0) & 1) as tinyint)) AS #2, CASE WHEN (0 = cast((shiftright(none#3L, 0) & 1) as tinyint)) THEN none#1 END AS #3, sum(none#0) AS #4]
+               +- RelationV2[none#0, none#1, none#2, none#3L] TPCDS.WEB_SALES
+
+  Warning: Schema's are different
+    push : StructField(total_sum,DecimalType(38,18),true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(lochierarchy,ByteType,false)StructField(rank_within_parent,IntegerType,true)
+    non-push : StructField(total_sum,DecimalType(38,18),true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(lochierarchy,ByteType,true)StructField(rank_within_parent,IntegerType,true)
+
+===========================================
+Query q87 validation failed:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : RelationV2[none#0L] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(count(1),LongType,false)
+    non-push : StructField(count(1),LongType,true)
+  values in row 0, column 0 don't match
+    push : push_value=47555.0
+    non-push : nonPushValue=47298.0
+
+===========================================
+Query q88 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : RelationV2[none#0L, none#1L, none#2L, none#3L, none#4L, none#5L, none#6L, none#7L] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(h8_30_to_9,LongType,false)StructField(h9_to_9_30,LongType,false)StructField(h9_30_to_10,LongType,false)StructField(h10_to_10_30,LongType,false)StructField(h10_30_to_11,LongType,false)StructField(h11_to_11_30,LongType,false)StructField(h11_30_to_12,LongType,false)StructField(h12_to_12_30,LongType,false)
+    non-push : StructField(h8_30_to_9,LongType,true)StructField(h9_to_9_30,LongType,true)StructField(h9_30_to_10,LongType,true)StructField(h10_to_10_30,LongType,true)StructField(h10_30_to_11,LongType,true)StructField(h11_to_11_30,LongType,true)StructField(h11_30_to_12,LongType,true)StructField(h12_to_12_30,LongType,true)
+
+===========================================
+Query q89 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- !Sort [CheckOverflow((cast(none#6 as decimal(38,17)) - cast(none#7 as decimal(38,17))), DecimalType(38,17), true) ASC NULLS FIRST, none#3 ASC NULLS FIRST], true
+      +- !Project [none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#8]
+         +- !Filter (0.100000 < CASE WHEN NOT (0E-22 = none#8) THEN CheckOverflow((cast(abs(CheckOverflow((cast(none#6 as decimal(38,17)) - cast(none#8 as decimal(38,17))), DecimalType(38,17), true)) as decimal(38,22)) / none#8), DecimalType(38,6), true) ELSE null END)
+            +- Window [avg(none#7) windowspecdefinition(none#0, none#2, none#3, none#4, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#0, none#2, none#3, none#4]
+               +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.ITEM
+
+
+===========================================
+Query q90 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0] TPCDS.WEB_SALES
+
+
+===========================================
+Query q91 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#3 DESC NULLS LAST], true
++- RelationV2[none#0, none#1, none#2, none#3] TPCDS.CALL_CENTER
+
+  Warning: Schema's are different
+    push : StructField(Call_Center,StringType,false)StructField(Call_Center_Name,StringType,true)StructField(Manager,StringType,true)StructField(Returns_Loss,DecimalType(38,18),true)
+    non-push : StructField(Call_Center,StringType,true)StructField(Call_Center_Name,StringType,true)StructField(Manager,StringType,true)StructField(Returns_Loss,DecimalType(38,18),true)
+
+===========================================
+Query q92 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0 ASC NULLS FIRST], true
++- RelationV2[none#0] TPCDS.WEB_SALES
+
+
+===========================================
+Query q93 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#1 ASC NULLS FIRST, none#0 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+
+
+===========================================
+Query q94 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : 'Sort [none#0L ASC NULLS FIRST], true
++- 'Aggregate [count(distinct none#0) AS #0L, sum(none#1) AS #1, sum(none#2) AS #2]
+   +- 'Project [none#1, none#2, none#3]
+      +- 'Join Inner, (none#0 = none#4)
+         :- 'Project [none#1, none#2, none#3, none#4]
+         :  +- 'Join Inner, (none#0 = none#5)
+         :     :- 'Project [none#1, none#2, none#3, none#4, none#5]
+         :     :  +- 'Join Inner, (none#0 = none#6)
+         :     :     :- 'Join LeftAnti, (none#3 = none#6)
+         :     :     :  :- 'Project [none#0, none#1, none#2, none#4, none#5, none#6]
+         :     :     :  :  +- 'Join LeftSemi, ((none#4 = none#8) AND NOT (none#3 = none#7))
+         :     :     :  :     :- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.WEB_SALES
+         :     :     :  :     +- RelationV2[none#0, none#1] TPCDS.WEB_SALES
+         :     :     :  +- RelationV2[none#0] TPCDS.WEB_RETURNS
+         :     :     +- RelationV2[none#0] TPCDS.DATE_DIM
+         :     +- RelationV2[none#0] TPCDS.CUSTOMER_ADDRESS
+         +- RelationV2[none#0] TPCDS.WEB_SITE
+
+  Warning: Schema's are different
+    push : StructField(order_count,LongType,false)StructField(total_shipping_cost,DecimalType(38,18),true)StructField(total_net_profit,DecimalType(38,18),true)
+    non-push : StructField(order_count,LongType,true)StructField(total_shipping_cost,DecimalType(38,18),true)StructField(total_net_profit,DecimalType(38,18),true)
+
+===========================================
+Query q95 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0L ASC NULLS FIRST], true
++- RelationV2[none#0L, none#1, none#2] TPCDS.WEB_SALES
+
+  Warning: Schema's are different
+    push : StructField(order_count,LongType,false)StructField(total_shipping_cost,DecimalType(38,18),true)StructField(total_net_profit,DecimalType(38,18),true)
+    non-push : StructField(order_count,LongType,true)StructField(total_shipping_cost,DecimalType(38,18),true)StructField(total_net_profit,DecimalType(38,18),true)
+
+===========================================
+Query q96 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0L ASC NULLS FIRST], true
++- RelationV2[none#0L] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(count(1),LongType,false)
+    non-push : StructField(count(1),LongType,true)
+
+===========================================
+Query q97 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : RelationV2[none#0L, none#1L, none#2L] TPCDS.STORE_SALES
+
+
+===========================================
+Query q98 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : !Sort [none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#6 ASC NULLS FIRST], true
++- !Project [none#0, none#1, none#2, none#3, none#4, none#5, CheckOverflow((cast(CheckOverflow((100.000000000000000000 * none#6), DecimalType(38,14), true) as decimal(38,18)) / none#8), DecimalType(38,6), true) AS #0]
+   +- Window [sum(none#7) windowspecdefinition(none#3, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#3]
+      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.STORE_SALES
+
+  Warning: Schema's are different
+    push : StructField(i_item_id,StringType,false)StructField(i_item_desc,StringType,true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(i_current_price,DecimalType(38,18),true)StructField(itemrevenue,DecimalType(38,18),true)StructField(revenueratio,DecimalType(38,6),true)
+    non-push : StructField(i_item_id,StringType,true)StructField(i_item_desc,StringType,true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(i_current_price,DecimalType(38,18),true)StructField(itemrevenue,DecimalType(38,18),true)StructField(revenueratio,DecimalType(38,6),true)
+
+===========================================
+Query q99 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : GlobalLimit 100
++- LocalLimit 100
+   +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
+      +- RelationV2[none#0, none#1, none#2, none#3L, none#4L, none#5L, none#6L, none#7L] TPCDS.CATALOG_SALES
+
+
+===========================================

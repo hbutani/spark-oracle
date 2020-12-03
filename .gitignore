@@ -56,3 +56,8 @@ docker/.env
 # leveldb
 **/metadata_cache/*.log
 **/metadata_cache/LOG*
+
+# data files
+**/_SUCCESS
+**/._SUCCESS.crc
+**/.part*.crc

@@ -1,0 +1,4 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [s_store_name#89550 ASC NULLS FIRST, i_item_desc#89578 ASC NULLS FIRST], true
+      +- RelationV2[s_store_name#89550, i_item_desc#89578, revenue#89544, i_current_price#89579, i_wholesale_cost#89580, i_brand#89582] TPCDS.STORE

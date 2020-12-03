@@ -1,0 +1,9 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [ca_zip#75132 ASC NULLS FIRST, ca_city#75129 ASC NULLS FIRST], true
+      +- Aggregate [ca_zip#75132, ca_city#75129], [ca_zip#75132, ca_city#75129, sum(ws_sales_price#75092) AS sum(ws_sales_price)#75209]
+         +- Project [WS_SALES_PRICE#75092, CA_CITY#75129, CA_ZIP#75132]
+            +- Filter (substr(ca_zip#75132, 1, 5) IN (85669,86197,88274,83405,86475,85392,85460,80348,81792) OR exists#75247)
+               +- Join ExistenceJoin(exists#75247), (i_item_id#75165 = I_ITEM_ID#75187)
+                  :- RelationV2[WS_SALES_PRICE#75092, CA_CITY#75129, CA_ZIP#75132, I_ITEM_ID#75165] TPCDS.WEB_SALES
+                  +- RelationV2[I_ITEM_ID#75187] TPCDS.ITEM

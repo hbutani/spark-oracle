@@ -1,0 +1,5 @@
+GlobalLimit 100
++- LocalLimit 100
+   +- Sort [i_item_id#3803 ASC NULLS FIRST, s_state#3804 ASC NULLS FIRST], true
+      +- Aggregate [i_item_id#3803, s_state#3804, spark_grouping_id#3802L], [i_item_id#3803, s_state#3804, cast((shiftright(spark_grouping_id#3802L, 0) & 1) as tinyint) AS g_state#3680, avg(ss_quantity#3695) AS agg1#3681, avg(ss_list_price#3697) AS agg2#3682, avg(ss_coupon_amt#3704) AS agg3#3683, avg(ss_sales_price#3698) AS agg4#3684]
+         +- RelationV2[SS_QUANTITY#3695, SS_LIST_PRICE#3697, SS_SALES_PRICE#3698, SS_COUPON_AMT#3704, i_item_id#3803, s_state#3804, spark_grouping_id#3802L] TPCDS.STORE_SALES

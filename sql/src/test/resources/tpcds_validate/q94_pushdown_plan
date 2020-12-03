@@ -1,0 +1,17 @@
+Sort [order_count#110565L ASC NULLS FIRST], true
++- Aggregate [count(distinct ws_order_number#110585) AS order_count#110565L, sum(ws_ext_ship_cost#110596) AS total_shipping_cost#110566, sum(ws_net_profit#110601) AS total_net_profit#110567]
+   +- Project [WS_ORDER_NUMBER#110585, WS_EXT_SHIP_COST#110596, WS_NET_PROFIT#110601]
+      +- Join Inner, (ws_web_site_sk#110581 = web_site_sk#110643)
+         :- Project [WS_WEB_SITE_SK#110581, WS_ORDER_NUMBER#110585, WS_EXT_SHIP_COST#110596, WS_NET_PROFIT#110601]
+         :  +- Join Inner, (ws_ship_addr_sk#110579 = ca_address_sk#110630)
+         :     :- Project [WS_SHIP_ADDR_SK#110579, WS_WEB_SITE_SK#110581, WS_ORDER_NUMBER#110585, WS_EXT_SHIP_COST#110596, WS_NET_PROFIT#110601]
+         :     :  +- Join Inner, (ws_ship_date_sk#110570 = d_date_sk#110602)
+         :     :     :- Join LeftAnti, (WS_ORDER_NUMBER#110585 = wr_order_number#110716)
+         :     :     :  :- Project [WS_SHIP_DATE_SK#110570, WS_SHIP_ADDR_SK#110579, WS_WEB_SITE_SK#110581, WS_ORDER_NUMBER#110585, WS_EXT_SHIP_COST#110596, WS_NET_PROFIT#110601]
+         :     :     :  :  +- Join LeftSemi, ((WS_ORDER_NUMBER#110585 = ws_order_number#110686) AND NOT (WS_WAREHOUSE_SK#110583 = ws_warehouse_sk#110684))
+         :     :     :  :     :- RelationV2[WS_SHIP_DATE_SK#110570, WS_SHIP_ADDR_SK#110579, WS_WEB_SITE_SK#110581, WS_WAREHOUSE_SK#110583, WS_ORDER_NUMBER#110585, WS_EXT_SHIP_COST#110596, WS_NET_PROFIT#110601] TPCDS.WEB_SALES
+         :     :     :  :     +- RelationV2[WS_WAREHOUSE_SK#110684, WS_ORDER_NUMBER#110686] TPCDS.WEB_SALES
+         :     :     :  +- RelationV2[WR_ORDER_NUMBER#110716] TPCDS.WEB_RETURNS
+         :     :     +- RelationV2[D_DATE_SK#110602] TPCDS.DATE_DIM
+         :     +- RelationV2[CA_ADDRESS_SK#110630] TPCDS.CUSTOMER_ADDRESS
+         +- RelationV2[WEB_SITE_SK#110643] TPCDS.WEB_SITE

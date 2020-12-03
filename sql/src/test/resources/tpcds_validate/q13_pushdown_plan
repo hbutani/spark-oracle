@@ -1,0 +1,1 @@
+RelationV2[avg(ss_quantity)#47577, avg(ss_ext_sales_price)#47578, avg(ss_ext_wholesale_cost)#47579, sum(ss_ext_wholesale_cost)#47580] TPCDS.STORE_SALES
