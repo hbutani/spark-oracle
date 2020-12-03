@@ -19,14 +19,13 @@ package org.apache.spark.sql.oracle.tpcds
 import java.io.{File, IOException, PrintWriter}
 
 import scala.collection.mutable.ArrayBuffer
-
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.plans.logical.{LocalRelation, LogicalPlan}
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.{OraSparkConfig, OraSparkUtils, SparkSessionExtensions}
-import org.apache.spark.sql.types.DataType
+import org.apache.spark.sql.types.{DataType, StructType}
 
 /**
  * A tool for validating TPCDSQuery results
@@ -64,6 +63,12 @@ object TPCDSValidator extends App {
 
     def planFilePath(qNm : String, isPushdown : Boolean) : String =
       s"${outPath}/${planFileNm(qNm, isPushdown)}"
+
+    def reportFileNm(t : String) : String =
+      s"${t}_report"
+
+    def reportFilePath : String =
+      s"${outPath}/${reportFileNm(System.currentTimeMillis().toString)}"
   }
 
   private case class ADiff(reason : String,
@@ -261,11 +266,19 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
       .csv(s"${args.resultFilePath(qNm, false)}")
   }
 
-  private def loadFromCSV(qNm: String): DataFrame = {
+  private def loadFromCSV(qNm: String, s : StructType): DataFrame = {
     TestOracleHive.sparkSession.
       read.
-      options(Map("inferSchema" -> "true", "delimiter" -> ",", "header" -> "true")).
+      schema(s).
+      options(Map("delimiter" -> " | ", "header" -> "true")).
       csv(args.resultFilePath(qNm, false))
+  }
+
+  private def writeReport(buf : String) : Unit = {
+    new PrintWriter(args.reportFilePath) {
+      write(buf)
+      close
+    }
   }
 
   private def writePlan(qNm: String, logPlan : LogicalPlan): Unit = {
@@ -305,6 +318,7 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
         |""".stripMargin
     )
     qDiffs.foreach(_.dump(buf))
+    writeReport(buf.toString())
     println(buf)
     // scalastyle:on println
   }
@@ -452,9 +466,9 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
         executeAndSaveResult(qNm, sql)
       }
 
-      val nonPushDF = loadFromCSV(qNm)
       val pushDF = TestOracleHive.sql(sql)
       val pushPlan = pushDF.queryExecution.optimizedPlan
+      val nonPushDF = loadFromCSV(qNm, pushDF.schema)
 
       if (args.rebuildPlans) {
         writePlan(qNm, pushDF.queryExecution.optimizedPlan)

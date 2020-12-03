@@ -57,13 +57,13 @@ order by c_customer_id
         from catalog_sales) x ),
  wswscs as
  (select d_week_seq,
-        sum(case when (d_day_name='Sunday') then sales_price else null end) sun_sales,
-        sum(case when (d_day_name='Monday') then sales_price else null end) mon_sales,
-        sum(case when (d_day_name='Tuesday') then sales_price else  null end) tue_sales,
-        sum(case when (d_day_name='Wednesday') then sales_price else null end) wed_sales,
-        sum(case when (d_day_name='Thursday') then sales_price else null end) thu_sales,
-        sum(case when (d_day_name='Friday') then sales_price else null end) fri_sales,
-        sum(case when (d_day_name='Saturday') then sales_price else null end) sat_sales
+        sum(case when (trim(TRAILING from d_day_name)='Sunday') then sales_price else null end) sun_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Monday') then sales_price else null end) mon_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Tuesday') then sales_price else  null end) tue_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Wednesday') then sales_price else null end) wed_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Thursday') then sales_price else null end) thu_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Friday') then sales_price else null end) fri_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Saturday') then sales_price else null end) sat_sales
  from wscs
      ,date_dim
  where d_date_sk = sold_date_sk
@@ -412,14 +412,13 @@ select  i_item_id,
        ss_promo_sk = p_promo_sk and
        cd_gender = 'M' and
        cd_marital_status = 'S' and
-       cd_education_status = 'College' and
+       trim(TRAILING from cd_education_status) = 'College' and
        (p_channel_email = 'N' or p_channel_event = 'N') and
        d_year = 2000
  group by i_item_id
  order by i_item_id
   limit 100;
  """.stripMargin
-
 
   val q8 = s"""
 select  s_store_name
@@ -738,7 +737,7 @@ from
     	,date_dim
 where
 	ws_item_sk = i_item_sk
-  	and i_category in ('Sports', 'Books', 'Home')
+  	and trim(TRAILING from i_category) in ('Sports', 'Books', 'Home')
   	and ws_sold_date_sk = d_date_sk
 	and d_date between cast('1999-02-22' as date)
                                 and date_add(cast('1999-02-22' as date), 30 )
@@ -773,21 +772,21 @@ order by
  and((ss_hdemo_sk=hd_demo_sk
   and cd_demo_sk = ss_cdemo_sk
   and cd_marital_status = 'M'
-  and cd_education_status = 'Advanced Degree'
+  and trim(TRAILING from cd_education_status) = 'Advanced Degree'
   and ss_sales_price between 100.00 and 150.00
   and hd_dep_count = 3
      )or
      (ss_hdemo_sk=hd_demo_sk
   and cd_demo_sk = ss_cdemo_sk
   and cd_marital_status = 'S'
-  and cd_education_status = 'College'
+  and trim(TRAILING from cd_education_status) = 'College'
   and ss_sales_price between 50.00 and 100.00
   and hd_dep_count = 1
      ) or
      (ss_hdemo_sk=hd_demo_sk
   and cd_demo_sk = ss_cdemo_sk
   and cd_marital_status = 'W'
-  and cd_education_status = '2 yr Degree'
+  and trim(TRAILING from cd_education_status) = '2 yr Degree'
   and ss_sales_price between 150.00 and 200.00
   and hd_dep_count = 1
      ))
@@ -1128,7 +1127,7 @@ select  i_item_id,
        cs_bill_cdemo_sk = cd1.cd_demo_sk and
        cs_bill_customer_sk = c_customer_sk and
        cd1.cd_gender = 'F' and
-       cd1.cd_education_status = 'Unknown' and
+       trim(TRAILING from cd1.cd_education_status) = 'Unknown' and
        c_current_cdemo_sk = cd2.cd_demo_sk and
        c_current_addr_sk = ca_address_sk and
        c_birth_month in (1,6,8,9,12,2) and
@@ -1529,7 +1528,7 @@ select  i_item_id,
        cs_promo_sk = p_promo_sk and
        cd_gender = 'M' and
        cd_marital_status = 'S' and
-       cd_education_status = 'College' and
+       trim(TRAILING from cd_education_status) = 'College' and
        (p_channel_email = 'N' or p_channel_event = 'N') and
        d_year = 2000
  group by i_item_id
@@ -1552,7 +1551,7 @@ select  i_item_id,
        ss_cdemo_sk = cd_demo_sk and
        cd_gender = 'M' and
        cd_marital_status = 'S' and
-       cd_education_status = 'College' and
+       trim(TRAILING from cd_education_status) = 'College' and
        d_year = 2002 and
        s_state in ('TN','TN', 'TN', 'TN', 'TN', 'TN')
  group by rollup (i_item_id, s_state)
@@ -1834,7 +1833,7 @@ where i_category in ('Electronics'))
   i_manufact_id
 from
  item
-where i_category in ('Electronics'))
+where trim(TRAILING from i_category) in ('Electronics'))
  and     ws_item_sk              = i_item_sk
  and     ws_sold_date_sk         = d_date_sk
  and     d_year                  = 1998
@@ -1869,8 +1868,8 @@ select c_last_name
     and store_sales.ss_store_sk = store.s_store_sk
     and store_sales.ss_hdemo_sk = household_demographics.hd_demo_sk
     and (date_dim.d_dom between 1 and 3 or date_dim.d_dom between 25 and 28)
-    and (household_demographics.hd_buy_potential = '>10000' or
-         household_demographics.hd_buy_potential = 'Unknown')
+    and (trim(TRAILING from household_demographics.hd_buy_potential) = '>10000' or
+         trim(TRAILING from household_demographics.hd_buy_potential) = 'Unknown')
     and household_demographics.hd_vehicle_count > 0
     and (case when household_demographics.hd_vehicle_count > 0
 	then household_demographics.hd_dep_count/ household_demographics.hd_vehicle_count
@@ -2112,46 +2111,46 @@ select  distinct(i_product_name)
    and (select count(*) as item_cnt
         from item
         where (i_manufact = i1.i_manufact and
-        ((i_category = 'Women' and
-        (i_color = 'powder' or i_color = 'khaki') and
-        (i_units = 'Ounce' or i_units = 'Oz') and
-        (i_size = 'medium' or i_size = 'extra large')
+        ((trim(TRAILING from i_category) = 'Women' and
+        (trim(TRAILING from i_color) = 'powder' or trim(TRAILING from i_color) = 'khaki') and
+        (trim(TRAILING from i_units) = 'Ounce' or trim(TRAILING from i_units) = 'Oz') and
+        (trim(TRAILING from i_size) = 'medium' or trim(TRAILING from i_size) = 'extra large')
         ) or
-        (i_category = 'Women' and
-        (i_color = 'brown' or i_color = 'honeydew') and
-        (i_units = 'Bunch' or i_units = 'Ton') and
-        (i_size = 'N/A' or i_size = 'small')
+        (trim(TRAILING from i_category) = 'Women' and
+        (trim(TRAILING from i_color) = 'brown' or trim(TRAILING from i_color) = 'honeydew') and
+        (trim(TRAILING from i_units) = 'Bunch' or trim(TRAILING from i_units) = 'Ton') and
+        (trim(TRAILING from i_size) = 'N/A' or trim(TRAILING from i_size) = 'small')
         ) or
-        (i_category = 'Men' and
-        (i_color = 'floral' or i_color = 'deep') and
-        (i_units = 'N/A' or i_units = 'Dozen') and
-        (i_size = 'petite' or i_size = 'large')
+        (trim(TRAILING from i_category) = 'Men' and
+        (trim(TRAILING from i_color) = 'floral' or trim(TRAILING from i_color) = 'deep') and
+        (trim(TRAILING from i_units) = 'N/A' or trim(TRAILING from i_units) = 'Dozen') and
+        (trim(TRAILING from i_size) = 'petite' or trim(TRAILING from i_size) = 'large')
         ) or
-        (i_category = 'Men' and
-        (i_color = 'light' or i_color = 'cornflower') and
-        (i_units = 'Box' or i_units = 'Pound') and
-        (i_size = 'medium' or i_size = 'extra large')
+        (trim(TRAILING from i_category) = 'Men' and
+        (trim(TRAILING from i_color) = 'light' or trim(TRAILING from i_color) = 'cornflower') and
+        (trim(TRAILING from i_units) = 'Box' or trim(TRAILING from i_units) = 'Pound') and
+        (trim(TRAILING from i_size) = 'medium' or trim(TRAILING from i_size) = 'extra large')
         ))) or
        (i_manufact = i1.i_manufact and
-        ((i_category = 'Women' and
-        (i_color = 'midnight' or i_color = 'snow') and
-        (i_units = 'Pallet' or i_units = 'Gross') and
-        (i_size = 'medium' or i_size = 'extra large')
+        ((trim(TRAILING from i_category) = 'Women' and
+        (trim(TRAILING from i_color) = 'midnight' or trim(TRAILING from i_color) = 'snow') and
+        (trim(TRAILING from i_units) = 'Pallet' or trim(TRAILING from i_units) = 'Gross') and
+        (trim(TRAILING from i_size) = 'medium' or trim(TRAILING from i_size) = 'extra large')
         ) or
-        (i_category = 'Women' and
-        (i_color = 'cyan' or i_color = 'papaya') and
-        (i_units = 'Cup' or i_units = 'Dram') and
-        (i_size = 'N/A' or i_size = 'small')
+        (trim(TRAILING from i_category) = 'Women' and
+        (trim(TRAILING from i_color) = 'cyan' or trim(TRAILING from i_color) = 'papaya') and
+        (trim(TRAILING from i_units) = 'Cup' or trim(TRAILING from i_units) = 'Dram') and
+        (trim(TRAILING from i_size) = 'N/A' or trim(TRAILING from i_size) = 'small')
         ) or
-        (i_category = 'Men' and
-        (i_color = 'orange' or i_color = 'frosted') and
-        (i_units = 'Each' or i_units = 'Tbl') and
-        (i_size = 'petite' or i_size = 'large')
+        (trim(TRAILING from i_category) = 'Men' and
+        (trim(TRAILING from i_color) = 'orange' or trim(TRAILING from i_color) = 'frosted') and
+        (trim(TRAILING from i_units) = 'Each' or trim(TRAILING from i_units) = 'Tbl') and
+        (trim(TRAILING from i_size) = 'petite' or trim(TRAILING from i_size) = 'large')
         ) or
-        (i_category = 'Men' and
-        (i_color = 'forest' or i_color = 'ghost') and
-        (i_units = 'Lb' or i_units = 'Bundle') and
-        (i_size = 'medium' or i_size = 'extra large')
+        (trim(TRAILING from i_category) = 'Men' and
+        (trim(TRAILING from i_color) = 'forest' or trim(TRAILING from i_color) = 'ghost') and
+        (trim(TRAILING from i_units) = 'Lb' or trim(TRAILING from i_units) = 'Bundle') and
+        (trim(TRAILING from i_size) = 'medium' or trim(TRAILING from i_size) = 'extra large')
         )))) > 0
  order by i_product_name
   limit 100;
@@ -2183,13 +2182,13 @@ select  dt.d_year
 
   val q43 = s"""
 select  s_store_name, s_store_id,
-        sum(case when (d_day_name='Sunday') then ss_sales_price else null end) sun_sales,
-        sum(case when (d_day_name='Monday') then ss_sales_price else null end) mon_sales,
-        sum(case when (d_day_name='Tuesday') then ss_sales_price else  null end) tue_sales,
-        sum(case when (d_day_name='Wednesday') then ss_sales_price else null end) wed_sales,
-        sum(case when (d_day_name='Thursday') then ss_sales_price else null end) thu_sales,
-        sum(case when (d_day_name='Friday') then ss_sales_price else null end) fri_sales,
-        sum(case when (d_day_name='Saturday') then ss_sales_price else null end) sat_sales
+        sum(case when (trim(TRAILING from d_day_name)='Sunday') then ss_sales_price else null end) sun_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Monday') then ss_sales_price else null end) mon_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Tuesday') then ss_sales_price else  null end) tue_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Wednesday') then ss_sales_price else null end) wed_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Thursday') then ss_sales_price else null end) thu_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Friday') then ss_sales_price else null end) fri_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Saturday') then ss_sales_price else null end) sat_sales
  from date_dim, store_sales, store
  where d_date_sk = ss_sold_date_sk and
        s_store_sk = ss_store_sk and
@@ -2358,7 +2357,7 @@ select sum (ss_quantity)
    and
    cd_marital_status = 'M'
    and
-   cd_education_status = '4 yr Degree'
+   trim(TRAILING from cd_education_status) = '4 yr Degree'
    and
    ss_sales_price between 100.00 and 150.00
    )
@@ -2368,7 +2367,7 @@ select sum (ss_quantity)
    and
    cd_marital_status = 'D'
    and
-   cd_education_status = '2 yr Degree'
+   trim(TRAILING from cd_education_status) = '2 yr Degree'
    and
    ss_sales_price between 50.00 and 100.00
   )
@@ -2378,7 +2377,7 @@ select sum (ss_quantity)
   and
    cd_marital_status = 'S'
    and
-   cd_education_status = 'College'
+   trim(TRAILING from cd_education_status) = 'College'
    and
    ss_sales_price between 150.00 and 200.00
  )
@@ -2681,13 +2680,13 @@ where ss_item_sk = i_item_sk and
 ss_sold_date_sk = d_date_sk and
 ss_store_sk = s_store_sk and
 d_month_seq in (1200,1200+1,1200+2,1200+3,1200+4,1200+5,1200+6,1200+7,1200+8,1200+9,1200+10,1200+11) and
-((i_category in ('Books','Children','Electronics') and
-i_class in ('personal','portable','reference','self-help') and
-i_brand in ('scholaramalgamalg #14','scholaramalgamalg #7',
+((trim(TRAILING from i_category) in ('Books','Children','Electronics') and
+trim(TRAILING from i_class) in ('personal','portable','reference','self-help') and
+trim(TRAILING from i_brand) in ('scholaramalgamalg #14','scholaramalgamalg #7',
 		'exportiunivamalg #9','scholaramalgamalg #9'))
-or(i_category in ('Women','Music','Men') and
-i_class in ('accessories','classical','fragrances','pants') and
-i_brand in ('amalgimporto #1','edu packscholar #1','exportiimporto #1',
+or(trim(TRAILING from i_category) in ('Women','Music','Men') and
+trim(TRAILING from i_class) in ('accessories','classical','fragrances','pants') and
+trim(TRAILING from i_brand) in ('amalgimporto #1','edu packscholar #1','exportiimporto #1',
 		'importoamalg #1')))
 group by i_manufact_id, d_qoy ) tmp1
 where case when avg_quarterly_sales > 0
@@ -2720,8 +2719,8 @@ order by avg_quarterly_sales,
          customer
  where   sold_date_sk = d_date_sk
          and item_sk = i_item_sk
-         and i_category = 'Women'
-         and i_class = 'maternity'
+         and trim(TRAILING from i_category) = 'Women'
+         and trim(TRAILING from i_class) = 'maternity'
          and c_customer_sk = cs_or_ws_sales.customer_sk
          and d_moy = 12
          and d_year = 1998
@@ -2783,7 +2782,7 @@ with ss as (
  where i_item_id in (select
      i_item_id
 from item
-where i_color in ('slate','blanched','burnished'))
+where trim(TRAILING from i_color) in ('slate','blanched','burnished'))
  and     ss_item_sk              = i_item_sk
  and     ss_sold_date_sk         = d_date_sk
  and     d_year                  = 2001
@@ -2802,7 +2801,7 @@ where i_color in ('slate','blanched','burnished'))
          i_item_id               in (select
   i_item_id
 from item
-where i_color in ('slate','blanched','burnished'))
+where trim(TRAILING from i_color) in ('slate','blanched','burnished'))
  and     cs_item_sk              = i_item_sk
  and     cs_sold_date_sk         = d_date_sk
  and     d_year                  = 2001
@@ -2821,7 +2820,7 @@ where i_color in ('slate','blanched','burnished'))
          i_item_id               in (select
   i_item_id
 from item
-where i_color in ('slate','blanched','burnished'))
+where trim(TRAILING from i_color) in ('slate','blanched','burnished'))
  and     ws_item_sk              = i_item_sk
  and     ws_sold_date_sk         = d_date_sk
  and     d_year                  = 2001
@@ -2960,13 +2959,13 @@ with ss_items as
 with wss as
  (select d_week_seq,
         ss_store_sk,
-        sum(case when (d_day_name='Sunday') then ss_sales_price else null end) sun_sales,
-        sum(case when (d_day_name='Monday') then ss_sales_price else null end) mon_sales,
-        sum(case when (d_day_name='Tuesday') then ss_sales_price else  null end) tue_sales,
-        sum(case when (d_day_name='Wednesday') then ss_sales_price else null end) wed_sales,
-        sum(case when (d_day_name='Thursday') then ss_sales_price else null end) thu_sales,
-        sum(case when (d_day_name='Friday') then ss_sales_price else null end) fri_sales,
-        sum(case when (d_day_name='Saturday') then ss_sales_price else null end) sat_sales
+        sum(case when (trim(TRAILING from d_day_name)='Sunday') then ss_sales_price else null end) sun_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Monday') then ss_sales_price else null end) mon_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Tuesday') then ss_sales_price else  null end) tue_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Wednesday') then ss_sales_price else null end) wed_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Thursday') then ss_sales_price else null end) thu_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Friday') then ss_sales_price else null end) fri_sales,
+        sum(case when (trim(TRAILING from d_day_name)='Saturday') then ss_sales_price else null end) sat_sales
  from store_sales,date_dim
  where d_date_sk = ss_sold_date_sk
  group by d_week_seq,ss_store_sk
@@ -3015,7 +3014,7 @@ with ss as (
   i_item_id
 from
  item
-where i_category in ('Music'))
+where trim(TRAILING from i_category) in ('Music'))
  and     ss_item_sk              = i_item_sk
  and     ss_sold_date_sk         = d_date_sk
  and     d_year                  = 1998
@@ -3036,7 +3035,7 @@ where i_category in ('Music'))
   i_item_id
 from
  item
-where i_category in ('Music'))
+where trim(TRAILING from i_category) in ('Music'))
  and     cs_item_sk              = i_item_sk
  and     cs_sold_date_sk         = d_date_sk
  and     d_year                  = 1998
@@ -3057,7 +3056,7 @@ where i_category in ('Music'))
   i_item_id
 from
  item
-where i_category in ('Music'))
+where trim(TRAILING from i_category) in ('Music'))
  and     ws_item_sk              = i_item_sk
  and     ws_sold_date_sk         = d_date_sk
  and     d_year                  = 1998
@@ -3174,13 +3173,13 @@ from (select i_manager_id
         and ss_sold_date_sk = d_date_sk
         and ss_store_sk = s_store_sk
         and d_month_seq in (1200,1200+1,1200+2,1200+3,1200+4,1200+5,1200+6,1200+7,1200+8,1200+9,1200+10,1200+11)
-        and ((    i_category in ('Books','Children','Electronics')
-              and i_class in ('personal','portable','reference','self-help')
-              and i_brand in ('scholaramalgamalg #14','scholaramalgamalg #7',
+        and ((    trim(TRAILING from i_category) in ('Books','Children','Electronics')
+              and trim(TRAILING from i_class) in ('personal','portable','reference','self-help')
+              and trim(TRAILING from i_brand) in ('scholaramalgamalg #14','scholaramalgamalg #7',
 		                  'exportiunivamalg #9','scholaramalgamalg #9'))
-           or(    i_category in ('Women','Music','Men')
-              and i_class in ('accessories','classical','fragrances','pants')
-              and i_brand in ('amalgimporto #1','edu packscholar #1','exportiimporto #1',
+           or(    trim(TRAILING from i_category) in ('Women','Music','Men')
+              and trim(TRAILING from i_class) in ('accessories','classical','fragrances','pants')
+              and trim(TRAILING from i_brand) in ('amalgimporto #1','edu packscholar #1','exportiimporto #1',
 		                 'importoamalg #1')))
 group by i_manager_id, d_moy) tmp1
 where case when avg_monthly_sales > 0 then abs (sum_sales - avg_monthly_sales) / avg_monthly_sales else null end > 0.1
@@ -3258,7 +3257,7 @@ cross_sales as
          hd1.hd_income_band_sk = ib1.ib_income_band_sk and
          hd2.hd_income_band_sk = ib2.ib_income_band_sk and
          cd1.cd_marital_status <> cd2.cd_marital_status and
-         i_color in ('purple','burlywood','indian','spring','floral','medium') and
+         trim(TRAILING from i_color) in ('purple','burlywood','indian','spring','floral','medium') and
          i_current_price between 64 and 64 + 10 and
          i_current_price between 64 + 1 and 64 + 15
 group by i_product_name
@@ -3771,7 +3770,7 @@ select i_brand_id brand_id, i_brand brand,t_hour,t_minute,
    sold_item_sk = i_item_sk
    and i_manager_id=1
    and time_sk = t_time_sk
-   and (t_meal_time = 'breakfast' or t_meal_time = 'dinner')
+   and (trim(TRAILING from t_meal_time) = 'breakfast' or trim(TRAILING from t_meal_time) = 'dinner')
  group by i_brand, i_brand_id,t_hour,t_minute
  order by ext_price desc, i_brand_id
  ;
@@ -3823,8 +3822,8 @@ select c_last_name
     and store_sales.ss_store_sk = store.s_store_sk
     and store_sales.ss_hdemo_sk = household_demographics.hd_demo_sk
     and date_dim.d_dom between 1 and 2
-    and (household_demographics.hd_buy_potential = '>10000' or
-         household_demographics.hd_buy_potential = 'Unknown')
+    and (trim(TRAILING from household_demographics.hd_buy_potential) = '>10000' or
+         trim(TRAILING from household_demographics.hd_buy_potential) = 'Unknown')
     and household_demographics.hd_vehicle_count > 0
     and case when household_demographics.hd_vehicle_count > 0 then
              household_demographics.hd_dep_count/ household_demographics.hd_vehicle_count else null end > 1
@@ -4445,7 +4444,7 @@ select  substr(r_reason_desc,1,20)
      and
      cd1.cd_marital_status = cd2.cd_marital_status
      and
-     cd1.cd_education_status = 'Advanced Degree'
+     trim(TRAILING from cd1.cd_education_status) = 'Advanced Degree'
      and
      cd1.cd_education_status = cd2.cd_education_status
      and
@@ -4457,7 +4456,7 @@ select  substr(r_reason_desc,1,20)
      and
      cd1.cd_marital_status = cd2.cd_marital_status
      and
-     cd1.cd_education_status = 'College'
+     trim(TRAILING from cd1.cd_education_status) = 'College'
      and
      cd1.cd_education_status = cd2.cd_education_status
      and
@@ -4469,7 +4468,7 @@ select  substr(r_reason_desc,1,20)
      and
      cd1.cd_marital_status = cd2.cd_marital_status
      and
-     cd1.cd_education_status = '2 yr Degree'
+     trim(TRAILING from cd1.cd_education_status)= '2 yr Degree'
      and
      cd1.cd_education_status = cd2.cd_education_status
      and
@@ -4669,11 +4668,11 @@ where ss_item_sk = i_item_sk and
       ss_sold_date_sk = d_date_sk and
       ss_store_sk = s_store_sk and
       d_year in (1999) and
-        ((i_category in ('Books','Electronics','Sports') and
-          i_class in ('computers','stereo','football')
+        ((trim(TRAILING from i_category) in ('Books','Electronics','Sports') and
+          trim(TRAILING from i_class) in ('computers','stereo','football')
          )
-      or (i_category in ('Men','Jewelry','Women') and
-          i_class in ('shirts','birdal','dresses')
+      or (trim(TRAILING from i_category) in ('Men','Jewelry','Women') and
+          trim(TRAILING from i_class) in ('shirts','birdal','dresses')
         ))
 group by i_category, i_class, i_brand,
          s_store_name, s_company_name, d_moy) tmp1
@@ -4729,9 +4728,9 @@ and     hd_demo_sk              = c_current_hdemo_sk
 and     ca_address_sk           = c_current_addr_sk
 and     d_year                  = 1998
 and     d_moy                   = 11
-and     ( (cd_marital_status       = 'M' and cd_education_status     = 'Unknown')
-        or(cd_marital_status       = 'W' and cd_education_status     = 'Advanced Degree'))
-and     hd_buy_potential like 'Unknown%'
+and     ( (cd_marital_status       = 'M' and trim(TRAILING from cd_education_status)     = 'Unknown')
+        or(cd_marital_status       = 'W' and trim(TRAILING from cd_education_status)     = 'Advanced Degree'))
+and     trim(TRAILING from hd_buy_potential) like 'Unknown%'
 and     ca_gmt_offset           = -7
 group by cc_call_center_id,cc_name,cc_manager,cd_marital_status,cd_education_status
 order by sum(cr_net_loss) desc;
@@ -4909,7 +4908,7 @@ from
     	,date_dim
 where
 	ss_item_sk = i_item_sk
-  	and i_category in ('Sports', 'Books', 'Home')
+  	and trim(TRAILING from i_category) in ('Sports', 'Books', 'Home')
   	and ss_sold_date_sk = d_date_sk
 	and d_date between cast('1999-02-22' as date)
 				and date_add(cast('1999-02-22' as date), 30 )
