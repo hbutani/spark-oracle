@@ -1,7 +1,7 @@
-Validation Report (generated on Fri Dec 04 21:03:14 PST 2020):
-  num_queries= (total=99, pass=0, warn=96, fail=3)
+Validation Report (generated on Fri Dec 04 21:59:34 PST 2020):
+  num_queries= (total=99, pass=0, warn=97, fail=2)
   skipped queries= q14-1,q14-2,q23-2,q66
-  failed queries= q54,q72,q87
+  failed queries= q72,q87
 
 Query q1 validation passed with warnings:
   Warning: Push Plan has Changed
@@ -704,7 +704,7 @@ Query q53 validation passed with warnings:
 
 
 ===========================================
-Query q54 validation failed:
+Query q54 validation passed with warnings:
   Warning: Push Plan has Changed
     push : <null>
     non-push : GlobalLimit 100
@@ -715,9 +715,6 @@ Query q54 validation failed:
   Warning: Schema's are different
     push : StructField(segment,IntegerType,true)StructField(num_customers,LongType,false)StructField(segment_base,IntegerType,true)
     non-push : StructField(segment,IntegerType,true)StructField(num_customers,LongType,true)StructField(segment_base,IntegerType,true)
-  values in row 0, column 2 don't match
-    push : push_value=593017.0
-    non-push : nonPushValue=593000.0
 
 ===========================================
 Query q55 validation passed with warnings:

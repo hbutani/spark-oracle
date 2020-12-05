@@ -310,16 +310,20 @@ object Casts extends OraSQLImplicits with Logging {
     def num_conv : SQLSnippet = {
       val nFromDT = fromDT.asInstanceOf[NumericType]
       val nToDT = toDT.asInstanceOf[NumericType]
-      if (isDataTypeWidening(nFromDT, nToDT) || !nullOnOverFlow) {
+      val oraDTE : OraExpression = {
+        val oraDT = OraDataType.toOraDataType(nToDT)
+        new OraLiteralSql(oraDT.oraTypeString)
+      }
+      if (isDataTypeWidening(nFromDT, nToDT)) {
         childOE.orasql
       } else {
-        val (minV, maxV) = OraLiterals.dataTypeMinMaxRange(nToDT)
-        val oraDTE : OraExpression = {
-          val oraDT = OraDataType.toOraDataType(nToDT)
-          OraLiteral(Literal(oraDT.oraTypeString)).toLiteralSql
+        if (!nullOnOverFlow) {
+          osql"cast(${childOE} as ${oraDTE})"
+        } else {
+          val (minV, maxV) = OraLiterals.dataTypeMinMaxRange(nToDT)
+          osql"case when ${childOE} >= ${minV} and ${childOE} <= ${maxV}" +
+            osql" then cast(${childOE} as ${oraDTE}) else null"
         }
-        osql"case when ${childOE} >= ${minV} and ${childOE} <= ${maxV}" +
-          osql" then cast(${childOE} as ${oraDTE}) else null"
       }
     }
   }
