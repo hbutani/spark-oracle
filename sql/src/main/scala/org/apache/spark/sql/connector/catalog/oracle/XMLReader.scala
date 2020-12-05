@@ -234,7 +234,7 @@ object XMLReader extends PartitionParsing with TableSXMLParsing with TableXMLPar
   }
 
   private[oracle] def longValue(nd: NodeSeq): Option[Long] = {
-    textValue(nd).map(_.toInt)
+    textValue(nd).map(_.toLong)
   }
 
   private[oracle] def doubleValue(nd: NodeSeq): Option[Double] = {

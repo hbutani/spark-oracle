@@ -17,7 +17,10 @@
 
 package org.apache.spark.sql.oracle.querysplit
 
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
+import org.apache.spark.sql.catalyst.plans.Inner
+import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan, Project}
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.oracle.operators.{OraPlan, OraSingleQueryBlock, OraTableScan}
 
 /**
@@ -82,13 +85,20 @@ object QuerySplitAnalyzer {
 
   private object JoinPlan {
 
-    /*
-     * Must only contain EquiJoins and Table Scans
-     */
-    def isEquiJoinSubPlan(lp : Option[LogicalPlan]) : Boolean = {
-      // TODO
-      false
+    def isEquiJoinPlan(plan : LogicalPlan) : Boolean = plan match {
+      case ExtractEquiJoinKeys(Inner, _, _, _, leftChild, rightChild, _) =>
+        isEquiJoinPlan(leftChild) && isEquiJoinPlan(rightChild)
+      case _ : DataSourceV2ScanRelation => true
+      case _ : Project => true
+      case _ : Filter => true
+      case _ => false
     }
+
+    /*
+     * Must only contain EquiJoins, Table Scans, Projects or Filters
+     */
+    def isEquiJoinSubPlan(lp : Option[LogicalPlan]) : Boolean =
+      lp.isDefined && isEquiJoinPlan(lp.get)
 
     def unapply(oPlan: OraSingleQueryBlock): Option[SplitScope] = {
       val noSubPlans = oPlan.children.forall(p => p.isInstanceOf[OraTableScan])

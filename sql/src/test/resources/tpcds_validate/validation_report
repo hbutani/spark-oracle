@@ -1,7 +1,8 @@
-Validation Report (generated on Thu Dec 03 10:55:13 PST 2020):
-  num_queries= (total=98, pass=0, warn=94, fail=4)
-  skipped queries= q14-1,q14-2,q23-2,q24-1,q24-2
-  failed queries= q38,q54,q72,q87
+Validation Report (generated on Fri Dec 04 21:03:14 PST 2020):
+  num_queries= (total=99, pass=0, warn=96, fail=3)
+  skipped queries= q14-1,q14-2,q23-2,q66
+  failed queries= q54,q72,q87
+
 Query q1 validation passed with warnings:
   Warning: Push Plan has Changed
     push : <null>
@@ -275,6 +276,22 @@ Query q23-1 validation passed with warnings:
 
 
 ===========================================
+Query q24-1 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
++- RelationV2[none#0, none#1, none#2, none#3] TPCDS.STORE_SALES
+
+
+===========================================
+Query q24-2 validation passed with warnings:
+  Warning: Push Plan has Changed
+    push : <null>
+    non-push : Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
++- RelationV2[none#0, none#1, none#2, none#3] TPCDS.STORE_SALES
+
+
+===========================================
 Query q25 validation passed with warnings:
   Warning: Push Plan has Changed
     push : <null>
@@ -400,8 +417,8 @@ Query q35 validation passed with warnings:
                :  +- 'Join Inner, (none#1 = none#2)
                :     :- 'Project [none#1, none#2]
                :     :  +- 'Filter (none#3 OR none#4)
-               :     :     +- 'Join ExistenceJoin(exists#12416), (none#0 = none#4)
-               :     :        :- 'Join ExistenceJoin(exists#12415), (none#0 = none#3)
+               :     :     +- 'Join ExistenceJoin(exists#13190), (none#0 = none#4)
+               :     :        :- 'Join ExistenceJoin(exists#13189), (none#0 = none#3)
                :     :        :  :- RelationV2[none#0, none#1, none#2] TPCDS.CUSTOMER
                :     :        :  +- RelationV2[none#0] TPCDS.WEB_SALES
                :     :        +- RelationV2[none#0] TPCDS.CATALOG_SALES
@@ -442,7 +459,7 @@ Query q37 validation passed with warnings:
     non-push : StructField(i_item_id,StringType,true)StructField(i_item_desc,StringType,true)StructField(i_current_price,DecimalType(38,18),true)
 
 ===========================================
-Query q38 validation failed:
+Query q38 validation passed with warnings:
   Warning: Push Plan has Changed
     push : <null>
     non-push : RelationV2[none#0L] TPCDS.STORE_SALES
@@ -450,9 +467,6 @@ Query q38 validation failed:
   Warning: Schema's are different
     push : StructField(count(1),LongType,false)
     non-push : StructField(count(1),LongType,true)
-  values in row 0, column 0 don't match
-    push : push_value=0.0
-    non-push : nonPushValue=107.0
 
 ===========================================
 Query q39-1 validation passed with warnings:
@@ -557,7 +571,7 @@ Query q45 validation passed with warnings:
       +- 'Aggregate [none#2, none#1], [none#2, none#1, sum(none#0) AS #0]
          +- 'Project [none#0, none#1, none#2]
             +- 'Filter (substr(none#2, 1, 5) IN (85460,83405,85392,81792,86475,86197,85669,88274,80348) OR none#4)
-               +- 'Join ExistenceJoin(exists#14854), (none#3 = none#4)
+               +- 'Join ExistenceJoin(exists#15628), (none#3 = none#4)
                   :- RelationV2[none#0, none#1, none#2, none#3] TPCDS.WEB_SALES
                   +- RelationV2[none#0] TPCDS.ITEM
 
@@ -846,19 +860,6 @@ Query q65 validation passed with warnings:
    +- Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
       +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.STORE
 
-
-===========================================
-Query q66 validation passed with warnings:
-  Warning: Push Plan has Changed
-    push : <null>
-    non-push : GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [none#0 ASC NULLS FIRST], true
-      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10, none#11, none#12, none#13, none#14, none#15, none#16, none#17, none#18, none#19, none#20, none#21, none#22, none#23, ... 20 more fields] TPCDS.WEB_SALES
-
-  Warning: Schema's are different
-    push : StructField(w_warehouse_name,StringType,true)StructField(w_warehouse_sq_ft,DecimalType(38,18),true)StructField(w_city,StringType,true)StructField(w_county,StringType,true)StructField(w_state,StringType,true)StructField(w_country,StringType,true)StructField(ship_carriers,StringType,false)StructField(year,DecimalType(38,18),true)StructField(jan_sales,DecimalType(38,6),true)StructField(feb_sales,DecimalType(38,6),true)StructField(mar_sales,DecimalType(38,6),true)StructField(apr_sales,DecimalType(38,6),true)StructField(may_sales,DecimalType(38,6),true)StructField(jun_sales,DecimalType(38,6),true)StructField(jul_sales,DecimalType(38,6),true)StructField(aug_sales,DecimalType(38,6),true)StructField(sep_sales,DecimalType(38,6),true)StructField(oct_sales,DecimalType(38,6),true)StructField(nov_sales,DecimalType(38,6),true)StructField(dec_sales,DecimalType(38,6),true)StructField(jan_sales_per_sq_foot,DecimalType(38,6),true)StructField(feb_sales_per_sq_foot,DecimalType(38,6),true)StructField(mar_sales_per_sq_foot,DecimalType(38,6),true)StructField(apr_sales_per_sq_foot,DecimalType(38,6),true)StructField(may_sales_per_sq_foot,DecimalType(38,6),true)StructField(jun_sales_per_sq_foot,DecimalType(38,6),true)StructField(jul_sales_per_sq_foot,DecimalType(38,6),true)StructField(aug_sales_per_sq_foot,DecimalType(38,6),true)StructField(sep_sales_per_sq_foot,DecimalType(38,6),true)StructField(oct_sales_per_sq_foot,DecimalType(38,6),true)StructField(nov_sales_per_sq_foot,DecimalType(38,6),true)StructField(dec_sales_per_sq_foot,DecimalType(38,6),true)StructField(jan_net,DecimalType(38,6),true)StructField(feb_net,DecimalType(38,6),true)StructField(mar_net,DecimalType(38,6),true)StructField(apr_net,DecimalType(38,6),true)StructField(may_net,DecimalType(38,6),true)StructField(jun_net,DecimalType(38,6),true)StructField(jul_net,DecimalType(38,6),true)StructField(aug_net,DecimalType(38,6),true)StructField(sep_net,DecimalType(38,6),true)StructField(oct_net,DecimalType(38,6),true)StructField(nov_net,DecimalType(38,6),true)StructField(dec_net,DecimalType(38,6),true)
-    non-push : StructField(w_warehouse_name,StringType,true)StructField(w_warehouse_sq_ft,DecimalType(38,18),true)StructField(w_city,StringType,true)StructField(w_county,StringType,true)StructField(w_state,StringType,true)StructField(w_country,StringType,true)StructField(ship_carriers,StringType,true)StructField(year,DecimalType(38,18),true)StructField(jan_sales,DecimalType(38,6),true)StructField(feb_sales,DecimalType(38,6),true)StructField(mar_sales,DecimalType(38,6),true)StructField(apr_sales,DecimalType(38,6),true)StructField(may_sales,DecimalType(38,6),true)StructField(jun_sales,DecimalType(38,6),true)StructField(jul_sales,DecimalType(38,6),true)StructField(aug_sales,DecimalType(38,6),true)StructField(sep_sales,DecimalType(38,6),true)StructField(oct_sales,DecimalType(38,6),true)StructField(nov_sales,DecimalType(38,6),true)StructField(dec_sales,DecimalType(38,6),true)StructField(jan_sales_per_sq_foot,DecimalType(38,6),true)StructField(feb_sales_per_sq_foot,DecimalType(38,6),true)StructField(mar_sales_per_sq_foot,DecimalType(38,6),true)StructField(apr_sales_per_sq_foot,DecimalType(38,6),true)StructField(may_sales_per_sq_foot,DecimalType(38,6),true)StructField(jun_sales_per_sq_foot,DecimalType(38,6),true)StructField(jul_sales_per_sq_foot,DecimalType(38,6),true)StructField(aug_sales_per_sq_foot,DecimalType(38,6),true)StructField(sep_sales_per_sq_foot,DecimalType(38,6),true)StructField(oct_sales_per_sq_foot,DecimalType(38,6),true)StructField(nov_sales_per_sq_foot,DecimalType(38,6),true)StructField(dec_sales_per_sq_foot,DecimalType(38,6),true)StructField(jan_net,DecimalType(38,6),true)StructField(feb_net,DecimalType(38,6),true)StructField(mar_net,DecimalType(38,6),true)StructField(apr_net,DecimalType(38,6),true)StructField(may_net,DecimalType(38,6),true)StructField(jun_net,DecimalType(38,6),true)StructField(jul_net,DecimalType(38,6),true)StructField(aug_net,DecimalType(38,6),true)StructField(sep_net,DecimalType(38,6),true)StructField(oct_net,DecimalType(38,6),true)StructField(nov_net,DecimalType(38,6),true)StructField(dec_net,DecimalType(38,6),true)
 
 ===========================================
 Query q67 validation passed with warnings:

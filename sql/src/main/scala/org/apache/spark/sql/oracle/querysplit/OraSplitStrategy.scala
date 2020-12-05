@@ -18,6 +18,7 @@ package org.apache.spark.sql.oracle.querysplit
 
 import oracle.spark.DataSourceKey
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.connector.read.oracle.OraUnknownDistribution
 import org.apache.spark.sql.connector.read.partitioning.Partitioning
@@ -100,7 +101,7 @@ case object NoSplitStrategy extends OraSplitStrategy {
  *    a target split table.
  *
  */
-object OraSplitStrategy {
+object OraSplitStrategy extends Logging {
 
   private def apply(splitList : IndexedSeq[OraDBSplit]) : OraSplitStrategy = {
     null
@@ -117,21 +118,27 @@ object OraSplitStrategy {
     } else {
       val splitScope = QuerySplitAnalyzer.splitCandidates(oraPlan)
       val planComplex = splitScope.candidateTables.nonEmpty
-      val planInfo = OraExplainPlan.constructPlanInfo(oraPlan, planComplex)
-      val bytesPerTask : Long = OraSparkConfig.getConf(OraSparkConfig.BYTES_PER_SPLIT_TASK)
-      val resultSplitEnabled = OraSparkConfig.getConf(OraSparkConfig.ALLOW_SPLITBY_RESULTSET)
+      val planInfoO = OraExplainPlan.constructPlanInfo(dsKey, oraPlan, planComplex)
 
-      if (planInfo.bytes < bytesPerTask || (planComplex && !resultSplitEnabled)) {
+      if (!planInfoO.isDefined) {
         NoSplitStrategy
       } else {
-        val targetTable : Option[TableAccessDetails] =
-          buildTableAccess(planInfo.tabAccesses, splitScope.candidateTables)
-        val splitList : IndexedSeq[OraDBSplit] = new OraDBSplitGenerator(dsKey,
-          planInfo.bytes,
-          planInfo.rowCount,
-          bytesPerTask,
-          targetTable).generateSplitList
-        OraSplitStrategy(splitList)
+        val planInfo = planInfoO.get
+        val bytesPerTask: Long = OraSparkConfig.getConf(OraSparkConfig.BYTES_PER_SPLIT_TASK)
+        val resultSplitEnabled = OraSparkConfig.getConf(OraSparkConfig.ALLOW_SPLITBY_RESULTSET)
+
+        if (planInfo.bytes < bytesPerTask || (planComplex && !resultSplitEnabled)) {
+          NoSplitStrategy
+        } else {
+          val targetTable: Option[TableAccessDetails] =
+            buildTableAccess(planInfo.tabAccesses, splitScope.candidateTables)
+          val splitList: IndexedSeq[OraDBSplit] = new OraDBSplitGenerator(dsKey,
+            planInfo.bytes,
+            planInfo.rowCount,
+            bytesPerTask,
+            targetTable).generateSplitList
+          OraSplitStrategy(splitList)
+        }
       }
     }
   }
@@ -144,7 +151,10 @@ object OraSplitStrategy {
     }
 
     if (!chosenTable.isDefined) {
-      // TODO logWarn
+      logWarning(
+        s"""Failed to match OraTable for tableAccess: ${tblAccess}
+           |  spliTables = ${splitTables.mkString(",")}""".stripMargin
+      )
     }
 
     chosenTable.map(_.oraTabScan)

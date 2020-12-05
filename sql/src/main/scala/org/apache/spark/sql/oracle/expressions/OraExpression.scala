@@ -19,14 +19,15 @@ package org.apache.spark.sql.oracle.expressions
 
 import java.util.Locale
 
-import org.apache.spark.sql.catalyst.expressions.{And, Expression, IsNotNull, IsNull}
+import org.apache.spark.sql.catalyst.expressions.{And, Coalesce, Expression, IsNotNull, IsNull, Literal}
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.truncatedString
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.oracle.{OraSparkUtils, OraSQLImplicits, SQLSnippet, SQLSnippetProvider}
 import org.apache.spark.sql.sources.Filter
-import org.apache.spark.sql.types.BooleanType
+import org.apache.spark.sql.types.{BooleanType, StringType}
+import org.apache.spark.unsafe.types.UTF8String
 
 abstract class OraExpression extends TreeNode[OraExpression]
   with OraSQLImplicits with SQLSnippetProvider {
@@ -211,6 +212,113 @@ object OraExpression {
       }
     }
   }
+
+  /**
+   *  In oracle sql '''Coalesce with an empty string seems to be treated differently.'''
+   *
+   * '''Example 1:'''
+   * - the following returns no rows:
+   * {{{
+   * select 1 from dual where coalesce(null, '') = coalesce(null, '’);
+   * }}}
+   *
+   * '''Example 2:'''
+   * The queries below return 2, except the last query.
+   * Table:
+   * {{{
+   * create table hb_xyz as select 'a' ln from dual union select null from dual;
+   * SQL> describe hb_xyz;
+   *  Name        Null?    Type
+   *  ----------------------------------------- -------- ----------------------------
+   *  LN          CHAR(1)
+   * }}}
+   *
+   *
+   * '''Queries:'''
+   * {{{
+   * select count(*)
+   * from (
+   * select coalesce(ln , '') from hb_xyz
+   * intersect
+   * select coalesce(ln , '') from hb_xyz
+   * );
+   *
+   * select count(*)
+   * from (
+   * select coalesce(ln , '<>') from hb_xyz
+   * intersect
+   * select coalesce(ln , '<>') from hb_xyz
+   * );
+   *
+   * select count(*)
+   * from (
+   * select coalesce(ln , '<>')
+   * from hb_xyz
+   * where coalesce(ln , '<>')  in (select coalesce(ln , '<>') from hb_xyz)
+   * );
+   *
+   * select count(*)
+   * from (
+   * select coalesce(ln , '')
+   * from hb_xyz
+   * where coalesce(ln , '')  in (select coalesce(ln , '') from hb_xyz)
+   * )
+   *
+   * Plan for intersect queries:
+   * Execution Plan
+   * ----------------------------------------------------------
+   * Plan hash value: 15181038
+   *
+   * --------------------------------------------------------------------------------
+   * | Id  | Operation          | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+   * --------------------------------------------------------------------------------
+   * |   0 | SELECT STATEMENT      |        |     1 |       |     8    (25)| 00:00:01 |
+   * |   1 |  SORT AGGREGATE       |        |     1 |       |        |           |
+   * |   2 |   VIEW              |        |     2 |       |     8    (25)| 00:00:01 |
+   * |   3 |    INTERSECTION       |        |       |       |        |           |
+   * |   4 |     SORT UNIQUE       |        |     2 |     4 |     4    (25)| 00:00:01 |
+   * |   5 |      TABLE ACCESS FULL| HB_XYZ |     2 |     4 |     3     (0)| 00:00:01 |
+   * |   6 |     SORT UNIQUE       |        |     2 |     4 |     4    (25)| 00:00:01 |
+   * |   7 |      TABLE ACCESS FULL| HB_XYZ |     2 |     4 |     3     (0)| 00:00:01 |
+   * --------------------------------------------------------------------------------
+   * Plan for in queries:
+   * Execution Plan
+   * ----------------------------------------------------------
+   * Plan hash value: 3742104981
+   *
+   * ------------------------------------------------------------------------------
+   * | Id  | Operation        | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+   * ------------------------------------------------------------------------------
+   * |   0 | SELECT STATEMENT    |         |       1 |       4 |       6   (0)| 00:00:01 |
+   * |   1 |  SORT AGGREGATE     |         |       1 |       4 |          |         |
+   * |*  2 |   HASH JOIN SEMI    |         |       1 |       4 |       6   (0)| 00:00:01 |
+   * |   3 |    TABLE ACCESS FULL| HB_XYZ |       2 |       4 |       3   (0)| 00:00:01 |
+   * |   4 |    TABLE ACCESS FULL| HB_XYZ |       2 |       4 |       3   (0)| 00:00:01 |
+   * ------------------------------------------------------------------------------
+   * Predicate Information (identified by operation id):
+   * ---------------------------------------------------
+   *
+   *    2 - access(COALESCE("LN",'')=COALESCE("LN",'’))
+   * OR
+   *  2 - access(COALESCE("LN",'<>')=COALESCE("LN",'<>'))
+   * }}}
+   *
+   * @param oE input OraExpression
+   * @return
+   */
+  def fixEmptyStringCoalesce(oE : OraExpression) : OraExpression = (oE, oE.catalystExpr) match {
+    case (oE@OraFnExpression(COALESCE, _, childrenOEs),
+    cE@Coalesce(_ :: Literal(v, StringType) :: Nil)) if v.toString == "" =>
+      val newChildrenOEs = (
+        childrenOEs.init :+
+          OraLiteral(Literal(UTF8String.fromString("<>"), StringType))
+        ).toArray
+      OraFnExpression(COALESCE, cE, newChildrenOEs)
+    case (_, _) => oE
+  }
+
+  def fixForJoinCond(oE : OraExpression) : OraExpression =
+    (fixEmptyStringCoalesce _ andThen applyIntConversion _)(oE)
 }
 
 object OraExpressions {

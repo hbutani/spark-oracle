@@ -28,6 +28,7 @@ import org.apache.spark.sql.catalyst.expressions.{Attribute, Literal, SpecificIn
 import org.apache.spark.sql.connector.read.PartitionReader
 import org.apache.spark.sql.connector.read.oracle.OraPartition.OraQueryAccumulators
 import org.apache.spark.sql.oracle.OracleCatalogOptions
+import org.apache.spark.sql.oracle.expressions.OraLiterals
 import org.apache.spark.sql.oracle.expressions.OraLiterals.{jdbcGetSet, JDBCGetSet}
 import org.apache.spark.sql.oracle.sqlexec.SparkOraStatement
 import org.apache.spark.util.{DoubleAccumulator, NextIterator, TaskCompletionListener, TaskFailureListener}
@@ -192,13 +193,7 @@ case class OraQueryStatement(oraPart: OraPartition, timeToExecute: DoubleAccumul
   override def catalogOptions: OracleCatalogOptions = dsInfo.catalogOptions
 
   private def bindValues(ps: PreparedStatement): Unit = {
-    val setters: Seq[JDBCGetSet[_]] =
-      bindValues.map { lit =>
-        jdbcGetSet(lit.dataType)
-      }
-    for (((bV, setter), i) <- bindValues.zip(setters).zipWithIndex) {
-      setter.setValue(bV, ps, i)
-    }
+    OraLiterals.bindValues(ps, bindValues)
   }
 
   private[oracle] def getConn : Connection = conn

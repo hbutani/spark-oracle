@@ -368,4 +368,15 @@ object OraLiterals {
     (OraLiteral(Literal(minV)).toLiteralSql, OraLiteral(Literal(maxV)).toLiteralSql)
   }
 
+  def bindValues(ps: PreparedStatement,
+                         bindValues: Seq[Literal]): Unit = {
+    val setters: Seq[JDBCGetSet[_]] =
+      bindValues.map { lit =>
+        jdbcGetSet(lit.dataType)
+      }
+    for (((bV, setter), i) <- bindValues.zip(setters).zipWithIndex) {
+      setter.setValue(bV, ps, i)
+    }
+  }
+
 }

@@ -37,12 +37,11 @@ package object querysplit {
 
   case class TableAccessOperation(tabNm : String,
                                   qBlk : String,
+                                  object_alias : String,
                                   alias : String,
                                   row_count : Long,
                                   bytes : Long,
-                                  partitionRange : Option[(Int, Int)]) {
-
-  }
+                                  partitionRange : Option[(Int, Int)])
 
   case class PlanInfo(
                        rowCount : Long,

@@ -511,7 +511,8 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
     }
   }
 
-  val excludeSet = Set("q14-1", "q14-2", "q23-2", "q24-1", "q24-2")
+  // q14-1, q14-2, q23-2, q66
+  val excludeSet : Set[String] = Set("q14-1", "q14-2", "q23-2", "q66")
 
   def run : Unit = {
     initializeSpark

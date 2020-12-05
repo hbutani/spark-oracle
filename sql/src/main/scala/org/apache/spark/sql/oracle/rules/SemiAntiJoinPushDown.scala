@@ -200,8 +200,8 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
       _rightOraExprs <- OraExpressions.unapplySeq(dereference(rightKeys, rightQBlk));
       outProjections <- OraExpressions.unapplySeq(joinOp.output)
     ) yield {
-      val leftOraExprs = _leftOraExprs.map(OraExpression.applyIntConversion)
-      val rightOraExprs = _rightOraExprs.map(OraExpression.applyIntConversion)
+      val leftOraExprs = _leftOraExprs.map(OraExpression.fixForJoinCond)
+      val rightOraExprs = _rightOraExprs.map(OraExpression.fixForJoinCond)
       val oraExpression: OraExpression = OraSubQueryJoin(
         joinOp,
         leftOraExprs,
@@ -233,8 +233,8 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
       outProjections <- OraExpressions.unapplySeq(joinOp.output)
     ) yield {
 
-      val leftOraExprs = _leftOraExprs.map(OraExpression.applyIntConversion)
-      val rightOraExprs = _rightOraExprs.map(OraExpression.applyIntConversion)
+      val leftOraExprs = _leftOraExprs.map(OraExpression.fixForJoinCond)
+      val rightOraExprs = _rightOraExprs.map(OraExpression.fixForJoinCond)
 
       /*
        * 1. Push is not null checks into right Query Block.
@@ -298,8 +298,8 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
           OraExpressions.unapplySeq(dereference(rightKeys ++ notInRkeys, rightQBlk));
         outProjections <- OraExpressions.unapplySeq(joinOp.output)
       ) yield {
-        val leftOraExprs = _leftOraExprs.map(OraExpression.applyIntConversion)
-        val rightOraExprs = _rightOraExprs.map(OraExpression.applyIntConversion)
+        val leftOraExprs = _leftOraExprs.map(OraExpression.fixForJoinCond)
+        val rightOraExprs = _rightOraExprs.map(OraExpression.fixForJoinCond)
 
         val newRQBlk = rightQBlk.copyBlock(select = rightOraExprs)
 
