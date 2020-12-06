@@ -319,6 +319,17 @@ object OraExpression {
 
   def fixForJoinCond(oE : OraExpression) : OraExpression =
     (fixEmptyStringCoalesce _ andThen applyIntConversion _)(oE)
+
+  def transformEmptyStringCoalesce(oE : OraExpression) : OraExpression = oE transformUp {
+    case oE : OraFnExpression => fixEmptyStringCoalesce(oE)
+  }
+
+  def canBeNull(cE : Expression) : Boolean = cE match {
+    case n : IsNull => false
+    case n : IsNotNull => false
+    case c : Coalesce => false
+    case _ => true
+  }
 }
 
 object OraExpressions {

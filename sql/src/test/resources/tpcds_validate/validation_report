@@ -1,7 +1,7 @@
-Validation Report (generated on Fri Dec 04 21:59:34 PST 2020):
-  num_queries= (total=99, pass=0, warn=97, fail=2)
+Validation Report (generated on Sat Dec 05 18:52:22 PST 2020):
+  num_queries= (total=99, pass=0, warn=98, fail=1)
   skipped queries= q14-1,q14-2,q23-2,q66
-  failed queries= q72,q87
+  failed queries= q72
 
 Query q1 validation passed with warnings:
   Warning: Push Plan has Changed
@@ -1133,7 +1133,7 @@ Query q86 validation passed with warnings:
     non-push : StructField(total_sum,DecimalType(38,18),true)StructField(i_category,StringType,true)StructField(i_class,StringType,true)StructField(lochierarchy,ByteType,true)StructField(rank_within_parent,IntegerType,true)
 
 ===========================================
-Query q87 validation failed:
+Query q87 validation passed with warnings:
   Warning: Push Plan has Changed
     push : <null>
     non-push : RelationV2[none#0L] TPCDS.STORE_SALES
@@ -1141,9 +1141,6 @@ Query q87 validation failed:
   Warning: Schema's are different
     push : StructField(count(1),LongType,false)
     non-push : StructField(count(1),LongType,true)
-  values in row 0, column 0 don't match
-    push : push_value=47555.0
-    non-push : nonPushValue=47298.0
 
 ===========================================
 Query q88 validation passed with warnings:

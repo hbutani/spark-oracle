@@ -69,7 +69,7 @@ class SetOpTranslationTest extends AbstractTranslationTest {
       |from SPARKTEST.UNIT_TEST """.stripMargin + """
       |where (("C_INT" IS NOT NULL AND ("C_INT" > ?)) AND  (COALESCE("C_INT" , ?), CASE WHEN "C_INT" IS NULL THEN 1 ELSE 0 END) NOT IN ( select COALESCE("C_INT" , 0), CASE WHEN "C_INT" IS NULL THEN 1 ELSE 0 END
       |from SPARKTEST.UNIT_TEST """.stripMargin + """
-      |where (("C_INT" IS NOT NULL AND ("C_INT" > ?)) AND COALESCE("C_INT" , ?) IS NOT NULL) )) )  group by "val"""".stripMargin
+      |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) )) )  group by "val"""".stripMargin
   )
 
 

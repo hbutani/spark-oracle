@@ -225,23 +225,26 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
 
   private def pushNotExists : Option[OraQueryBlock] = {
     val joinOp = pushdownCatalystOp
-    val rightNullChecks : Seq[Expression] = rightKeys.map(IsNotNull(_))
+
+    /*
+     * 1. Push is not null checks into right Query Block.
+     * - the `rightKeys` are [[AttributeReference]]s on rightQBlock
+     * - so pushing conditions w/o any checks or alias substitution.
+     * 2. But only push rightKey expressions that can generate null values.
+     */
+
+    val rightNullChecks : Seq[Expression] =
+      rightKeys.filter(OraExpression.canBeNull).map(IsNotNull(_))
     for (
       _leftOraExprs <- OraExpressions.unapplySeq(leftKeys);
       _rightOraExprs <- OraExpressions.unapplySeq(dereference(rightKeys, rightQBlk));
-      _rightOraNotNullExprs <- OraExpressions.unapplySeq(rightNullChecks);
+      rightOraNotNullExprs <- OraExpressions.unapplySeq(rightNullChecks);
       outProjections <- OraExpressions.unapplySeq(joinOp.output)
     ) yield {
 
       val leftOraExprs = _leftOraExprs.map(OraExpression.fixForJoinCond)
       val rightOraExprs = _rightOraExprs.map(OraExpression.fixForJoinCond)
 
-      /*
-       * 1. Push is not null checks into right Query Block.
-       * - the `rightKeys` are [[AttributeReference]]s on rightQBlock
-       * - so pushing conditions w/o any checks or alias substitution.
-       */
-      val rightOraNotNullExprs = OraExpression.removeInvalidNullCheck(_rightOraNotNullExprs)
       val newRFil = if (rightOraNotNullExprs.nonEmpty) {
         val filts : Seq[OraExpression] = rightQBlk.where.toSeq ++ rightOraNotNullExprs
         Some(
