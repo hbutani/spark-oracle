@@ -96,8 +96,8 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) ex
   /*
    * On start load namespaces and table lists from local cache or DB.
    */
-  loadNamespaces()
-  loadTableSpaces()
+  loadNamespaces(!cache_only)
+  loadTableSpaces(!cache_only)
 
   private def loadNamespaces(reload : Boolean = false) : Unit = {
 
