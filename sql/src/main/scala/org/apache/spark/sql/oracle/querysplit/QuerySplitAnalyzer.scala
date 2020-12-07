@@ -19,7 +19,7 @@ package org.apache.spark.sql.oracle.querysplit
 
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
 import org.apache.spark.sql.catalyst.plans.Inner
-import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan, Project}
+import org.apache.spark.sql.catalyst.plans.logical.{Filter, GlobalLimit, LocalLimit, LogicalPlan, Project}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.oracle.operators.{OraPlan, OraSingleQueryBlock, OraTableScan}
 
@@ -91,6 +91,8 @@ object QuerySplitAnalyzer {
       case _ : DataSourceV2ScanRelation => true
       case _ : Project => true
       case _ : Filter => true
+      case _ : GlobalLimit => true
+      case _ : LocalLimit => true
       case _ => false
     }
 

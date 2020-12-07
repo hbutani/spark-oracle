@@ -49,12 +49,13 @@ package object querysplit {
                        tabAccesses : Seq[TableAccessOperation]
                      )
 
+  def ORA_SYS_PARTITION(pNm : String) : Boolean = pNm.startsWith("SYS")
 
   case class TableAccessDetails(oraTable : OraTable, tabAccessOp : TableAccessOperation) {
     val scheme = oraTable.schema
     val name = oraTable.name
     val tableParts : Option[Seq[String]] = tabAccessOp.partitionRange.flatMap { r =>
-      val partNms = oraTable.partitions(r._1, r._2)
+      val partNms = oraTable.partitions(r._1, r._2).filterNot(ORA_SYS_PARTITION)
       if (partNms.isEmpty) None else Some(partNms)
     }
   }

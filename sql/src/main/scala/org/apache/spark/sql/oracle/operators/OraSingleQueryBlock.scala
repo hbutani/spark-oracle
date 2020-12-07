@@ -63,9 +63,10 @@ trait OraQueryBlockSQLSnippets {self: OraSingleQueryBlock =>
 
   import OraSQLImplicits._
 
-  private def sourceSnippet : SQLSnippet = {
+  private def sourceSnippet(implicit srcSnipOverride :
+  OraTableScan => Option[SQLSnippet] = t => None) : SQLSnippet = {
     val srcSQL = source match {
-      case ot : OraTableScan => SQLSnippet.tableQualId(ot.oraTable)
+      case ot : OraTableScan => srcSnipOverride(ot).getOrElse(SQLSnippet.tableQualId(ot.oraTable))
       case oQ : OraQueryBlock => SQLSnippet.subQuery(oQ.orasql)
     }
     val qualifier : SQLSnippet =
@@ -151,10 +152,11 @@ case class OraSingleQueryBlock(source: OraPlan,
 
   override def splitOraSQL(dbSplitId : Int, splitStrategy : OraSplitStrategy)
   : SQLSnippet = {
-    SQLSnippet.select(selectListSQL : _*).
+    val sqlSnip = SQLSnippet.select(selectListSQL : _*).
       from(sourcesSQL(ot => splitStrategy.splitOraSQL(ot, dbSplitId))).
       where(whereConditionSQL).
       groupBy(groupByListSQL)
+    splitStrategy.associateFetchClause(sqlSnip, dbSplitId)
   }
 
   override def copyBlock(source: OraPlan = source,

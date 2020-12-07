@@ -22,7 +22,8 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.connector.read.oracle.OraUnknownDistribution
 import org.apache.spark.sql.connector.read.partitioning.Partitioning
-import org.apache.spark.sql.oracle.{OraSparkConfig, SQLSnippet}
+import org.apache.spark.sql.oracle.{OraSparkConfig, OraSQLImplicits, SQLSnippet}
+import org.apache.spark.sql.oracle.expressions.{OraExpressions, OraLiteralSql}
 import org.apache.spark.sql.oracle.operators.{OraPlan, OraTableScan}
 
 trait OraSplitStrategy {
@@ -64,6 +65,35 @@ trait OraSplitStrategy {
    */
   def splitOraSQL(oraTblScan : OraTableScan, splitId : Int) : Option[SQLSnippet]
 
+  protected def tableSelectList(oraTableScan: OraTableScan) : Seq[SQLSnippet] = {
+    OraExpressions.unapplySeq(oraTableScan.catalystAttributes).get
+      .map(_.reifyLiterals.orasql)
+  }
+
+  protected def tableFrom(ot: OraTableScan) : SQLSnippet =
+    SQLSnippet.tableQualId(ot.oraTable)
+
+  protected def isTarget(oraTblScan: OraTableScan,
+                         targetTable : TableAccessDetails
+                        ) : Boolean = {
+    oraTblScan.isQuerySplitCandidate &&
+      oraTblScan.oraTable.schema == targetTable.oraTable.schema &&
+      oraTblScan.oraTable.name == targetTable.oraTable.name
+  }
+
+  /**
+   * [[OraResultSplitStrategy]] can use this hook to add a fetch clause:
+   * `OFFSET ? ROWS FETCH NEXT ? ROWS ONLY`
+   *
+   * @param sqlSnip
+   * @param splitId
+   * @return
+   */
+  def associateFetchClause(sqlSnip: SQLSnippet, splitId : Int) : SQLSnippet = sqlSnip
+
+  protected def literalsql(v : Any) : OraLiteralSql =
+    new OraLiteralSql(v.toString)
+
 }
 
 case object NoSplitStrategy extends OraSplitStrategy {
@@ -71,6 +101,79 @@ case object NoSplitStrategy extends OraSplitStrategy {
 
   override def splitOraSQL(oraTblScan: OraTableScan, splitId : Int): Option[SQLSnippet] =
     None
+}
+
+case class OraRowIdSplitStrategy(splitList : IndexedSeq[OraDBSplit],
+                                 targetTable : TableAccessDetails
+                                ) extends OraSplitStrategy {
+  import OraSQLImplicits._
+
+  private def sqlString(s : String) = literalsql(s"'${s}'")
+
+  override def splitOraSQL(oraTblScan: OraTableScan, splitId: Int): Option[SQLSnippet] = {
+    if (isTarget(oraTblScan, targetTable)) {
+      val split = splitList(splitId).asInstanceOf[OraRowIdSplit]
+      val cond = osql"rowid BETWEEN ${sqlString(split.start)} AND ${sqlString(split.stop)}"
+
+      Some(
+        SQLSnippet.subQuery(
+          SQLSnippet.select(tableSelectList(oraTblScan): _*).
+            from(tableFrom(oraTblScan)).
+            where(cond)
+        )
+      )
+    } else None
+  }
+}
+
+case class OraPartitionSplitStrategy(splitList : IndexedSeq[OraDBSplit],
+                                     targetTable : TableAccessDetails
+                                    ) extends OraSplitStrategy {
+  import OraSQLImplicits._
+
+  override def splitOraSQL(oraTblScan: OraTableScan, splitId: Int): Option[SQLSnippet] = {
+    if (isTarget(oraTblScan, targetTable)) {
+      val split = splitList(splitId).asInstanceOf[OraPartitionSplit]
+      val subPart : Boolean = targetTable.oraTable.isSubPartitioned
+
+      def partClause(pNm : String) : SQLSnippet = {
+        if (!subPart) {
+          osql"PARTITION(${literalsql(pNm)})"
+        } else {
+          osql"SUBPARTITION(${literalsql(pNm)})"
+        }
+      }
+
+      if (split.partitions.size == 1) {
+        Some( osql"${tableFrom(oraTblScan)} ${partClause(split.partitions.head)}")
+      } else {
+        val selCl = SQLSnippet.select(tableSelectList(oraTblScan): _*)
+        val fromCl = tableFrom(oraTblScan)
+        val partSels = split.partitions.map{pNm =>
+          SQLSnippet.select(tableSelectList(oraTblScan): _*).
+            from(osql"${fromCl} ${partClause(pNm)}")
+        }
+        Some(
+          SQLSnippet.subQuery(
+            SQLSnippet.operator("union all", partSels : _*)
+          )
+        )
+      }
+
+    } else None
+  }
+}
+
+case class OraResultSplitStrategy(splitList : IndexedSeq[OraDBSplit]) extends OraSplitStrategy {
+  override def splitOraSQL(oraTblScan: OraTableScan, splitId: Int): Option[SQLSnippet] = None
+
+  override def associateFetchClause(sqlSnip: SQLSnippet, splitId : Int) : SQLSnippet = {
+    import OraSQLImplicits._
+    val split = splitList(splitId).asInstanceOf[OraResultSplit]
+    val offsetCl = osql"OFFSET ${literalsql(split.offset)} " +
+        osql"ROWS FETCH NEXT ${literalsql(split.numRows)} ROWS ONLY"
+    osql"${sqlSnip} ${offsetCl}"
+  }
 }
 
 /**
@@ -103,8 +206,17 @@ case object NoSplitStrategy extends OraSplitStrategy {
  */
 object OraSplitStrategy extends Logging {
 
-  private def apply(splitList : IndexedSeq[OraDBSplit]) : OraSplitStrategy = {
-    null
+  private def apply(splitList : IndexedSeq[OraDBSplit],
+                    targettable : Option[TableAccessDetails]
+                   ) : OraSplitStrategy = {
+     (splitList.headOption, targettable) match {
+      case  (None, _) => NoSplitStrategy
+      case (Some(s : OraNoSplit.type), _) => NoSplitStrategy
+      case (Some(s : OraRowIdSplit), Some(tt)) => OraRowIdSplitStrategy(splitList, tt)
+      case (Some(s : OraPartitionSplit), Some(tt)) => OraPartitionSplitStrategy(splitList, tt)
+      case (Some(s : OraResultSplit), _) => OraResultSplitStrategy(splitList)
+      case _ => NoSplitStrategy
+    }
   }
 
   def generateSplits(dsKey : DataSourceKey,
@@ -113,12 +225,12 @@ object OraSplitStrategy extends Logging {
   ) : OraSplitStrategy = {
     val qrySplitEnabled = OraSparkConfig.getConf(OraSparkConfig.ENABLE_ORA_QUERY_SPLITTING)
 
-    if (!qrySplitEnabled || true /* TODO, currently query splitting not enabled */ ) {
+    if (!qrySplitEnabled ) {
       NoSplitStrategy
     } else {
       val splitScope = QuerySplitAnalyzer.splitCandidates(oraPlan)
-      val planComplex = splitScope.candidateTables.nonEmpty
-      val planInfoO = OraExplainPlan.constructPlanInfo(dsKey, oraPlan, planComplex)
+      val planComplex = splitScope.candidateTables.isEmpty
+      val planInfoO = OraExplainPlan.constructPlanInfo(dsKey, oraPlan, !planComplex)
 
       if (!planInfoO.isDefined) {
         NoSplitStrategy
@@ -137,7 +249,7 @@ object OraSplitStrategy extends Logging {
             planInfo.rowCount,
             bytesPerTask,
             targetTable).generateSplitList
-          OraSplitStrategy(splitList)
+          OraSplitStrategy(splitList, targetTable)
         }
       }
     }

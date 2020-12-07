@@ -17,7 +17,7 @@
 package org.apache.spark.sql.oracle
 
 import org.apache.spark.internal.config.ConfigEntry
-import org.apache.spark.network.util.ByteUnit
+import org.apache.spark.network.util.{ByteUnit, JavaUtils}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.internal.SQLConf.buildConf
@@ -39,7 +39,7 @@ object OraSparkConfig {
   val ENABLE_ORA_QUERY_SPLITTING = buildConf(
     "spark.sql.oracle.enable.querysplitting").
     doc("""Enable Splitting Oracle Pushdown Queries into multiple
-    |queries, one per task. Default is true.
+    |queries, one per task. Currently default is false.
     |The process of inferring Query splits, runs an explain on
     |the pushdown query. This may incur an overhead of 100s of mSecs.
     |In situations where it is ok to always run 1 task or
@@ -50,15 +50,15 @@ object OraSparkConfig {
     |user to specify split strategy""".stripMargin
     ).
     booleanConf.
-    createWithDefault(true)
+    createWithDefault(false)
 
   val BYTES_PER_SPLIT_TASK =
-    buildConf("spark.sql.oracle.querysplit.targetmbytes")
+    buildConf("spark.sql.oracle.querysplit.target")
       .doc(
         """Split pushdown query so that each Task returns these many bytes
           |(specified in MB). Default is 1""".stripMargin)
-      .bytesConf(ByteUnit.MiB)
-      .createWithDefault(1)
+      .bytesConf(ByteUnit.BYTE)
+      .createWithDefault(JavaUtils.byteStringAs("1MB", ByteUnit.BYTE))
 
   val ALLOW_SPLITBY_RESULTSET = buildConf(
     "spark.sql.oracle.allow.splitresultset").

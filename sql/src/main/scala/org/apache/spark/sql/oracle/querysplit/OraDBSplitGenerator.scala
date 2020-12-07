@@ -38,11 +38,11 @@ sealed trait OraDBSplit
 
 case object OraNoSplit extends OraDBSplit
 
-case class OraResultSplit(start : Long, numRows : Long) extends OraDBSplit
+case class OraResultSplit(offset : Long, numRows : Long) extends OraDBSplit
 
 case class OraPartitionSplit(partitions : Seq[String]) extends OraDBSplit
 
-case class OraRowIdSplit(start : String, end : String) extends OraDBSplit
+case class OraRowIdSplit(start : String, stop : String) extends OraDBSplit
 
 /**
  * Given a Query's output stats(bytes, rowCOunt) and a potential targetTable
@@ -90,11 +90,11 @@ class OraDBSplitGenerator(dsKey : DataSourceKey,
 
   private lazy val numSplits : Int = Math.ceil(degree_of_parallel).toInt
 
-  private lazy val rowsPerSplit = Math.ceil(rowCount / numSplits.toDouble).toInt
-
   private def noSplitList = IndexedSeq(OraNoSplit)
 
   private def resultSplitList : IndexedSeq[OraDBSplit] = {
+    val rowsPerSplit = Math.ceil(rowCount / numSplits.toDouble).toInt
+
     val splits = new Array[OraResultSplit](numSplits)
     var rownum = 0
     var i = 0
@@ -119,12 +119,68 @@ class OraDBSplitGenerator(dsKey : DataSourceKey,
     splits.toIndexedSeq
   }
 
+  /**
+   * Manual sql example:
+   * {{{
+   *   SQL> select DBMS_PARALLEL_EXECUTE.GENERATE_TASK_NAME('ORASPARK') from dual;
+   *
+   * DBMS_PARALLEL_EXECUTE.GENERATE_TASK_NAME('ORASPARK')
+   * --------------------------------------------------------------------------------
+   * ORASPARK5
+   *
+   * SQL> exec DBMS_PARALLEL_EXECUTE.CREATE_TASK('ORASPARK5', 'Dummy task for ORASPARK splitter');
+   *
+   * PL/SQL procedure successfully completed.
+   *
+   * SQL> exec DBMS_PARALLEL_EXECUTE.CREATE_CHUNKS_BY_ROWID(
+   *    'ORASPARK5', 'SPARKTEST', 'UNIT_TEST', TRUE, 500);
+   *
+   * PL/SQL procedure successfully completed.
+   *
+   * SQL> select START_ROWID, END_ROWID
+   * from user_parallel_execute_chunks where task_name='ORASPARK5' order by START_ROWID;
+   *
+   * START_ROWID        END_ROWID
+   * ------------------ ------------------
+   * AAASH2AAMAAAKYwAAA AAASH2AAMAAAKZPH//
+   *
+   * SQL> exec DBMS_PARALLEL_EXECUTE.DROP_CHUNKS('ORASPARK5')
+   *
+   * PL/SQL procedure successfully completed.
+   *
+   * SQL> exec DBMS_PARALLEL_EXECUTE.DROP_TASK('ORASPARK5')
+   *
+   * PL/SQL procedure successfully completed.
+   * }}}
+   *
+   * @param table
+   * @return
+   */
   private def rowIdSplitList(table : TableAccessDetails) : IndexedSeq[OraDBSplit] = {
+    /**
+     * Try to use the table count estimate. Why?
+     * - the plan estimate of bytes and rows is based on returned rows.
+     * - whereas rowid ranges are based on the entire table.
+     * For example:
+     * {{{
+     * table rowCount = 1000, query result_cnt = 100, bytes = 1000, bytesPerTask=100
+     * So:
+     * dop=10
+     * if we use query row_count, we get rowsPerSplit=10 => rowsPerSplit=10, so we get 100 tasks
+     * Using table rowCount=1000 => rowsPerSplit=100, so we get 10 tasks.
+     * }}}
+     */
+    val rowsPerSplit = {
+      val rCnt = table.oraTable.tabStats.row_count.getOrElse(rowCount)
+      Math.ceil(rCnt / numSplits.toDouble).toInt
+    }
+
     ORASQLUtils.perform(
       dsKey,
       s"build row-id splits for table ${table.scheme}.${table.name}"
     ) {conn =>
       val taskName = ORASQLUtils.performQuery(conn, CHUNK_TASK_NAME_SQL) {rs =>
+        rs.next()
         rs.getString(1)
       }
 
@@ -132,7 +188,7 @@ class OraDBSplitGenerator(dsKey : DataSourceKey,
         ps => ps.setString(1, taskName))(_ => ())
 
       ORASQLUtils.performCall(conn,
-        CHUNK_TASK_CREATE_TASK_SQL,
+        CHUNK_TASK_CREATE_CHUNKS,
         cs => {
           cs.setString(1, taskName)
           cs.setString(2, table.scheme)
@@ -193,12 +249,9 @@ object OraDBSplitGenerator {
     "call " + "DBMS_PARALLEL_EXECUTE.DROP_TASK(?)"
 
   private[querysplit] val CHUNK_TASK_CREATE_CHUNKS =
-  """
-      |call DBMS_PARALLEL_EXECUTE.CREATE_CHUNKS_BY_ROWID(
-      |  ?,?,?,
-      |  TRUE,
-      |  ?
-      |)""".stripMargin
+  """begin
+      |  DBMS_PARALLEL_EXECUTE.CREATE_CHUNKS_BY_ROWID(?,?,?,TRUE,?);
+      |end;""".stripMargin
 
   private[querysplit] val ROWID_CHUNKS_QUERY =
   """

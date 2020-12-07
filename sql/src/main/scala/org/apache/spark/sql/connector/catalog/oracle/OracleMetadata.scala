@@ -237,6 +237,9 @@ object OracleMetadata {
       ab.toIndexedSeq
     }
 
+    @transient lazy val  isSubPartitioned : Boolean =
+      partitions.exists(p => p.subPartitions.nonEmpty)
+
     /**
      * Numbering starts at 1. Return partitions in the subrange(s,e)
      * both ends are inclusive.
