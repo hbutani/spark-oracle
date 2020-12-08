@@ -1,4 +1,4 @@
-Validation Report (generated on Sat Dec 05 18:52:22 PST 2020):
+Validation Report (generated on Tue Dec 08 07:59:28 PST 2020):
   num_queries= (total=99, pass=0, warn=98, fail=1)
   skipped queries= q14-1,q14-2,q23-2,q66
   failed queries= q72
@@ -417,8 +417,8 @@ Query q35 validation passed with warnings:
                :  +- 'Join Inner, (none#1 = none#2)
                :     :- 'Project [none#1, none#2]
                :     :  +- 'Filter (none#3 OR none#4)
-               :     :     +- 'Join ExistenceJoin(exists#13190), (none#0 = none#4)
-               :     :        :- 'Join ExistenceJoin(exists#13189), (none#0 = none#3)
+               :     :     +- 'Join ExistenceJoin(exists#13218), (none#0 = none#4)
+               :     :        :- 'Join ExistenceJoin(exists#13217), (none#0 = none#3)
                :     :        :  :- RelationV2[none#0, none#1, none#2] TPCDS.CUSTOMER
                :     :        :  +- RelationV2[none#0] TPCDS.WEB_SALES
                :     :        +- RelationV2[none#0] TPCDS.CATALOG_SALES
@@ -571,7 +571,7 @@ Query q45 validation passed with warnings:
       +- 'Aggregate [none#2, none#1], [none#2, none#1, sum(none#0) AS #0]
          +- 'Project [none#0, none#1, none#2]
             +- 'Filter (substr(none#2, 1, 5) IN (85460,83405,85392,81792,86475,86197,85669,88274,80348) OR none#4)
-               +- 'Join ExistenceJoin(exists#15628), (none#3 = none#4)
+               +- 'Join ExistenceJoin(exists#15656), (none#3 = none#4)
                   :- RelationV2[none#0, none#1, none#2, none#3] TPCDS.WEB_SALES
                   +- RelationV2[none#0] TPCDS.ITEM
 

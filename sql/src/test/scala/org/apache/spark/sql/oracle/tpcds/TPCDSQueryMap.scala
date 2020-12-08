@@ -1182,7 +1182,7 @@ select  i_brand_id brand_id, i_brand brand, i_manufact_id, i_manufact,
      ,item
      ,date_dim
  where cs_item_sk = i_item_sk
-   and i_category in ('Sports', 'Books', 'Home')
+   and trim(TRAILING from i_category) in ('Sports', 'Books', 'Home')
    and cs_sold_date_sk = d_date_sk
  and d_date between cast('1999-02-22' as date)
                                 and date_add(cast('1999-02-22' as date), 30)
@@ -1399,7 +1399,7 @@ select c_last_name
       ,s_store_name
       ,sum(netpaid) paid
 from ssales
-where i_color = 'pale'
+where trim(TRAILING from i_color) = 'pale'
 group by c_last_name
         ,c_first_name
         ,s_store_name
@@ -1453,7 +1453,7 @@ select c_last_name
       ,s_store_name
       ,sum(netpaid) paid
 from ssales
-where i_color = 'chiffon'
+where trim(TRAILING from i_color) = 'chiffon'
 group by c_last_name
         ,c_first_name
         ,s_store_name
@@ -3800,7 +3800,7 @@ where d1.d_week_seq = d2.d_week_seq
   and d3.d_date > date_add(cast(d1.d_date as date),5)
   and trim(TRAILING from hd_buy_potential) = '>10000'
   and d1.d_year = 1999
-  and cd_marital_status = 'D'
+  and trim(TRAILING from cd_marital_status) = 'D'
 group by i_item_desc,w_warehouse_name,d1.d_week_seq
 order by total_cnt desc, i_item_desc, w_warehouse_name, d_week_seq
  limit 100;
@@ -3918,7 +3918,7 @@ WITH all_sales AS (
                           JOIN date_dim ON d_date_sk=cs_sold_date_sk
                           LEFT JOIN catalog_returns ON (cs_order_number=cr_order_number
                                                     AND cs_item_sk=cr_item_sk)
-       WHERE i_category='Books'
+       WHERE trim(TRAILING from i_category)='Books'
        UNION
        SELECT d_year
              ,i_brand_id
@@ -3931,7 +3931,7 @@ WITH all_sales AS (
                         JOIN date_dim ON d_date_sk=ss_sold_date_sk
                         LEFT JOIN store_returns ON (ss_ticket_number=sr_ticket_number
                                                 AND ss_item_sk=sr_item_sk)
-       WHERE i_category='Books'
+       WHERE trim(TRAILING from i_category)='Books'
        UNION
        SELECT d_year
              ,i_brand_id
@@ -3944,7 +3944,7 @@ WITH all_sales AS (
                       JOIN date_dim ON d_date_sk=ws_sold_date_sk
                       LEFT JOIN web_returns ON (ws_order_number=wr_order_number
                                             AND ws_item_sk=wr_item_sk)
-       WHERE i_category='Books') sales_detail
+       WHERE trim(TRAILING from i_category)='Books') sales_detail
  GROUP BY d_year, i_brand_id, i_class_id, i_category_id, i_manufact_id)
  SELECT  prev_yr.d_year AS prev_year
                           ,curr_yr.d_year AS year
@@ -4346,7 +4346,7 @@ with sr_items as
 	where d_week_seq in
 		(select d_week_seq
 		from date_dim
-	  where d_date in ('2000-06-30','2000-09-27','2000-11-17')))
+	  where d_date in (DATE '2000-06-30', DATE '2000-09-27', DATE '2000-11-17')))
  and   sr_returned_date_sk   = d_date_sk
  group by i_item_id),
  cr_items as
@@ -4362,7 +4362,7 @@ with sr_items as
 	where d_week_seq in
 		(select d_week_seq
 		from date_dim
-	  where d_date in ('2000-06-30','2000-09-27','2000-11-17')))
+	  where d_date in (DATE '2000-06-30', DATE '2000-09-27', DATE '2000-11-17')))
  and   cr_returned_date_sk   = d_date_sk
  group by i_item_id),
  wr_items as
@@ -4378,7 +4378,7 @@ with sr_items as
 	where d_week_seq in
 		(select d_week_seq
 		from date_dim
-		where d_date in ('2000-06-30','2000-09-27','2000-11-17')))
+		where d_date in (DATE '2000-06-30', DATE '2000-09-27', DATE '2000-11-17')))
  and   wr_returned_date_sk   = d_date_sk
  group by i_item_id)
   select  sr_items.item_id
@@ -4780,7 +4780,7 @@ select  ss_customer_sk
                                                                and sr_ticket_number = ss_ticket_number)
                 ,reason
             where sr_reason_sk = r_reason_sk
-              and r_reason_desc = 'reason 28') t
+              and trim(TRAILING from r_reason_desc) = 'reason 28') t
       group by ss_customer_sk
       order by sumsales, ss_customer_sk
  limit 100;
