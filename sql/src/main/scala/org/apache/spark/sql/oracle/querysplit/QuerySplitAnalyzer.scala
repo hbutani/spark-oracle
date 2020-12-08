@@ -20,6 +20,7 @@ package org.apache.spark.sql.oracle.querysplit
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
 import org.apache.spark.sql.catalyst.plans.Inner
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, GlobalLimit, LocalLimit, LogicalPlan, Project}
+import org.apache.spark.sql.connector.read.oracle.{OraFileScan, OraScan}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.oracle.operators.{OraPlan, OraSingleQueryBlock, OraTableScan}
 
@@ -88,11 +89,14 @@ object QuerySplitAnalyzer {
     def isEquiJoinPlan(plan : LogicalPlan) : Boolean = plan match {
       case ExtractEquiJoinKeys(Inner, _, _, _, leftChild, rightChild, _) =>
         isEquiJoinPlan(leftChild) && isEquiJoinPlan(rightChild)
-      case _ : DataSourceV2ScanRelation => true
-      case _ : Project => true
-      case _ : Filter => true
-      case _ : GlobalLimit => true
-      case _ : LocalLimit => true
+      case DataSourceV2ScanRelation(_, oraFScan: OraFileScan, _) =>
+        !oraFScan.oraPlan.catalystOp.isDefined
+      case DataSourceV2ScanRelation(_, oraScan: OraScan, _) =>
+        isEquiJoinSubPlan(oraScan.oraPlan.catalystOp)
+      case p : Project => isEquiJoinPlan(p.child)
+      case f : Filter => isEquiJoinPlan(f.child)
+      case g : GlobalLimit => isEquiJoinPlan(g.child)
+      case l : LocalLimit => isEquiJoinPlan(l.child)
       case _ => false
     }
 

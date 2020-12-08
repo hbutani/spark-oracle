@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.oracle
 
-import java.io.File
+import java.io.{File, PrintStream}
 
 import org.scalatest.{fixture, BeforeAndAfterAll}
 
@@ -203,7 +203,8 @@ abstract class AbstractTest
       df2: DataFrame,
       devAllowedInAproxNumeric: Double,
       Sorted: Boolean = false,
-      chooseRounding: Boolean = true): Boolean = {
+      chooseRounding: Boolean = true,
+      out : PrintStream = System.out): Boolean = {
 
     if (df1.schema != df2.schema) {
       logWarning(s"""
@@ -245,13 +246,15 @@ abstract class AbstractTest
       }
     }
 
+    var diffFound : Boolean = false
+
     val df1_count = df1_ilist.size
     val df2_count = df2_ilist.size
     if (df1_count != df2_count) {
-      println(df1_count + "\t" + df2_count)
-      println("The row count is not equal")
-      println(s"""df1=\n${df1_ilist.mkString("\n")}\ndf2=\n ${df2_ilist.mkString("\n")}""")
-      return false
+      out.println(df1_count + "\t" + df2_count)
+      out.println("The row count is not equal")
+      // out.println(s"""df1=\n${df1_ilist.mkString("\n")}\ndf2=\n ${df2_ilist.mkString("\n")}""")
+      diffFound = true
     }
 
     for (i <- 0 to df1_count.toInt - 1) {
@@ -276,23 +279,26 @@ abstract class AbstractTest
                 Float.PositiveInfinity,
                 Float.NegativeInfinity,
                 0).contains(res1)) {
-            println(s"values in row $i, column $j don't match: ${res1} != ${res2}")
-            println(s"""df1=\n${df1_ilist.mkString("\n")}\ndf2=\n ${df2_ilist.mkString("\n")}""")
-            return false
+            out.println(s"values in row $i, column $j don't match: ${res1} != ${res2}")
+            diffFound = true
           }
         } else if ((OraSparkUtils.isApproximateNumeric(df1.schema(j).dataType) &&
                    (Math.abs(res1.asInstanceOf[Double] - res2.asInstanceOf[Double]) >
                      devAllowedInAproxNumeric)) ||
                    (!OraSparkUtils.isApproximateNumeric(df1.schema(j).dataType) && res1 != res2)) {
-          println(s"values in row $i, column $j don't match: ${res1} != ${res2}")
-          println(s"""df1=\n${df1_ilist.mkString("\n")}\ndf2=\n ${df2_ilist.mkString("\n")}""")
-          return false
+          out.println(s"values in row $i, column $j don't match: ${res1} != ${res2}")
+          diffFound = true
         }
       }
     }
     logDebug("The two dataframe is equal " + df1_count)
     // println(df1_list.mkString("", "\n", ""))
-    return true
+
+    if (!diffFound && false) {
+      println(s"""df1=\n${df1_ilist.mkString("\n")}\ndf2=\n ${df2_ilist.mkString("\n")}""")
+    }
+
+    diffFound
   }
 
   def delete(f: File): Unit = {

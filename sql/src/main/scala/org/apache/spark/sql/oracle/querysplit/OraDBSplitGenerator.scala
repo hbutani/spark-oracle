@@ -110,12 +110,13 @@ class OraDBSplitGenerator(dsKey : DataSourceKey,
                                  partitions : Seq[String]) : IndexedSeq[OraDBSplit] = {
     val numPartitions = partitions.length
     val actualSplits = Math.min(numPartitions, numSplits)
-    val partsPerSplit = Math.ceil(numPartitions / actualSplits).toInt
-    val splits = new Array[OraPartitionSplit](actualSplits)
+    val partsPerSplit = Math.ceil(numPartitions / actualSplits.toDouble).toInt
+    val splits = ArrayBuffer[OraPartitionSplit]()
 
     for((splitParts, i) <- partitions.sliding(partsPerSplit, partsPerSplit).zipWithIndex) {
-      splits(i) = OraPartitionSplit(splitParts)
+      splits += OraPartitionSplit(splitParts)
     }
+
     splits.toIndexedSeq
   }
 

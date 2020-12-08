@@ -66,7 +66,7 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
 
     val ab = ArrayBuffer[String]()
 
-    val excludeSet = Set("q14-1", "q14-2", "q23-2", "q24-1", "q24-2")
+    val excludeSet = Set("q14-1", "q14-2", "q23-2")
 
     val resList = ArrayBuffer[(String, Long)]()
 

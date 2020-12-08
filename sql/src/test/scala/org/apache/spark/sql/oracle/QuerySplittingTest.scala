@@ -16,6 +16,8 @@
  */
 package org.apache.spark.sql.oracle
 
+import java.io.{ByteArrayOutputStream, PrintStream}
+
 import org.scalatest.BeforeAndAfterEach
 
 import org.apache.spark.sql.DataFrame
@@ -31,15 +33,15 @@ import org.apache.spark.sql.hive.test.oracle.TestOracleHive
  *
  * Todo:
  * Tests:
- * - unit_test_p scan  (DONE)
- * - ss scan with filter
- * - sparktest.sparktest_sales scan (DONE)
- * - star-join
- * - star-join-agg resulting in result split
- * - outer-joins split ?
- * - why is OraScan.planInputPartitions called twice
+ *  - unit_test_p scan  (DONE)
+ *  - ss scan with filter (DONE)
+ *  - customer scan (DONE)
+ *  - star-join (2 tests)
+ *  - star-join-agg resulting in result split
+ *  - outer-joins split ?
+ *  - why is OraScan.planInputPartitions called twice
  *
- * - run on all tpcds
+ *  - run on all tpcds
 
  */
 abstract class QuerySplittingTest extends AbstractTest
@@ -49,10 +51,12 @@ abstract class QuerySplittingTest extends AbstractTest
     super.beforeAll()
     setupSplitting(true, split_100k)
     TestOracleHive.sql("set spark.sql.catalog.oracle.use_resultset_cache=false")
+    TestOracleHive.sql("set spark.sql.oracle.allow.splitresultset=true")
   }
 
   override def afterAll(): Unit = {
     TestOracleHive.sql("set spark.sql.catalog.oracle.use_resultset_cache=true")
+    TestOracleHive.sql("set spark.sql.oracle.allow.splitresultset=false")
     setupSplitting(false, split_1m)
     super.afterAll()
   }
@@ -80,33 +84,57 @@ abstract class QuerySplittingTest extends AbstractTest
       TestOracleHive.sparkSession.sqlContext)
   }
 
-  ignore("partitionSplit") { td =>
-
-  val sql =
-    """
-      |select *
-      |from sparktest.unit_test_partitioned""".stripMargin
-
-    val df1 = collect(sql)(true, split_100k)
+  private def testSplitting(sql : String,
+                            splitLevel : String) : Unit = {
+    val df1 = collect(sql)(true, splitLevel)
     val df2 = collect(sql)(false, split_100k)
+    val bs = new ByteArrayOutputStream()
+    val out : PrintStream = new PrintStream(bs)
 
-    isTwoDataFrameEqual(df1, df2, 0.0)
+    if (!isTwoDataFrameEqual(df1, df2, 0.0, false, true, out)) {
+      println(new String(bs.toByteArray))
+    }
+  }
 
+  test("partitionSplit") { td =>
+    testSplitting(
+      """
+        |select ss_item_sk, ss_ext_sales_price
+        |from store_sales
+        |where SS_SALES_PRICE > 100""".stripMargin,
+      split_1m
+    )
   }
 
   test("rowIdSplit") { td =>
 
-    val sql =
+    testSplitting(
       """
-        |select *
-        |from sparktest.sparktest_sales
-        |where amount_sold > 1000""".stripMargin
-
-    val df1 = collect(sql)(true, split_100k)
-    val df2 = collect(sql)(false, split_100k)
-
-    isTwoDataFrameEqual(df1, df2, 0.0)
-
+        |select C_CUSTOMER_SK, C_FIRST_NAME
+        |from customer
+        |where C_BIRTH_MONTH = 1
+        |""".stripMargin,
+      split_10k
+    )
   }
 
+  test("innerJoinRowIdSplit") { td =>
+    testSplitting(
+      """
+        |select ss_item_sk, ss_ext_sales_price, C_CUSTOMER_SK, C_FIRST_NAME
+        |from store_sales join customer on c_customer_sk = ss_customer_sk
+        |where SS_SALES_PRICE > 100""".stripMargin,
+      split_1m
+    )
+  }
+
+  test("outerJoinResultSetSplit") { td =>
+    testSplitting(
+      """
+        |select ss_item_sk, ss_ext_sales_price, C_CUSTOMER_SK, C_FIRST_NAME
+        |from store_sales left outer join customer on c_current_addr_sk = ss_customer_sk
+        |where SS_SALES_PRICE > 100""".stripMargin,
+      split_1m
+    )
+  }
 }

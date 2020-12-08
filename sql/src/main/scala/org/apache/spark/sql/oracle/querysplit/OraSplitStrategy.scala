@@ -277,13 +277,15 @@ object OraSplitStrategy extends Logging {
   private def buildTableAccess(tabAccesses : Seq[TableAccessOperation],
                        splitTables : Seq[SplitCandidate]) : Option[TableAccessDetails] = {
 
-    val tbAcOp = tabAccesses.sortBy(tA => tA.bytes).last
-    val isLargeTabAcc = tabAccesses.forall(tA => tA == tbAcOp ||
-      tA.bytes < LARGE_TABLE_BYTES_READ_MULTIPLIER * tbAcOp.bytes
-    )
-    for(tblScan <- matchOraTable(tbAcOp, splitTables) if isLargeTabAcc) yield {
-      tblScan.setQuerySplitCandidate
-      TableAccessDetails(tblScan.oraTable, tbAcOp)
-    }
+    if (tabAccesses.nonEmpty) {
+      val tbAcOp = tabAccesses.sortBy(tA => tA.bytes).last
+      val isLargeTabAcc = tabAccesses.forall(tA => tA == tbAcOp ||
+        tA.bytes < LARGE_TABLE_BYTES_READ_MULTIPLIER * tbAcOp.bytes
+      )
+      for (tblScan <- matchOraTable(tbAcOp, splitTables) if isLargeTabAcc) yield {
+        tblScan.setQuerySplitCandidate
+        TableAccessDetails(tblScan.oraTable, tbAcOp)
+      }
+    } else None
   }
 }
