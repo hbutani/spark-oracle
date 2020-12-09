@@ -48,7 +48,7 @@ case class OraTableScanValidator(plan: LogicalPlan) {
           t,
           OraFileScan(_, _, _, _, _, oraPlan: OraTableScan, _, _, _),
           _) =>
-        t.name() -> oraPlan
+        t.name -> oraPlan
     }
 
   private lazy val scanDetails: Seq[(String, ScanDetails)] =

@@ -69,6 +69,4 @@ class OraParser(baseParser : ParserInterface) extends ParserInterface {
   override def parseDataType(sqlText: String): DataType =
     baseParser.parseDataType(sqlText)
 
-  override def parseRawDataType(sqlText: String): DataType =
-  baseParser.parseDataType(sqlText)
 }
