@@ -57,11 +57,15 @@ case class OraCompositeQueryBlock(children : Seq[OraQueryBlock],
                          where: Option[OraExpression],
                          groupBy: Option[Seq[OraExpression]],
                          catalystOp: Option[LogicalPlan],
-                         catalystProjectList: Seq[NamedExpression]): OraQueryBlock =
+                         catalystProjectList: Seq[NamedExpression],
+                         orderBy: Option[Seq[OraExpression]]): OraQueryBlock =
     InternalFailure("attempt to call copyBlock on a composite query block", this)
 
   override def orasql: SQLSnippet = SQLSnippet.join(children.map(_.orasql), oraCompOp)
 
   override def splitOraSQL(dbSplitId : Int, splitStrategy : OraSplitStrategy): SQLSnippet
   = SQLSnippet.join(children.map(c => c.splitOraSQL(dbSplitId, splitStrategy)), oraCompOp)
+
+  override def orderBy: Option[Seq[OraExpression]] =
+    InternalFailure("attempt to access orderBy of a composite query block", this)
 }

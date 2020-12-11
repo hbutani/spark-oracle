@@ -458,6 +458,9 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
       /* groupBys */
       oraPlan.groupBy.foreach(gBys => gBys.foreach(oE => fixOE(oE, true)))
 
+      /* orderBys */
+      oraPlan.orderBy.foreach(oBys => oBys.foreach(oE => fixOE(oE, true)))
+
     }
 
     def fixLatJoinAliases(ljOutMap : Map[ExprId, String]) : Unit = {

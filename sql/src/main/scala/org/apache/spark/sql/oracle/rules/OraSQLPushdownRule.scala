@@ -72,7 +72,7 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
             projections = Seq.empty,
             filter = None,
             partitionFilter = None),
-          Seq.empty, None, oraProjs, oraFil, None, Some(dsv2), dsv2.output
+          Seq.empty, None, oraProjs, oraFil, None, Some(dsv2), dsv2.output, None
         )
       case oraQBlck: OraQueryBlock => oraQBlck
     }
@@ -251,6 +251,13 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
           toOraQueryBlock(oraScan.oraPlan, dsV2),
           gl,
           sparkSession).pushdown.getOrElse(gl)
+      case sort @ Sort(sortOrder, global, child @
+        DataSourceV2ScanRelation(_, oraScan: OraScan, _)) =>
+        OrderByPushDown(child,
+          oraScan,
+          toOraQueryBlock(oraScan.oraPlan, child),
+          sort,
+          sparkSession).pushdown.getOrElse(sort)
       case u @ Union(OraScans(childScans @ _*), false, false) =>
         import org.apache.spark.sql.oracle.OraSQLImplicits._
         val (dsv2s, oraScans) = childScans.unzip

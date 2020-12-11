@@ -62,6 +62,9 @@ class SQLSnippet private (val sql: String, val params: Seq[Literal]) {
 
   def having(condition: SQLSnippet): SQLSnippet = osql"${this} having ${condition}"
 
+  def orderBy(oByListOpt: Option[Seq[SQLSnippet]]): SQLSnippet =
+    oByListOpt.fold(this) { columns => orderBy(columns : _*) }
+
   def orderBy(columns: SQLSnippet*): SQLSnippet =
     if (columns.isEmpty) this else osql"${this} order by ${csv(columns: _*)}"
 

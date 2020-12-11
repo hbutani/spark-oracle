@@ -76,6 +76,7 @@ trait OraQueryBlock extends OraPlan with Product {
   def groupBy: Option[Seq[OraExpression]]
   def catalystOp: Option[LogicalPlan]
   def catalystProjectList: Seq[NamedExpression]
+  def orderBy : Option[Seq[OraExpression]]
 
   def canApply(plan: LogicalPlan): Boolean
 
@@ -92,7 +93,8 @@ trait OraQueryBlock extends OraPlan with Product {
       where: Option[OraExpression] = where,
       groupBy: Option[Seq[OraExpression]] = groupBy,
       catalystOp: Option[LogicalPlan] = catalystOp,
-      catalystProjectList: Seq[NamedExpression] = catalystProjectList): OraQueryBlock
+      catalystProjectList: Seq[NamedExpression] = catalystProjectList,
+      orderBy: Option[Seq[OraExpression]] = orderBy): OraQueryBlock
 
 }
 
@@ -106,7 +108,7 @@ object OraQueryBlock {
   def newBlockOnCurrent(currQBlock : OraQueryBlock) : OraQueryBlock = {
     val newOraExprs = OraExpressions.unapplySeq(currQBlock.catalystAttributes).get
     OraSingleQueryBlock(currQBlock, Seq.empty, None, newOraExprs,
-      None, None, None, currQBlock.catalystAttributes)
+      None, None, None, currQBlock.catalystAttributes, None)
   }
 
   val ORA_JOIN_ALIAS_TAG = TreeNodeTag[String]("_joinAlias")

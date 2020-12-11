@@ -19,7 +19,7 @@ package org.apache.spark.sql.oracle.operators
 import org.apache.spark.sql.catalyst.expressions.NamedExpression
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.plans.{FullOuter, JoinType, LeftOuter, RightOuter}
-import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Expand, Filter, GlobalLimit, Join, LogicalPlan, Project}
+import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Expand, Filter, GlobalLimit, Join, LogicalPlan, Project, Sort}
 import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet}
 import org.apache.spark.sql.oracle.expressions.{OraExpression, OraLiteralSql}
 import org.apache.spark.sql.oracle.expressions.Named.OraColumnRef
@@ -43,11 +43,16 @@ trait OraQueryBlockState { self: OraSingleQueryBlock =>
     groupBy.isDefined || hasAggregations
   }
 
+  lazy val hasSortOrder : Boolean = {
+    orderBy.isDefined
+  }
+
   lazy val hasJoins = joins.nonEmpty
   lazy val hasLatJoin = latJoin.isDefined
 
   def canApply(plan: LogicalPlan): Boolean = plan match {
     case p: Project => true
+    case s: Sort => true
     case f: Filter => !(hasOuterJoin || hasAggregate)
     case j@Join(_, _, (LeftOuter | RightOuter | FullOuter), _, _) =>
       !(hasComputedShape || hasFilter || hasAggregate || hasLatJoin)
@@ -128,6 +133,7 @@ trait OraQueryBlockSQLSnippets {self: OraSingleQueryBlock =>
  * @param select  the projected expressions of this query block.
  * @param where   an optional filter expression
  * @param groupBy optional aggregation expressions.
+ * @param orderBy optional sort order expressions.
  */
 case class OraSingleQueryBlock(source: OraPlan,
                                joins: Seq[OraJoinClause],
@@ -136,18 +142,21 @@ case class OraSingleQueryBlock(source: OraPlan,
                                where: Option[OraExpression],
                                groupBy: Option[Seq[OraExpression]],
                                catalystOp: Option[LogicalPlan],
-                               catalystProjectList: Seq[NamedExpression])
+                               catalystProjectList: Seq[NamedExpression],
+                               orderBy: Option[Seq[OraExpression]])
   extends OraQueryBlock with OraQueryBlockState with OraQueryBlockSQLSnippets {
 
   val children: Seq[OraPlan] = Seq(source) ++ joins.map(_.joinSrc)
 
-  override def stringArgs: Iterator[Any] = Iterator(catalystProjectList, select, where, groupBy)
+  override def stringArgs: Iterator[Any] = Iterator(catalystProjectList, select, where,
+    groupBy, orderBy)
 
   override def orasql: SQLSnippet = {
     SQLSnippet.select(selectListSQL : _*).
       from(sourcesSQL).
       where(whereConditionSQL).
-      groupBy(groupByListSQL)
+      groupBy(groupByListSQL).
+      orderBy(orderByListSQL)
   }
 
   override def splitOraSQL(dbSplitId : Int, splitStrategy : OraSplitStrategy)
@@ -155,7 +164,8 @@ case class OraSingleQueryBlock(source: OraPlan,
     val sqlSnip = SQLSnippet.select(selectListSQL : _*).
       from(sourcesSQL(ot => splitStrategy.splitOraSQL(ot, dbSplitId))).
       where(whereConditionSQL).
-      groupBy(groupByListSQL)
+      groupBy(groupByListSQL).
+      orderBy(orderByListSQL)
     splitStrategy.associateFetchClause(sqlSnip, true, select.size, dbSplitId)
   }
 
@@ -166,8 +176,8 @@ case class OraSingleQueryBlock(source: OraPlan,
                          where: Option[OraExpression] = where,
                          groupBy: Option[Seq[OraExpression]] = groupBy,
                          catalystOp: Option[LogicalPlan] = catalystOp,
-                         catalystProjectList: Seq[NamedExpression] = catalystProjectList
-                        ) : OraQueryBlock =
+                         catalystProjectList: Seq[NamedExpression] = catalystProjectList,
+                         orderBy: Option[Seq[OraExpression]] = orderBy) : OraQueryBlock =
     this.copy(
       source = source,
       joins = joins,
@@ -176,6 +186,7 @@ case class OraSingleQueryBlock(source: OraPlan,
       where = where,
       groupBy = groupBy,
       catalystOp = catalystOp,
-      catalystProjectList = catalystProjectList
+      catalystProjectList = catalystProjectList,
+      orderBy = orderBy
     )
 }

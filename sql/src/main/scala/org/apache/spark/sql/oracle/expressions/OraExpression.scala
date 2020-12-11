@@ -146,6 +146,7 @@ object OraExpression {
       case Casts(oE) => oE
       case Aggregates(oE) => oE
       case IgnoreExpressions(oE) => oE
+      case Sort(oE) => oE
       case _ => null
     })
 
