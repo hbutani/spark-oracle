@@ -34,7 +34,6 @@ docs/auto/
 *.fdb_latexmk
 *.fls
 docs/*.xml
-docs/*.key
 *.tex
 *.tiff
 docs/benchmark/*.html
