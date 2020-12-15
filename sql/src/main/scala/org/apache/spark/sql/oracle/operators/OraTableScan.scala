@@ -73,14 +73,23 @@ case class OraTableScan(
     }
   }
 
-  override def orasql: SQLSnippet = {
-    val filOpt =
-      SQLSnippet.combine(SQLSnippet.AND, filter.map(_.orasql), partitionFilter.map(_.orasql))
+  private def filSnippet : Option[SQLSnippet] =
+    SQLSnippet.combine(SQLSnippet.AND, filter.map(_.orasql), partitionFilter.map(_.orasql))
 
-    SQLSnippet.select(projections.map(_.orasql): _*).from(oraTable).where(filOpt)
+  override def orasql: SQLSnippet = {
+    SQLSnippet.select(projections.map(_.orasql): _*).from(oraTable).where(filSnippet)
   }
 
-  override def splitOraSQL(dbSplitId : Int, splitStrategy : OraSplitStrategy): SQLSnippet = orasql
+  /*
+   * Only called when pushdown is off.
+   * Provide same sql gen as sourcaTable in [[OraSingleQueryBlock]]
+   */
+  override def splitOraSQL(dbSplitId : Int, splitStrategy : OraSplitStrategy): SQLSnippet = {
+    val tblCl =
+      splitStrategy.splitOraSQL(this, dbSplitId).getOrElse(SQLSnippet.tableQualId(oraTable))
+    SQLSnippet.select(projections.map(_.orasql): _*).
+      from(tblCl).where(filSnippet)
+  }
 
   def isQuerySplitCandidate: Boolean =
     getTagValue(OraTableScan.ORA_QUERY_SPLIT_CANDIDATE_TAG).getOrElse(false)

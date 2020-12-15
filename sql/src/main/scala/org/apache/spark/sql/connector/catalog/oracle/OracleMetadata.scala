@@ -251,6 +251,8 @@ object OracleMetadata {
     def partitions(start : Int, end : Int) : Seq[String] = {
       partitionNameIdxSeq.slice(start-1, `end`)
     }
+
+    def allPartitions : Seq[String] = partitionNameIdxSeq
   }
 
   private[oracle] val NAMESPACES_CACHE_KEY = "__namespaces__".getBytes(UTF_8)

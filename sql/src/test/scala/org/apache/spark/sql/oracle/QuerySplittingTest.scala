@@ -23,26 +23,12 @@ import org.scalatest.BeforeAndAfterEach
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.plans.logical.LocalRelation
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
+import org.apache.spark.sql.oracle.tpcds.TPCDSQueryMap
 
 // scalastyle:off println
 /**
  * 1. Run with `spark.sql.catalog.oracle.use_resultset_cache=false` in [[TestOracleHive]]
  *    Setting it here doesn't get applied. [[ResultSetCache]] gets initialized once.
- * 2. Run with `spark.sql.catalog.oracle.use_metadata_cache_only=false` so that the
- *    `sparktest.sparktest_sales` is read.
- *
- * Todo:
- * Tests:
- *  - unit_test_p scan  (DONE)
- *  - ss scan with filter (DONE)
- *  - customer scan (DONE)
- *  - star-join (2 tests)
- *  - star-join-agg resulting in result split
- *  - outer-joins split ?
- *  - why is OraScan.planInputPartitions called twice
- *
- *  - run on all tpcds
-
  */
 abstract class QuerySplittingTest extends AbstractTest
   with PlanTestHelpers with BeforeAndAfterEach {
@@ -92,9 +78,21 @@ abstract class QuerySplittingTest extends AbstractTest
     val out : PrintStream = new PrintStream(bs)
 
     if (!isTwoDataFrameEqual(df1, df2, 0.0, false, true, out)) {
+      println("Error:")
       println(new String(bs.toByteArray))
     }
   }
+
+  test("partitionFilterSplit") { td =>
+    testSplitting(
+      """
+        |select ss_item_sk, ss_ext_sales_price
+        |from store_sales
+        |where SS_SALES_PRICE > 100 and ss_sold_date_sk > 2451000""".stripMargin,
+      split_100k
+    )
+  }
+
 
   test("partitionSplit") { td =>
     testSplitting(
@@ -135,6 +133,44 @@ abstract class QuerySplittingTest extends AbstractTest
         |from store_sales left outer join customer on c_current_addr_sk = ss_customer_sk
         |where SS_SALES_PRICE > 100""".stripMargin,
       split_1m
+    )
+  }
+
+  test("outerJoinResultSetSplit2") { td =>
+    testSplitting(
+      """
+        |select C_CURRENT_ADDR_SK, ca_address_sk, C_FIRST_NAME
+        |from customer left outer join customer_address on C_CURRENT_ADDR_SK = ca_address_sk
+        |where c_birth_day = 1""".stripMargin,
+      split_10k
+    )
+  }
+
+  test("q98") { td =>
+    testSplitting(
+      TPCDSQueryMap.q98,
+      split_1m
+    )
+  }
+
+  test("q2") { td =>
+    testSplitting(
+      TPCDSQueryMap.q98,
+      split_100k
+    )
+  }
+
+  test("q71") { td =>
+    testSplitting(
+      TPCDSQueryMap.q98,
+      split_100k
+    )
+  }
+
+  test("q34") { td =>
+    testSplitting(
+      TPCDSQueryMap.q98,
+      split_100k
     )
   }
 }

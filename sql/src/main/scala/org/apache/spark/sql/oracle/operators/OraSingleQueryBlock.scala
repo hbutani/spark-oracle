@@ -156,7 +156,7 @@ case class OraSingleQueryBlock(source: OraPlan,
       from(sourcesSQL(ot => splitStrategy.splitOraSQL(ot, dbSplitId))).
       where(whereConditionSQL).
       groupBy(groupByListSQL)
-    splitStrategy.associateFetchClause(sqlSnip, dbSplitId)
+    splitStrategy.associateFetchClause(sqlSnip, true, select.size, dbSplitId)
   }
 
   override def copyBlock(source: OraPlan = source,

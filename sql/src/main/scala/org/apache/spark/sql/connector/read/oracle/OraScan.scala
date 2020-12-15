@@ -51,6 +51,12 @@ trait OraScan {
   @transient protected lazy val splitStrategy : OraSplitStrategy =
     OraSplitStrategy.generateSplits(dsKey, oraPlan)(sparkSession)
 
+  /*
+   * Called twice:
+   * - DataSourceV2Strategy check, invokes BatchScanExec.supportsColumnar, which triggers compute of
+   *   to BatchScanExec.partitions
+   * - RemoveRedundantProjects.isRedundant invokes BatchScanExec.supportsColumnar ...
+   */
   override def planInputPartitions(): Array[InputPartition] = {
     (for (i <- splitStrategy.splitIds) yield {
       val orasql = oraPlan.splitOraSQL(i, splitStrategy)

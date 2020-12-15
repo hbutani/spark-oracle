@@ -298,7 +298,7 @@ abstract class AbstractTest
       println(s"""df1=\n${df1_ilist.mkString("\n")}\ndf2=\n ${df2_ilist.mkString("\n")}""")
     }
 
-    diffFound
+    !diffFound
   }
 
   def delete(f: File): Unit = {

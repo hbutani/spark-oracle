@@ -54,9 +54,30 @@ package object querysplit {
   case class TableAccessDetails(oraTable : OraTable, tabAccessOp : TableAccessOperation) {
     val scheme = oraTable.schema
     val name = oraTable.name
-    val tableParts : Option[Seq[String]] = tabAccessOp.partitionRange.flatMap { r =>
-      val partNms = oraTable.partitions(r._1, r._2).filterNot(ORA_SYS_PARTITION)
-      if (partNms.isEmpty) None else Some(partNms)
+
+    /*
+     * Try to form partition list from tableAccessOp; otherwise for partitioned tables
+     * return all parts.
+     */
+    val tableParts : Option[Seq[String]] = {
+
+      if (oraTable.isPartitioned) {
+
+        val partNms = tabAccessOp.partitionRange.map { r =>
+          val p = oraTable.partitions(r._1, r._2).filterNot(ORA_SYS_PARTITION)
+          if (p.isEmpty) {
+            oraTable.allPartitions.filterNot(ORA_SYS_PARTITION)
+          } else {
+            p
+          }
+        }.getOrElse(oraTable.allPartitions.filterNot(ORA_SYS_PARTITION))
+
+        Some(partNms)
+      } else {
+        None
+      }
+
+
     }
   }
 

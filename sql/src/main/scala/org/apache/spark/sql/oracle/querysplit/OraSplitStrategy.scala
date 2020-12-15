@@ -16,7 +16,7 @@
  */
 package org.apache.spark.sql.oracle.querysplit
 
-import oracle.spark.DataSourceKey
+import oracle.spark.{DataSourceKey, ORASQLUtils}
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
@@ -85,11 +85,22 @@ trait OraSplitStrategy {
    * [[OraResultSplitStrategy]] can use this hook to add a fetch clause:
    * `OFFSET ? ROWS FETCH NEXT ? ROWS ONLY`
    *
+   * Each fetch batch is run as a separate query. To ensure all
+   * invocations have the same overall resultset, add an order by
+   * clause of original query doesn't have one.
+   *
+   * TODO: what about data consistency across query invocations.
+   * Run all queries of a [[https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/SELECT.html#GUID-CFA006CA-6FF1-4972-821E-6996142A51C6 specific SCN]]
+   * Each table reference would need to have to be associated `flashback_query_clause`.
+   *
    * @param sqlSnip
    * @param splitId
    * @return
    */
-  def associateFetchClause(sqlSnip: SQLSnippet, splitId : Int) : SQLSnippet = sqlSnip
+  def associateFetchClause(sqlSnip: SQLSnippet,
+                           addOrderBy : Boolean,
+                           orderByCnt : Int,
+                           splitId : Int) : SQLSnippet = sqlSnip
 
   protected def literalsql(v : Any) : OraLiteralSql =
     new OraLiteralSql(v.toString)
@@ -164,15 +175,32 @@ case class OraPartitionSplitStrategy(splitList : IndexedSeq[OraDBSplit],
   }
 }
 
-case class OraResultSplitStrategy(splitList : IndexedSeq[OraDBSplit]) extends OraSplitStrategy {
+case class OraResultSplitStrategy(splitList : IndexedSeq[OraDBSplit],
+                                  scn : Long) extends OraSplitStrategy {
   override def splitOraSQL(oraTblScan: OraTableScan, splitId: Int): Option[SQLSnippet] = None
 
-  override def associateFetchClause(sqlSnip: SQLSnippet, splitId : Int) : SQLSnippet = {
+  override def associateFetchClause(sqlSnip: SQLSnippet,
+                                    addOrderBy : Boolean,
+                                    orderByCnt : Int,
+                                    splitId : Int) : SQLSnippet = {
     import OraSQLImplicits._
     val split = splitList(splitId).asInstanceOf[OraResultSplit]
-    val offsetCl = osql"OFFSET ${literalsql(split.offset)} " +
-        osql"ROWS FETCH NEXT ${literalsql(split.numRows)} ROWS ONLY"
-    osql"${sqlSnip} ${offsetCl}"
+
+    val ordByCl = if (addOrderBy) {
+      val ordrExprs = for (i <- 1 until  (orderByCnt + 1)) yield {
+        SQLSnippet.literalSnippet(i.toString)
+      }
+      osql"order by ${SQLSnippet.csv(ordrExprs : _*)}"
+    } else SQLSnippet.empty
+
+    val offsetCl = {
+      val offset = osql"OFFSET ${literalsql(split.offset)} ROWS"
+      if (split.numRows != -1) {
+        offset + osql" FETCH NEXT ${literalsql(split.numRows)} ROWS ONLY"
+      } else offset
+    }
+
+    osql"${sqlSnip} ${ordByCl} ${offsetCl}"
   }
 }
 
@@ -207,14 +235,15 @@ case class OraResultSplitStrategy(splitList : IndexedSeq[OraDBSplit]) extends Or
 object OraSplitStrategy extends Logging {
 
   private def apply(splitList : IndexedSeq[OraDBSplit],
-                    targettable : Option[TableAccessDetails]
+                    targettable : Option[TableAccessDetails],
+                    currentSCN : Long
                    ) : OraSplitStrategy = {
      (splitList.headOption, targettable) match {
       case  (None, _) => NoSplitStrategy
       case (Some(s : OraNoSplit.type), _) => NoSplitStrategy
       case (Some(s : OraRowIdSplit), Some(tt)) => OraRowIdSplitStrategy(splitList, tt)
       case (Some(s : OraPartitionSplit), Some(tt)) => OraPartitionSplitStrategy(splitList, tt)
-      case (Some(s : OraResultSplit), _) => OraResultSplitStrategy(splitList)
+      case (Some(s : OraResultSplit), _) => OraResultSplitStrategy(splitList, currentSCN)
       case _ => NoSplitStrategy
     }
   }
@@ -249,7 +278,8 @@ object OraSplitStrategy extends Logging {
             planInfo.rowCount,
             bytesPerTask,
             targetTable).generateSplitList
-          OraSplitStrategy(splitList, targetTable)
+          val scn = ORASQLUtils.currentSCN(dsKey)
+          OraSplitStrategy(splitList, targetTable, scn)
         }
       }
     }

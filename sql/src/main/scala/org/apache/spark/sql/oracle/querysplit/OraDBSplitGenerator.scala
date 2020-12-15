@@ -64,6 +64,11 @@ case class OraRowIdSplit(start : String, stop : String) extends OraDBSplit
  *    targeted partitions, we distribute the partitions into `numSplits`. This
  *    assumes partitions are approximately the same size. Generate a list of
  *    [[OraPartitionSplit]] where each Split contains one or more partitions.
+ *    List of targeted partions is preferably inferred in the plan. But
+ *    if target table is a partitioned table and the plan doesn't infer target partitions,
+ *    we set target partitions to all partitions of the target table. This is
+ *    because, splitting a partitioned table by partitions is preferred to splitting it
+ *    by rowid.
  *  - When there is a `target table` and there is no list of targeted partitions
  *    we split based on `rowId` ranges. We use the [[https://docs.oracle.com/en/database/oracle/oracle-database/19/arpls/DBMS_PARALLEL_EXECUTE.html#GUID-D13B6975-09B5-4711-AD43-45F68228C1CC DBMS_PARALLEL_PACKAGE]]
  *    to compute row chunks. The user of the Catalog connection must have
@@ -103,6 +108,12 @@ class OraDBSplitGenerator(dsKey : DataSourceKey,
       i += 1
       rownum += rowsPerSplit
     }
+
+    /*
+     * The last Split fetches the remaining rows
+     */
+    splits(numSplits - 1) = splits(numSplits -1).copy(numRows = -1)
+
     splits.toIndexedSeq
   }
 

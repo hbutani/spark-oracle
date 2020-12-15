@@ -19,6 +19,7 @@ package oracle.spark
 
 import java.sql.{CallableStatement, Connection, PreparedStatement, ResultSet, Statement}
 
+import oracle.jdbc.internal.OracleConnection
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 
@@ -317,11 +318,11 @@ object ORASQLUtils extends Logging {
 
   val throwAnalysisException = OraSparkUtils.throwAnalysisException _
 
-  //  def getOraQueryRelations(plan : SparkPlan) : Seq[OracleQueryRelation] =
-  //    plan.collect {
-  //      case RowDataSourceScanExec(_, _, oRel: OracleQueryRelation, _, _, _) => {
-  //        oRel
-  //      }
-  //    }
+  def currentSCN(dsKey : DataSourceKey) : Long = {
+    perform(dsKey, "Get SCN") {conn =>
+      val internalConnection : OracleConnection = conn.unwrap(classOf[OracleConnection])
+      internalConnection.getCurrentSCN()
+    }
+  }
 
 }
