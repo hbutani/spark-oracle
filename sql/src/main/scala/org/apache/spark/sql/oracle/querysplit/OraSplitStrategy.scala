@@ -190,7 +190,7 @@ case class OraResultSplitStrategy(splitList : IndexedSeq[OraDBSplit],
       val ordrExprs = for (i <- 1 until  (orderByCnt + 1)) yield {
         SQLSnippet.literalSnippet(i.toString)
       }
-      osql"order by ${SQLSnippet.csv(ordrExprs : _*)}"
+      osql"${SQLSnippet.nl}order by ${SQLSnippet.csv(ordrExprs : _*)}"
     } else SQLSnippet.empty
 
     val offsetCl = {
@@ -200,7 +200,7 @@ case class OraResultSplitStrategy(splitList : IndexedSeq[OraDBSplit],
       } else offset
     }
 
-    osql"${sqlSnip} ${ordByCl} ${offsetCl}"
+    osql"${sqlSnip}${ordByCl}${SQLSnippet.nl}${offsetCl}"
   }
 }
 

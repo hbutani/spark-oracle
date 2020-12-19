@@ -23,6 +23,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Expand, Filter, G
 import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet}
 import org.apache.spark.sql.oracle.expressions.{OraExpression, OraLiteralSql}
 import org.apache.spark.sql.oracle.expressions.Named.OraColumnRef
+import org.apache.spark.sql.oracle.expressions.Predicates.RownumLimit
 import org.apache.spark.sql.oracle.querysplit.OraSplitStrategy
 
 trait OraQueryBlockState { self: OraSingleQueryBlock =>
@@ -43,23 +44,28 @@ trait OraQueryBlockState { self: OraSingleQueryBlock =>
     groupBy.isDefined || hasAggregations
   }
 
-  lazy val hasSortOrder : Boolean = {
+  lazy val hasOrder : Boolean = {
     orderBy.isDefined
   }
 
   lazy val hasJoins = joins.nonEmpty
   lazy val hasLatJoin = latJoin.isDefined
 
+  def hasRowLimit : Boolean =
+    where.map {w =>
+      w.find(oE => oE.isInstanceOf[RownumLimit]).isDefined
+    }.getOrElse(false)
+
   def canApply(plan: LogicalPlan): Boolean = plan match {
-    case p: Project => true
-    case s: Sort => true
-    case f: Filter => !(hasOuterJoin || hasAggregate)
+    case p: Project => !hasOrder
+    case s: Sort => !hasOrder
+    case f: Filter => !(hasOrder || hasOuterJoin || hasAggregate)
     case j@Join(_, _, (LeftOuter | RightOuter | FullOuter), _, _) =>
-      !(hasComputedShape || hasFilter || hasAggregate || hasLatJoin)
-    case j: Join => !(hasComputedShape || hasAggregate || hasLatJoin)
-    case e: Expand => !(hasComputedShape || hasAggregate || hasLatJoin)
-    case a: Aggregate => !(hasComputedShape || hasAggregate)
-    case gl : GlobalLimit => !(hasOuterJoin || hasAggregate)
+      !(hasComputedShape || hasFilter || hasAggregate || hasLatJoin || hasOrder)
+    case j: Join => !(hasComputedShape || hasAggregate || hasLatJoin || hasOrder)
+    case e: Expand => !(hasComputedShape || hasAggregate || hasLatJoin || hasOrder)
+    case a: Aggregate => !(hasComputedShape || hasAggregate || hasOrder)
+    case gl : GlobalLimit => !(hasOuterJoin || hasAggregate || hasOrder)
   }
 
 }
@@ -123,6 +129,9 @@ trait OraQueryBlockSQLSnippets {self: OraSingleQueryBlock =>
   protected def whereConditionSQL = where.map(_.orasql)
 
   protected def groupByListSQL = groupBy.map(_.map(_.reifyLiterals.orasql))
+
+  protected def orderByListSQL : Option[Seq[SQLSnippet]] =
+    orderBy.map(_.map(_.reifyLiterals.orasql))
 }
 
 /**
@@ -148,8 +157,8 @@ case class OraSingleQueryBlock(source: OraPlan,
 
   val children: Seq[OraPlan] = Seq(source) ++ joins.map(_.joinSrc)
 
-  override def stringArgs: Iterator[Any] = Iterator(catalystProjectList, select, where,
-    groupBy, orderBy)
+  override def stringArgs: Iterator[Any] =
+    Iterator(catalystProjectList, select, where, groupBy, orderBy)
 
   override def orasql: SQLSnippet = {
     SQLSnippet.select(selectListSQL : _*).
@@ -166,7 +175,7 @@ case class OraSingleQueryBlock(source: OraPlan,
       where(whereConditionSQL).
       groupBy(groupByListSQL).
       orderBy(orderByListSQL)
-    splitStrategy.associateFetchClause(sqlSnip, true, select.size, dbSplitId)
+    splitStrategy.associateFetchClause(sqlSnip, !orderBy.isDefined, select.size, dbSplitId)
   }
 
   override def copyBlock(source: OraPlan = source,

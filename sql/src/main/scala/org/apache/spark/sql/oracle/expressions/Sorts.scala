@@ -20,25 +20,26 @@ package org.apache.spark.sql.oracle.expressions
 import org.apache.spark.sql.catalyst.expressions.{Expression, NullOrdering, SortDirection, SortOrder}
 import org.apache.spark.sql.oracle.SQLSnippet
 
-object Sort {
+object Sorts {
 
-  case class OraSortOrder(child : OraExpression,
+  case class OraSortOrder(catalystExpr : SortOrder,
+                          child : OraExpression,
                           direction : SortDirection,
-                          nullOrdering: NullOrdering,
-                          sameOrderExpressions: Seq[Expression]
+                          nullOrdering: NullOrdering
                          ) extends OraExpression {
-    val catalystExpr: Expression = child.catalystExpr
-    val children: Seq[OraExpression] = Seq(child)
-    val OraSortDirection = new OraLiteralSql(direction.sql)
-    val OraSortNullPlacement = new OraLiteralSql(nullOrdering.sql)
 
-    override def orasql: SQLSnippet = osql"${child} $OraSortDirection $OraSortNullPlacement"
+    val children: Seq[OraExpression] = Seq(child)
+
+    private val  sortDirSnip = SQLSnippet.literalSnippet(direction.sql)
+    private val nullOrderSnip = SQLSnippet.literalSnippet(nullOrdering.sql)
+
+    override def orasql: SQLSnippet = osql"${child} ${sortDirSnip} ${nullOrderSnip}"
   }
 
-  case class seqSortOrder(order : Seq[SortOrder])
-
-  def unapply(e: Expression) : Option[OraExpression] = Option(x = e match {
-    case oE@SortOrder(child, direction, nullOrdering, sameOrderExpressions) =>
-      OraSortOrder(OraExpression.unapply(child).get, direction, nullOrdering, sameOrderExpressions)
+  def unapply(e: Expression) : Option[OraExpression] = Option(e match {
+    case cE@SortOrder(OraExpression(oE), direction, nullOrdering, sameOrderExpressions)
+    if sameOrderExpressions.isEmpty =>
+      OraSortOrder(cE, oE, direction, nullOrdering)
+    case _ => null
   })
 }

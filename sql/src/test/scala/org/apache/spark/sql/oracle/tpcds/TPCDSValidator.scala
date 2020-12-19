@@ -258,13 +258,13 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
     TestOracleHive.sql("use oracle")
   }
 
-  private def writeToCSV(df: DataFrame, qNm: String): Unit = {
+  private def writeToCSV(df: DataFrame, qNm: String, push : Boolean): Unit = {
     df.coalesce(1)
       .write
       .option("header", true)
       .option("sep", " | ")
       .mode("overwrite")
-      .csv(s"${args.resultFilePath(qNm, false)}")
+      .csv(s"${args.resultFilePath(qNm, push)}")
   }
 
   private def loadFromCSV(qNm: String, s : StructType): DataFrame = {
@@ -294,11 +294,11 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
     try source.mkString finally source.close()
   }
 
-  private def executeAndSaveResult(qNm: String, sql : String) : Unit = {
+  private def executeAndSaveResult(qNm: String, sql : String, push : Boolean) : Unit = {
     try {
-      OraSparkConfig.setConf(OraSparkConfig.ENABLE_ORA_PUSHDOWN, false)
+      OraSparkConfig.setConf(OraSparkConfig.ENABLE_ORA_PUSHDOWN, push)
       val df = TestOracleHive.sql(sql)
-      writeToCSV(df, qNm)
+      writeToCSV(df, qNm, push)
     } finally {
       OraSparkConfig.setConf(OraSparkConfig.ENABLE_ORA_PUSHDOWN, true)
     }
@@ -353,7 +353,7 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
                               nonPushDF: DataFrame,
                               resultDiff : ResultDiff,
                               devAllowedInAproxNumeric: Double,
-                              Sorted: Boolean = false,
+                              sorted: Boolean = false,
                               chooseRounding: Boolean = true
                                ): Unit = {
 
@@ -371,7 +371,7 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
     var df1_ilist = df11.queryExecution.executedPlan.executeCollect()
     var df2_ilist = df21.queryExecution.executedPlan.executeCollect()
 
-    if (!Sorted && df1_ilist.size > 1) {
+    if (!sorted && df1_ilist.size > 1) {
 
       df1_ilist = {
         val sortCols1 = df11.columns
@@ -484,7 +484,12 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
       val sql = TPCDSQueryMap.queryMap(qNm)
 
       if (args.rebuildResults) {
-        executeAndSaveResult(qNm, sql)
+        executeAndSaveResult(qNm, sql, false)
+
+        // uncomment if you want the pushdown results
+        // to comapre with non-pushdown results.
+        // DON'T checkin pushdown results.
+        // executeAndSaveResult(qNm, sql, true)
       }
 
       val pushDF = TestOracleHive.sql(sql)

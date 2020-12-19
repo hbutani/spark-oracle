@@ -32,6 +32,11 @@ import org.apache.spark.util.Utils
 /**
  * If [[OracleCatalogOptions.use_resultset_cache]] is enabled
  * [[ResultSet]]s are saved and served from a local folder.
+ *
+ * TODO:
+ * - switch to
+ *   - saving ResultSet as local parquet. Read in RS; create a LocalRel and save as Parquet
+ *   - have loadCachedResultSet return a Iterator[InternalRow]
  */
 object ResultSetCache extends  Logging {
 

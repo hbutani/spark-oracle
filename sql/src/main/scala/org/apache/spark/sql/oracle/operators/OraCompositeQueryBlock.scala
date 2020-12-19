@@ -48,6 +48,9 @@ case class OraCompositeQueryBlock(children : Seq[OraQueryBlock],
   override def groupBy: Option[Seq[OraExpression]] =
     InternalFailure("attempt to access groupBy of a composite query block", this)
 
+  override def orderBy: Option[Seq[OraExpression]] =
+    InternalFailure("attempt to access orderBy of a composite query block", this)
+
   override def canApply(plan: LogicalPlan): Boolean = false
 
   override def copyBlock(source: OraPlan,
@@ -65,7 +68,4 @@ case class OraCompositeQueryBlock(children : Seq[OraQueryBlock],
 
   override def splitOraSQL(dbSplitId : Int, splitStrategy : OraSplitStrategy): SQLSnippet
   = SQLSnippet.join(children.map(c => c.splitOraSQL(dbSplitId, splitStrategy)), oraCompOp)
-
-  override def orderBy: Option[Seq[OraExpression]] =
-    InternalFailure("attempt to access orderBy of a composite query block", this)
 }

@@ -54,19 +54,19 @@ class SQLSnippet private (val sql: String, val params: Seq[Literal]) {
   def ++(snips: Seq[SQLSnippet]): SQLSnippet = snips.foldLeft(this)(_ + _)
 
   def groupBy(columns: SQLSnippet*): SQLSnippet =
-    if (columns.isEmpty) this else osql"${this} group by ${csv(columns: _*)}"
+    if (columns.isEmpty) this else osql"${this}${nl}group by ${csv(columns: _*)}"
 
   def groupBy(gByListOpt: Option[Seq[SQLSnippet]]): SQLSnippet = {
     gByListOpt.fold(this) { columns => groupBy(columns : _*) }
   }
 
-  def having(condition: SQLSnippet): SQLSnippet = osql"${this} having ${condition}"
+  def having(condition: SQLSnippet): SQLSnippet = osql"${this}${nl}having ${condition}"
 
   def orderBy(oByListOpt: Option[Seq[SQLSnippet]]): SQLSnippet =
     oByListOpt.fold(this) { columns => orderBy(columns : _*) }
 
   def orderBy(columns: SQLSnippet*): SQLSnippet =
-    if (columns.isEmpty) this else osql"${this} order by ${csv(columns: _*)}"
+    if (columns.isEmpty) this else osql"${this}${nl}order by ${csv(columns: _*)}"
 
   def asc: SQLSnippet = osql"${this} asc"
   def desc: SQLSnippet = osql"${this} desc"

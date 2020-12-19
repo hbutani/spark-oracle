@@ -52,6 +52,7 @@ abstract class QuerySplittingTest extends AbstractTest
     setupSplitting(true, split_100k)
   }
 
+  val split_1k = "1kb"
   val split_10k = "10kb"
   val split_100k = "100kb"
   val split_1m = "1Mb"
@@ -155,22 +156,29 @@ abstract class QuerySplittingTest extends AbstractTest
 
   test("q2") { td =>
     testSplitting(
-      TPCDSQueryMap.q98,
-      split_100k
+      TPCDSQueryMap.q2,
+      split_1k
     )
   }
 
   test("q71") { td =>
     testSplitting(
-      TPCDSQueryMap.q98,
-      split_100k
+      TPCDSQueryMap.q71,
+      split_1k
     )
   }
 
   test("q34") { td =>
     testSplitting(
-      TPCDSQueryMap.q98,
-      split_100k
+      TPCDSQueryMap.q34,
+      split_1k
+    )
+  }
+
+  test("q99") { td =>
+    testSplitting(
+      TPCDSQueryMap.q99,
+      split_1k
     )
   }
 }

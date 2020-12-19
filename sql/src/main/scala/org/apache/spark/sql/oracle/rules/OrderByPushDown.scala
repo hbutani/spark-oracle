@@ -18,12 +18,10 @@
 package org.apache.spark.sql.oracle.rules
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.{Expression, NullOrdering, SortDirection, SortOrder}
-import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, LogicalPlan, Sort}
+import org.apache.spark.sql.catalyst.plans.logical.Sort
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
-import org.apache.spark.sql.oracle.SQLSnippet
-import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions, OraLiteralSql}
+import org.apache.spark.sql.oracle.expressions.OraExpressions
 import org.apache.spark.sql.oracle.operators.OraQueryBlock
 
 case class OrderByPushDown(inDSScan: DataSourceV2ScanRelation,
@@ -33,22 +31,14 @@ case class OrderByPushDown(inDSScan: DataSourceV2ScanRelation,
                            sparkSession: SparkSession
                           ) extends OraPushdown with ProjectListPushdownHelper {
 
-  def sortByOrder(order: Seq[SortOrder],
-                  global: Boolean,
-                  child: LogicalPlan): Option[Seq[OraExpression]] = {
-    // Go Through Each Sort Order and make a seq of OraExpression.
-    val sq: Option[Seq[OraExpression]] = OraExpressions.unapplySeq(order)
-    sq
-  }
-
   override private[rules] def pushdownSQL: Option[OraQueryBlock] = {
     if (currQBlk.canApply(pushdownCatalystOp)) {
-      val sortOpp = pushdownCatalystOp
-      val sortExpression = pushdownCatalystOp.order
-      val res = sortByOrder(pushdownCatalystOp.order,
-        pushdownCatalystOp.global, pushdownCatalystOp.child)
-      Some(currQBlk.copyBlock(orderBy = res,
-        catalystOp = Some(sortOpp)))
+      val sortOp = pushdownCatalystOp
+
+      for(sortOrderOEs <- OraExpressions.unapplySeq(sortOp.order)) yield {
+        currQBlk.copyBlock(orderBy = Some(sortOrderOEs), catalystOp = Some(sortOp))
+      }
+
     } else {
       None
     }

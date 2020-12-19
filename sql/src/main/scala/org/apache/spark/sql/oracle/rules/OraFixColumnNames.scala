@@ -310,9 +310,16 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
       case _ => ()
     }
 
+    /**
+     * Ensure attribute references in order by use the output name of this query block.
+     * So references in generated-sql matches the aliases in the select list.
+     */
+    protected def fixOrderBy : Unit
+
     def execute : Unit = {
       fixInternals
       fixProjectList
+      fixOrderBy
     }
   }
 
@@ -326,6 +333,8 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
     lazy val latJoinOutMap : Map[ExprId, Attribute] = Map.empty
 
     override protected def fixInternals : Unit = ()
+
+    override protected def fixOrderBy : Unit = ()
 
     override def outEIdMap: Map[ExprId, String] =
       oraPlan.catalystAttributes.map(a => a.exprId -> a.name).toMap
@@ -463,6 +472,28 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
 
     }
 
+    /**
+     * Ensure attribute references in order by use the output name of this query block.
+     * So references in generated-sql matches the aliases in the select list.
+     */
+    override protected def fixOrderBy : Unit = {
+      for (sortOEs <- oraPlan.orderBy) {
+        for (
+          sE <- sortOEs;
+          oE <- sE
+        ) {
+          oE match {
+            case oNE: OraColumnRef =>
+              val outNm = outEIdMap(oNE.catalystExpr.exprId)
+              if (oNE.outNmInOraSQL != outNm) {
+                oNE.setOraFixedNm(UnQualFixedColNm(outNm))
+              }
+            case _ => ()
+          }
+        }
+      }
+    }
+
     def fixLatJoinAliases(ljOutMap : Map[ExprId, String]) : Unit = {
       if (oraPlan.latJoin.isDefined) {
         val headPL = oraPlan.latJoin.get.projections.head
@@ -509,6 +540,8 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
     override def latJoinOutMap: Map[ExprId, Attribute] = Map.empty
 
     override protected def fixInternals: Unit = ()
+
+    override protected def fixOrderBy : Unit = ()
 
     override def outEIdMap: Map[ExprId, String] = firstChild.outEIdMap
 

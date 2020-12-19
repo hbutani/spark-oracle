@@ -18,9 +18,10 @@ package org.apache.spark.sql.oracle.readpath
 
 import java.sql.Timestamp
 
-import oracle.spark.{DataSourceKey, ORAMetadataSQLs, ORASQLUtils}
+import oracle.spark.{ConnectionManagement, DataSourceKey, ORAMetadataSQLs, ORASQLUtils}
 import org.scalacheck.Gen
 
+import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.testutils.{DataGens, TestDataSetup}
 
 /**
@@ -30,6 +31,15 @@ import org.apache.spark.sql.oracle.testutils.{DataGens, TestDataSetup}
  *   OracleWebRowSetXmlWriterImpl
  */
 object ReadPathTestSetup {
+
+
+  /*
+   * Run with spark.sql.catalog.oracle.use_metadata_cache_only=false
+   */
+  def main(args : Array[String]) : Unit = {
+    TestOracleHive.sql("use oracle")
+    createAndLoad(ConnectionManagement.getDSKeyInTestEnv)
+  }
 
   object SetupUser {
     val create_user =
