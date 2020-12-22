@@ -68,6 +68,14 @@ class SQLSnippet private (val sql: String, val params: Seq[Literal]) {
   def orderBy(columns: SQLSnippet*): SQLSnippet =
     if (columns.isEmpty) this else osql"${this}${nl}order by ${csv(columns: _*)}"
 
+  def windowOverAttr(oByListOpt: Option[Seq[SQLSnippet]]): SQLSnippet =
+    oByListOpt.fold(this) { columns => windowOverAttr(columns : _*) }
+
+  def windowOverAttr(columns: SQLSnippet*): SQLSnippet =
+    if (columns.isEmpty) this else osql"${emptyJoin(columns: _*)}"
+
+
+
   def asc: SQLSnippet = osql"${this} asc"
   def desc: SQLSnippet = osql"${this} desc"
   def limit(n: Int): SQLSnippet = osql"${this} limit ${n}"
@@ -199,6 +207,8 @@ object SQLSnippet {
   val LTE: SQLSnippet = osql"<="
   val EXISTS: SQLSnippet = osql"exists"
   val NOT_EXISTS: SQLSnippet = osql"not exists"
+  val PARTITION_BY = osql"PARTITION BY"
+  val ORDER_BY = osql"ORDER BY"
 
   def literalSnippet(s: String): SQLSnippet =
     SQLSnippet(s, Seq.empty)
@@ -277,6 +287,8 @@ object SQLSnippet {
   }
 
   def csv(parts: SQLSnippet*): SQLSnippet = join(parts, comma, false)
+
+  def emptyJoin(parts: SQLSnippet*): SQLSnippet = join(parts, empty, false)
 
   def select(projections: SQLSnippet*): SQLSnippet = osql"select ${csv(projections: _*)}"
 

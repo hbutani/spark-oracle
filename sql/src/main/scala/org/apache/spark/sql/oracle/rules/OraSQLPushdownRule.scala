@@ -258,6 +258,14 @@ object OraSQLPushdownRule extends OraLogicalRule with Logging {
           toOraQueryBlock(oraScan.oraPlan, child),
           sort,
           sparkSession).pushdown.getOrElse(sort)
+      case window @ Window(windowExprs, partitionSpec, orderSpec, child @
+        DataSourceV2ScanRelation(_, oraScan: OraScan, _)) =>
+        WindowPushDown(child,
+          oraScan,
+          toOraQueryBlock(oraScan.oraPlan, child),
+          window,
+          sparkSession
+        ).pushdown.getOrElse(window)
       case u @ Union(OraScans(childScans @ _*), false, false) =>
         import org.apache.spark.sql.oracle.OraSQLImplicits._
         val (dsv2s, oraScans) = childScans.unzip

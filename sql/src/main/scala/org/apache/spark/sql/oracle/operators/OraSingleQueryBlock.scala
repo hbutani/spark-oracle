@@ -16,10 +16,10 @@
  */
 package org.apache.spark.sql.oracle.operators
 
-import org.apache.spark.sql.catalyst.expressions.NamedExpression
+import org.apache.spark.sql.catalyst.expressions.{NamedExpression, WindowExpression}
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.plans.{FullOuter, JoinType, LeftOuter, RightOuter}
-import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Expand, Filter, GlobalLimit, Join, LogicalPlan, Project, Sort}
+import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Expand, Filter, GlobalLimit, Join, LogicalPlan, Project, Sort, Window}
 import org.apache.spark.sql.oracle.{OraSQLImplicits, SQLSnippet}
 import org.apache.spark.sql.oracle.expressions.{OraExpression, OraLiteralSql}
 import org.apache.spark.sql.oracle.expressions.Named.OraColumnRef
@@ -48,6 +48,14 @@ trait OraQueryBlockState { self: OraSingleQueryBlock =>
     orderBy.isDefined
   }
 
+  lazy val hasWindow : Boolean = {
+    select.map {oE =>
+      oE.map(_.catalystExpr).collect {
+        case wE : WindowExpression => wE
+      }
+    }.flatten.nonEmpty
+  }
+
   lazy val hasJoins = joins.nonEmpty
   lazy val hasLatJoin = latJoin.isDefined
 
@@ -57,8 +65,9 @@ trait OraQueryBlockState { self: OraSingleQueryBlock =>
     }.getOrElse(false)
 
   def canApply(plan: LogicalPlan): Boolean = plan match {
-    case p: Project => !hasOrder
+    case p: Project => !hasOrder || !hasWindow
     case s: Sort => !hasOrder
+    case w: Window => !(hasWindow || hasComputedShape)
     case f: Filter => !(hasOrder || hasOuterJoin || hasAggregate)
     case j@Join(_, _, (LeftOuter | RightOuter | FullOuter), _, _) =>
       !(hasComputedShape || hasFilter || hasAggregate || hasLatJoin || hasOrder)
