@@ -17,9 +17,11 @@
 
 package org.apache.spark.sql.oracle.expressions
 
-import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, OuterReference}
 import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.oracle.{SQLSnippet, SQLSnippetProvider}
+import org.apache.spark.sql.oracle.expressions.Subquery.OraSubQueryJoin
+import org.apache.spark.sql.oracle.operators.{OraPlan, OraQueryBlock}
 
 /**
  * Conversions for expressions in ''namedExpressions.scala''
@@ -99,11 +101,33 @@ object Named {
 
   }
 
+  case class OraOuterRef(oraColRef : OraColumnRef) extends OraExpression with OraLeafExpression {
+    lazy val catalystExpr: Expression = OuterReference(oraColRef.catalystExpr)
+
+    override def orasql: SQLSnippet = oraColRef.orasql
+  }
+
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
       case cE @ Alias(OraExpression(child), _) => OraAlias(cE, child)
       case cE: AttributeReference => OraColumnRef(cE)
       case _ => null
     })
+
+  def makeReferencesOuter(oE : OraExpression) : OraExpression = oE transformUp {
+    case cr : OraColumnRef => OraOuterRef(cr)
+  }
+
+  def outerRefs(oraPlan: OraPlan): Seq[OraOuterRef] = oraPlan match {
+    case oraQBlk: OraQueryBlock => oraQBlk.where.map { cond =>
+      (cond.collect {
+        case oSE: OraSubQueryJoin if oSE.oraPlan.where.isDefined =>
+          oSE.oraPlan.where.get.collect {
+            case or: OraOuterRef => or
+          }
+      }).flatten
+    }.getOrElse(Seq.empty)
+    case _ => Seq.empty
+  }
 
 }

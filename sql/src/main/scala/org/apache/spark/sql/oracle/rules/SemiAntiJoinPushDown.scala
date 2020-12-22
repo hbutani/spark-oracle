@@ -17,13 +17,13 @@
 package org.apache.spark.sql.oracle.rules
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.{And, Expression, IsNotNull, PredicateHelper}
+import org.apache.spark.sql.catalyst.expressions.{And, EqualTo, Expression, PredicateHelper}
 import org.apache.spark.sql.catalyst.plans.{JoinType, LeftAnti, LeftSemi}
 import org.apache.spark.sql.catalyst.plans.logical.Join
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.oracle.{OraSparkUtils, SQLSnippet}
-import org.apache.spark.sql.oracle.expressions.{AND, OraBinaryOpExpression, OraExpression, OraExpressions}
+import org.apache.spark.sql.oracle.expressions.{AND, Named, OraBinaryOpExpression, OraExpression, OraExpressions, OraLiteral, OraLiteralSql}
 import org.apache.spark.sql.oracle.expressions.Subquery.OraSubQueryJoin
 import org.apache.spark.sql.oracle.operators.OraQueryBlock
 
@@ -122,10 +122,12 @@ import org.apache.spark.sql.oracle.operators.OraQueryBlock
  * - the join condition on the [[LeftAnti]] join outputs `unit_test` rows with null 'c_int' values.
  * This gets translated to the following Oracle SQL:
  * {{{
- * select "C_LONG"
- * from SPARKTEST.UNIT_TEST
- * where  ("C_LONG", "C_INT") NOT IN ( select "C_LONG", "C_INT"
- * from SPARKTEST.UNIT_TEST_PARTITIONED )
+ * select "sparkora_0"."C_LONG"
+ * from SPARKTEST.UNIT_TEST "sparkora_0"
+ * where  "C_INT" NOT IN ( select "C_INT"
+ *                         from SPARKTEST.UNIT_TEST_PARTITIONED
+ *                         where ("sparkora_0"."C_LONG" = "C_LONG")
+ *                       )
  * }}}
  * - we translate into an oracle sql not in subquery and rely on no-in smenatics in Oracle.
  *
@@ -149,16 +151,13 @@ import org.apache.spark.sql.oracle.operators.OraQueryBlock
  * }}}
  * This gets translated to the following Oracle SQL:
  * {{{
- *   select "C_LONG"
- * from SPARKTEST.UNIT_TEST
- * where  ("C_LONG", "C_INT") NOT IN ( select "C_INT", "C_LONG"
- * from SPARKTEST.UNIT_TEST_PARTITIONED
- * where ("c_long" IS NOT NULL AND "c_int" IS NOT NULL) )
+ *   select "sparkora_0"."C_LONG"
+ *   from SPARKTEST.UNIT_TEST "sparkora_0"
+ *   where not exists ( select 1
+ *                      from SPARKTEST.UNIT_TEST_PARTITIONED
+ *                      where (("sparkora_0"."C_LONG" = "C_LONG") AND ("sparkora_0"."C_INT" = "C_INT"))
+ *                    )
  * }}}
- * Since we don't translate into a not exists Oracle subquery,
- * we push not null checks against joining keys.
- * See [[https://tipsfororacle.blogspot.com/2016/09/not-in-vs-not-exists.html difference between not in and not exists]]
- * semantics in oracle sql.
  *
  * @param inDSScan
  * @param leftOraScan
@@ -223,58 +222,121 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
     }
   }
 
-  private def pushNotExists : Option[OraQueryBlock] = {
+  /**
+   * Handle `not in` and `not exists` translation.
+   * - `not exists` case is when there is equiJoin conditions in the NotInJoinPattern
+   *   (notInLKeys, notInRkeys are empty)
+   * - `not in` has 2 cases
+   *   - when there is are correlated conditions, i.e. `leftKeys.nonEmpty`
+   *   - when there is no correlated conditions, i.e. `leftKeys.isEmpty`
+   *
+   * The correlated condition is constructed by [[EqualTo]] check on each
+   * `outerCorrOEs` and `innerCorrOEs`. `outerCorrOEs` are wrapped in
+   * [[org.apache.spark.sql.oracle.expressions.Named.OraOuterRef]].
+   *
+   * [[OraFixColumnNames]] then tags the outer [[org.apache.spark.sql.oracle.expressions.Named.OraColumnRef]]
+   * with the correct oracle-sql name from the outer Query Block.
+   *
+   * @return
+   */
+  private def pushNot: Option[OraQueryBlock] = {
     val joinOp = pushdownCatalystOp
+    val notInConjuncts = joinCond.map(splitConjunctivePredicates).getOrElse(Seq.empty)
 
-    /*
-     * 1. Push is not null checks into right Query Block.
-     * - the `rightKeys` are [[AttributeReference]]s on rightQBlock
-     * - so pushing conditions w/o any checks or alias substitution.
-     * 2. But only push rightKey expressions that can generate null values.
-     */
+    val notInJoinPattern = NotInJoinPattern(joinOp)
+    val notInJoinKeys: Option[Seq[(Expression, Expression)]] =
+      OraSparkUtils.sequence(notInConjuncts.map(notInJoinPattern.unapply(_)))
+    val (notInLKeys, notInRkeys) = notInJoinKeys.map(_.unzip).getOrElse((Seq.empty, Seq.empty))
+    val notExists = notInLKeys.isEmpty
+    val corrPredicate = leftKeys.nonEmpty
 
-    val rightNullChecks : Seq[Expression] =
-      rightKeys.filter(OraExpression.canBeNull).map(IsNotNull(_))
     for (
-      _leftOraExprs <- OraExpressions.unapplySeq(leftKeys);
-      _rightOraExprs <- OraExpressions.unapplySeq(dereference(rightKeys, rightQBlk));
-      rightOraNotNullExprs <- OraExpressions.unapplySeq(rightNullChecks);
+      _outerCorrOEs <- OraExpressions.unapplySeq(leftKeys);
+      _outerNotInOEs <- OraExpressions.unapplySeq(notInLKeys);
+      _innerCorrOEs <- OraExpressions.unapplySeq(dereference(rightKeys, rightQBlk));
+      _innerNotInOEs <- OraExpressions.unapplySeq(dereference(notInRkeys, rightQBlk));
       outProjections <- OraExpressions.unapplySeq(joinOp.output)
     ) yield {
 
-      val leftOraExprs = _leftOraExprs.map(OraExpression.fixForJoinCond)
-      val rightOraExprs = _rightOraExprs.map(OraExpression.fixForJoinCond)
 
-      val newRFil = if (rightOraNotNullExprs.nonEmpty) {
-        val filts : Seq[OraExpression] = rightQBlk.where.toSeq ++ rightOraNotNullExprs
-        Some(
-        filts.reduce { (lOE : OraExpression, rOE : OraExpression) =>
-          OraBinaryOpExpression(AND, And(lOE.catalystExpr, rOE.catalystExpr), lOE, rOE)
+      val outerCorrOEs = _outerCorrOEs.
+        map(OraExpression.fixForJoinCond).
+        map(Named.makeReferencesOuter)
+
+      val innerCorrOEs = _innerCorrOEs.map(OraExpression.fixForJoinCond)
+      val outerNotInOEs = _outerNotInOEs.map(OraExpression.fixForJoinCond)
+      val innerNotInOEs = _innerNotInOEs.map(OraExpression.fixForJoinCond)
+
+
+      /**
+       * The correlated condition is constructed by [[EqualTo]] check on each
+       * `outerCorrOEs` and `innerCorrOEs`. `outerCorrOEs` are wrapped in
+       * [[org.apache.spark.sql.oracle.expressions.Named.OraOuterRef]]
+       */
+      val innerCorrCond : OraExpression = if (corrPredicate) {
+        val conds: Seq[OraExpression] = outerCorrOEs.zip(innerCorrOEs).map {
+          case (o, i) =>
+            val cE = EqualTo(o.catalystExpr, i.catalystExpr)
+            OraBinaryOpExpression(cE.symbol, cE, o, i)
         }
+
+        conds.tail.fold(conds.head) { (l, r) =>
+          OraBinaryOpExpression(AND, And(l.catalystExpr, r.catalystExpr), l, r)
+        }
+      } else null
+
+      /**
+       * Update the `rightQBlk`:
+       * - add the `innerCorrCond` to the where clause
+       * - change the selectList to the `innerNotInOEs` list
+       */
+      val newInnerQBlk = {
+        val rBlck = if (rightQBlk.canApplyFilter) {
+          rightQBlk
+        } else {
+          OraQueryBlock.newBlockOnCurrent(rightQBlk)
+        }
+
+        val innerWhere : Option[OraExpression] = if (corrPredicate) {
+          val oE = rBlck.where.map(f =>
+            OraBinaryOpExpression(AND,
+              And(f.catalystExpr, innerCorrCond.catalystExpr),
+              f, innerCorrCond
+            )
+          ).getOrElse(innerCorrCond)
+          Some(oE)
+        } else rBlck.where
+
+        val innerSelect = if (notExists) {
+          Seq(new OraLiteralSql("1"))
+        } else {
+          innerNotInOEs
+        }
+
+        rBlck.copyBlock(
+          select = innerSelect,
+          where = innerWhere
         )
-      } else {
-        rightQBlk.where
       }
 
-      val newRQBlk = rightQBlk.copyBlock(
-        select = rightOraExprs,
-        where = newRFil
-      )
+      val joinSQOp = if (notExists) {
+        SQLSnippet.NOT_EXISTS
+      } else {
+        SQLSnippet.NOT_IN
+      }
 
-      /*
-       * 2. Add NOT IN predicate to `currQBlk`
-       */
-      val oraExpression: OraExpression = OraSubQueryJoin(
+      val subQryOE: OraExpression = OraSubQueryJoin(
         joinOp,
-        leftOraExprs,
-        SQLSnippet.NOT_IN,
-        newRQBlk)
+        outerNotInOEs,
+        joinSQOp,
+        newInnerQBlk)
+
       val newFil = currQBlk.where.map(f =>
         OraBinaryOpExpression(AND,
-          And(f.catalystExpr, oraExpression.catalystExpr),
-          f, oraExpression
+          And(f.catalystExpr, subQryOE.catalystExpr),
+          f, subQryOE
         )
-      ).getOrElse(oraExpression)
+      ).getOrElse(subQryOE)
 
       currQBlk.copyBlock(
         select = outProjections,
@@ -286,55 +348,12 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
 
   }
 
-  private def pushNotIn : Option[OraQueryBlock] = {
-    val joinOp = pushdownCatalystOp
-    val notInConjuncts = splitConjunctivePredicates(joinCond.get)
-    val notInJoinPattern = NotInJoinPattern(joinOp)
-    val notInJoinKeys : Option[Seq[(Expression, Expression)]] =
-      OraSparkUtils.sequence(notInConjuncts.map(notInJoinPattern.unapply(_)))
-
-    if (notInJoinKeys.isDefined) {
-      val (notInLKeys, notInRkeys) = notInJoinKeys.get.unzip
-      for (
-        _leftOraExprs <- OraExpressions.unapplySeq(leftKeys ++ notInLKeys);
-        _rightOraExprs <-
-          OraExpressions.unapplySeq(dereference(rightKeys ++ notInRkeys, rightQBlk));
-        outProjections <- OraExpressions.unapplySeq(joinOp.output)
-      ) yield {
-        val leftOraExprs = _leftOraExprs.map(OraExpression.fixForJoinCond)
-        val rightOraExprs = _rightOraExprs.map(OraExpression.fixForJoinCond)
-
-        val newRQBlk = rightQBlk.copyBlock(select = rightOraExprs)
-
-        val oraExpression: OraExpression = OraSubQueryJoin(
-          joinOp,
-          leftOraExprs,
-          SQLSnippet.NOT_IN,
-          newRQBlk)
-        val newFil = currQBlk.where.map(f =>
-          OraBinaryOpExpression(AND,
-            And(f.catalystExpr, oraExpression.catalystExpr),
-            f, oraExpression
-          )
-        ).getOrElse(oraExpression)
-
-        currQBlk.copyBlock(
-          select = outProjections,
-          where = Some(newFil),
-          catalystOp = Some(joinOp),
-          catalystProjectList = joinOp.output
-        )
-      }
-    } else None
-  }
-
   private[rules] def pushdownSQL: Option[OraQueryBlock] = {
     if (currQBlk.canApply(pushdownCatalystOp)) {
 
       joinType match {
         case LeftSemi if leftKeys.nonEmpty && !joinCond.isDefined => pushSemiJoin
-        case LeftAnti if leftKeys.nonEmpty && !joinCond.isDefined => pushNotExists
-        case LeftAnti if joinCond.isDefined => pushNotIn
+        case LeftAnti => pushNot
         case _ => None
       }
     } else None

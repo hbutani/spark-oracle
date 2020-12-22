@@ -52,6 +52,7 @@ case class OraCompositeQueryBlock(children : Seq[OraQueryBlock],
     InternalFailure("attempt to access orderBy of a composite query block", this)
 
   override def canApply(plan: LogicalPlan): Boolean = false
+  override def canApplyFilter : Boolean = false
 
   override def copyBlock(source: OraPlan,
                          joins: Seq[OraJoinClause],

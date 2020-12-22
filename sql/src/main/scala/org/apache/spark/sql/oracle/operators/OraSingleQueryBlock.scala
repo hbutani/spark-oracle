@@ -68,6 +68,8 @@ trait OraQueryBlockState { self: OraSingleQueryBlock =>
     case gl : GlobalLimit => !(hasOuterJoin || hasAggregate || hasOrder)
   }
 
+  def canApplyFilter : Boolean = !(hasOrder || hasOuterJoin || hasAggregate)
+
 }
 
 trait OraQueryBlockSQLSnippets {self: OraSingleQueryBlock =>

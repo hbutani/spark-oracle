@@ -79,6 +79,7 @@ trait OraQueryBlock extends OraPlan with Product {
   def orderBy : Option[Seq[OraExpression]]
 
   def canApply(plan: LogicalPlan): Boolean
+  def canApplyFilter : Boolean
 
   def getSourceAlias: Option[String] = getTagValue(ORA_SOURCE_ALIAS_TAG)
   def setSourceAlias(alias: String): Unit = {

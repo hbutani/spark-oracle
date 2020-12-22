@@ -25,8 +25,8 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
-import org.apache.spark.sql.oracle.expressions.Named.{OraColumnRef, OraNamedExpression, QualFixedColNm, UnQualFixedColNm}
-import org.apache.spark.sql.oracle.expressions.OraExpression
+import org.apache.spark.sql.oracle.expressions.{Named, OraExpression}
+import org.apache.spark.sql.oracle.expressions.Named._
 import org.apache.spark.sql.oracle.expressions.Subquery.OraSubqueryExpression
 import org.apache.spark.sql.oracle.operators.{OraCompositeQueryBlock, OraPlan, OraSingleQueryBlock, OraTableScan}
 
@@ -173,6 +173,7 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
     def pos: SourcePos
     lazy val qualifier: String = s"${NAME_TAG}_${pos}"
     def source(id: SourcePos): FixPlan
+    def colRefsInCorrSubQs : Set[ExprId]
 
     case class QualCol(srcPos: SourcePos, name: String) {
       lazy val fixedName = QualFixedColNm(source(srcPos).qualifier, name)
@@ -209,7 +210,8 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
 
       val qualifiedExprIdsForDupNames = dupNames.values.flatten.toSet
 
-      val qualifiedExprIds = qualifiedExprIdsForDupNames ++ exprIdsFromDupNamesInScope
+      val qualifiedExprIds =
+        qualifiedExprIdsForDupNames ++ exprIdsFromDupNamesInScope ++ colRefsInCorrSubQs
 
       val qualifiedInputs : Set[SourcePos] = inEIdMap.filter {
         case (eId, _) => qualifiedExprIds.contains(eId)
@@ -329,6 +331,7 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
     override def projectList: Seq[OraExpression] = oraPlan.projections
     override def numSources: SourcePos = 0
     override def source(id: SourcePos): FixPlan = null
+    override def colRefsInCorrSubQs : Set[ExprId] = Set.empty
 
     lazy val latJoinOutMap : Map[ExprId, Attribute] = Map.empty
 
@@ -410,6 +413,12 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
 
     override def source(id: SourcePos): FixPlan = childPlansMap(id)
 
+    override def colRefsInCorrSubQs : Set[ExprId] = {
+      (for (outRef <- Named.outerRefs(oraPlan)) yield {
+        outRef.oraColRef.catalystExpr.exprId
+      }).toSet
+    }
+
     override protected def fixInternals: Unit = {
       def fixOE(oE : OraExpression, applyLJFixes : Boolean) : Unit = {
         oE.foreachUp {
@@ -463,6 +472,9 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
 
       /* where */
       oraPlan.where.foreach(oE => fixOE(oE, true))
+
+      /* fix outer references in subquery expression */
+      Named.outerRefs(oraPlan).map(oE => fixOE(oE.oraColRef, true))
 
       /* groupBys */
       oraPlan.groupBy.foreach(gBys => gBys.foreach(oE => fixOE(oE, true)))
@@ -536,6 +548,8 @@ object OraFixColumnNames extends OraLogicalRule with Logging {
     override def numSources: SourcePos = firstChild.numSources
 
     override def source(id: SourcePos): FixPlan = null
+
+    override def colRefsInCorrSubQs : Set[ExprId] = Set.empty
 
     override def latJoinOutMap: Map[ExprId, Attribute] = Map.empty
 

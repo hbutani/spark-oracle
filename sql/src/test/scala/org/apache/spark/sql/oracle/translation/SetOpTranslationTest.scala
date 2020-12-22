@@ -55,6 +55,7 @@ class SetOpTranslationTest extends AbstractTranslationTest {
       |group by "val"""".stripMargin
       )
 
+  // scalastyle:off line.size.limit
   testPushdown("except1",
     """
       |select c_int as val
@@ -66,11 +67,11 @@ class SetOpTranslationTest extends AbstractTranslationTest {
       |where c_int > 10000000
       |""".stripMargin,
     """select "val"
-      |from ( select "C_INT" AS "val"
+      |from ( select "sparkora_0"."C_INT" AS "val"
+      |from SPARKTEST.UNIT_TEST "sparkora_0"
+      |where (("sparkora_0"."C_INT" IS NOT NULL AND ("sparkora_0"."C_INT" > ?)) AND not exists ( select 1
       |from SPARKTEST.UNIT_TEST """.stripMargin + """
-      |where (("C_INT" IS NOT NULL AND ("C_INT" > ?)) AND  (COALESCE("C_INT" , ?), CASE WHEN "C_INT" IS NULL THEN 1 ELSE 0 END) NOT IN ( select COALESCE("C_INT" , 0), CASE WHEN "C_INT" IS NULL THEN 1 ELSE 0 END
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
-      |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) )) ) """.stripMargin + """
+      |where (("C_INT" IS NOT NULL AND ("C_INT" > ?)) AND ((COALESCE("sparkora_0"."C_INT" , ?) = COALESCE("C_INT" , ?)) AND (CASE WHEN "sparkora_0"."C_INT" IS NULL THEN 1 ELSE 0 END = CASE WHEN "C_INT" IS NULL THEN 1 ELSE 0 END))) )) ) """.stripMargin + """
       |group by "val"""".stripMargin
   )
 

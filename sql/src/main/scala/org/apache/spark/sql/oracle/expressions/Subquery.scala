@@ -55,7 +55,7 @@ object Subquery {
   }
 
   /**
-   * Represents a subQuery check (such as IN or NOT IN)
+   * Represents a subQuery check (such as IN or NOT IN or NOT EXISTS)
    * This is the Oracle SQL for a Spark [[LeftSemi]] or [[LeftAnti]]
    * `join` operattion.
    *
@@ -74,7 +74,9 @@ object Subquery {
       val joinExprsSQL : Seq[SQLSnippet] = joiningExprs.map(_.orasql)
       val subQrySQL = oraPlan.orasql
 
-      if (joinExprsSQL.size > 1) {
+      if (joiningExprs.size == 0) {
+        osql"${op} ( ${subQrySQL} )"
+      } else if (joinExprsSQL.size > 1) {
         osql" (${SQLSnippet.csv(joinExprsSQL : _*)}) ${op} ( ${subQrySQL} )"
       } else {
         osql" ${joinExprsSQL.head} ${op} ( ${subQrySQL} )"
