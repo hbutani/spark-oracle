@@ -1,20 +1,20 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [CheckOverflow((promote_precision(cast(sum_sales#82154 as decimal(38,17))) - promote_precision(cast(avg_monthly_sales#82155 as decimal(38,17)))), DecimalType(38,17), true) ASC NULLS FIRST, cc_name#82249 ASC NULLS FIRST], true
-      +- Project [i_category#82171, i_brand#82167, cc_name#82249, d_year#82221, d_moy#82223, avg_monthly_sales#82155, sum_sales#82154, sum_sales#82572 AS psum#82157, sum_sales#82600 AS nsum#82158]
-         +- Join Inner, ((((i_category#82171 = i_category#82401) AND (i_brand#82167 = i_brand#82397)) AND (cc_name#82249 = cc_name#82479)) AND (rn#82156 = (rn#82574 - 1)))
-            :- Project [i_category#82171, i_brand#82167, cc_name#82249, d_year#82221, d_moy#82223, sum_sales#82154, avg_monthly_sales#82155, rn#82156, sum_sales#82572]
-            :  +- Join Inner, ((((i_category#82171 = i_category#82286) AND (i_brand#82167 = i_brand#82282)) AND (cc_name#82249 = cc_name#82364)) AND (rn#82156 = (rn#82546 + 1)))
-            :     :- Filter (((((isnotnull(d_year#82221) AND isnotnull(avg_monthly_sales#82155)) AND (d_year#82221 = 1999.000000000000000000)) AND (avg_monthly_sales#82155 > 0E-22)) AND (CASE WHEN (avg_monthly_sales#82155 > 0E-22) THEN CheckOverflow((promote_precision(cast(abs(CheckOverflow((promote_precision(cast(sum_sales#82154 as decimal(38,17))) - promote_precision(cast(avg_monthly_sales#82155 as decimal(38,17)))), DecimalType(38,17), true)) as decimal(38,22))) / promote_precision(avg_monthly_sales#82155)), DecimalType(38,6), true) ELSE null END > 0.100000)) AND isnotnull(rn#82156))
-            :     :  +- Window [rank(d_year#82221, d_moy#82223) windowspecdefinition(i_category#82171, i_brand#82167, cc_name#82249, d_year#82221 ASC NULLS FIRST, d_moy#82223 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rn#82156], [i_category#82171, i_brand#82167, cc_name#82249], [d_year#82221 ASC NULLS FIRST, d_moy#82223 ASC NULLS FIRST]
-            :     :     +- Project [i_category#82171, i_brand#82167, cc_name#82249, d_year#82221, d_moy#82223, sum_sales#82154, avg_monthly_sales#82155]
-            :     :        +- Window [avg(_w0#82543) windowspecdefinition(i_category#82171, i_brand#82167, cc_name#82249, d_year#82221, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS avg_monthly_sales#82155], [i_category#82171, i_brand#82167, cc_name#82249, d_year#82221]
-            :     :           +- RelationV2[i_category#82171, i_brand#82167, cc_name#82249, d_year#82221, d_moy#82223, sum_sales#82154, _w0#82543] TPCDS.ITEM
-            :     +- Project [i_category#82286, i_brand#82282, cc_name#82364, sum_sales#82572, rn#82546]
-            :        +- Filter isnotnull(rn#82546)
-            :           +- Window [rank(d_year#82336, d_moy#82338) windowspecdefinition(i_category#82286, i_brand#82282, cc_name#82364, d_year#82336 ASC NULLS FIRST, d_moy#82338 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rn#82546], [i_category#82286, i_brand#82282, cc_name#82364], [d_year#82336 ASC NULLS FIRST, d_moy#82338 ASC NULLS FIRST]
-            :              +- RelationV2[i_category#82286, i_brand#82282, cc_name#82364, d_year#82336, d_moy#82338, sum_sales#82572] TPCDS.ITEM
-            +- Project [i_category#82401, i_brand#82397, cc_name#82479, sum_sales#82600, rn#82574]
-               +- Filter isnotnull(rn#82574)
-                  +- Window [rank(d_year#82451, d_moy#82453) windowspecdefinition(i_category#82401, i_brand#82397, cc_name#82479, d_year#82451 ASC NULLS FIRST, d_moy#82453 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rn#82574], [i_category#82401, i_brand#82397, cc_name#82479], [d_year#82451 ASC NULLS FIRST, d_moy#82453 ASC NULLS FIRST]
-                     +- RelationV2[i_category#82401, i_brand#82397, cc_name#82479, d_year#82451, d_moy#82453, sum_sales#82600] TPCDS.ITEM
+'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [CheckOverflow((cast(none#6 as decimal(38,17)) - cast(none#5 as decimal(38,17))), DecimalType(38,17), true) ASC NULLS FIRST, none#2 ASC NULLS FIRST], true
+      +- 'Project [none#0, none#1, none#2, none#3, none#4, none#6, none#5, none#8 AS #0, none#12 AS #1]
+         +- 'Join Inner, ((((none#0 = none#9) AND (none#2 = none#11)) AND ((none#13 - 1) = none#7)) AND (none#1 = none#10))
+            :- 'Project [none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#11]
+            :  +- 'Join Inner, ((((none#0 = none#8) AND (none#1 = none#9)) AND ((1 + none#12) = none#7)) AND (none#2 = none#10))
+            :     :- !Filter (((((isnotnull(none#7) AND (CASE WHEN (0E-22 < none#6) THEN CheckOverflow((cast(abs(CheckOverflow((cast(none#5 as decimal(38,17)) - cast(none#6 as decimal(38,17))), DecimalType(38,17), true)) as decimal(38,22)) / none#6), DecimalType(38,6), true) ELSE null END > 0.100000)) AND (1999.000000000000000000 = none#3)) AND isnotnull(none#3)) AND isnotnull(none#6)) AND (0E-22 < none#6))
+            :     :  +- Window [rank(none#3, none#4) windowspecdefinition(none#0, none#1, none#2, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0, none#1, none#2], [none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST]
+            :     :     +- !Project [none#0, none#1, none#2, none#3, none#4, none#5, none#7]
+            :     :        +- Window [avg(none#6) windowspecdefinition(none#0, none#1, none#2, none#3, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#0, none#1, none#2, none#3]
+            :     :           +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.ITEM
+            :     +- !Project [none#0, none#1, none#2, none#5, none#6]
+            :        +- !Filter isnotnull(none#6)
+            :           +- Window [rank(none#3, none#4) windowspecdefinition(none#0, none#1, none#2, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0, none#1, none#2], [none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST]
+            :              +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.ITEM
+            +- !Project [none#0, none#1, none#2, none#5, none#6]
+               +- !Filter isnotnull(none#6)
+                  +- Window [rank(none#3, none#4) windowspecdefinition(none#0, none#1, none#2, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0, none#1, none#2], [none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST]
+                     +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.ITEM

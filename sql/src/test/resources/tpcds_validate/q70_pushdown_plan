@@ -1,16 +1,16 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [lochierarchy#93580 DESC NULLS LAST, CASE WHEN (lochierarchy#93580 = 0) THEN s_state#93766 END ASC NULLS FIRST, rank_within_parent#93581 ASC NULLS FIRST], true
-      +- Project [total_sum#93579, s_state#93766, s_county#93767, lochierarchy#93580, rank_within_parent#93581]
-         +- Window [rank(_w3#93782) windowspecdefinition(_w1#93780, _w2#93781, _w3#93782 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rank_within_parent#93581], [_w1#93780, _w2#93781], [_w3#93782 DESC NULLS LAST]
-            +- Aggregate [s_state#93766, s_county#93767, spark_grouping_id#93765L], [sum(ss_net_profit#93604) AS total_sum#93579, s_state#93766, s_county#93767, (cast((shiftright(spark_grouping_id#93765L, 1) & 1) as tinyint) + cast((shiftright(spark_grouping_id#93765L, 0) & 1) as tinyint)) AS lochierarchy#93580, (cast((shiftright(spark_grouping_id#93765L, 1) & 1) as tinyint) + cast((shiftright(spark_grouping_id#93765L, 0) & 1) as tinyint)) AS _w1#93780, CASE WHEN (cast((shiftright(spark_grouping_id#93765L, 0) & 1) as tinyint) = 0) THEN s_state#93766 END AS _w2#93781, sum(ss_net_profit#93604) AS _w3#93782]
-               +- Expand [List(SS_NET_PROFIT#93604, s_state#93657, s_county#93656, 0), List(SS_NET_PROFIT#93604, s_state#93657, null, 1), List(SS_NET_PROFIT#93604, null, null, 3)], [SS_NET_PROFIT#93604, s_state#93766, s_county#93767, spark_grouping_id#93765L]
-                  +- Project [SS_NET_PROFIT#93604, s_state#93657, s_county#93656]
-                     +- Join Inner, (s_store_sk#93633 = ss_store_sk#93589)
-                        :- RelationV2[SS_STORE_SK#93589, SS_NET_PROFIT#93604] TPCDS.STORE_SALES
-                        +- Join LeftSemi, (S_STATE#93657 = s_state#93576)
-                           :- RelationV2[S_STORE_SK#93633, S_COUNTY#93656, S_STATE#93657] TPCDS.STORE
-                           +- Project [s_state#93576]
-                              +- Filter (isnotnull(ranking#93577) AND (ranking#93577 <= 5))
-                                 +- Window [rank(_w2#93754) windowspecdefinition(s_state#93711, _w2#93754 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS ranking#93577], [s_state#93711], [_w2#93754 DESC NULLS LAST]
-                                    +- RelationV2[s_state#93576, s_state#93711, _w2#93754] TPCDS.STORE_SALES
+'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [none#3 DESC NULLS LAST, CASE WHEN (none#3 = 0) THEN none#1 END ASC NULLS FIRST, none#4 ASC NULLS FIRST], true
+      +- 'Project [none#0, none#1, none#2, none#3, none#7]
+         +- 'Window [rank(none#6) windowspecdefinition(none#4, none#5, none#6 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#4, none#5], [none#6 DESC NULLS LAST]
+            +- 'Aggregate [none#1, none#2, none#3L], [sum(none#0) AS #0, none#1, none#2, (cast((shiftright(none#3L, 1) & 1) as tinyint) + cast((shiftright(none#3L, 0) & 1) as tinyint)) AS #1, (cast((shiftright(none#3L, 1) & 1) as tinyint) + cast((shiftright(none#3L, 0) & 1) as tinyint)) AS #2, CASE WHEN (0 = cast((shiftright(none#3L, 0) & 1) as tinyint)) THEN none#1 END AS #3, sum(none#0) AS #4]
+               +- 'Expand [List(none#0, none#1, none#2, 0), List(none#0, none#1, null, 1), List(none#0, null, null, 3)], [none#0, none#0, none#1, none#2L]
+                  +- 'Project [none#1, none#4, none#3]
+                     +- 'Join Inner, (none#0 = none#2)
+                        :- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+                        +- 'Join LeftSemi, (none#2 = none#3)
+                           :- RelationV2[none#0, none#1, none#2] TPCDS.STORE
+                           +- Project [none#0]
+                              +- !Filter ((5 >= none#3) AND isnotnull(none#3))
+                                 +- Window [rank(none#2) windowspecdefinition(none#1, none#2 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1], [none#2 DESC NULLS LAST]
+                                    +- RelationV2[none#0, none#1, none#2] TPCDS.STORE_SALES

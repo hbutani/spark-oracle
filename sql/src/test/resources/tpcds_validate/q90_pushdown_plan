@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [am_pm_ratio#109071 ASC NULLS FIRST], true
-      +- RelationV2[am_pm_ratio#109071] TPCDS.WEB_SALES
+RelationV2[none#0] TPCDS.WEB_SALES

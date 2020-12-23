@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [substr(r_reason_desc, 1, 20)#14021 ASC NULLS FIRST, avg(ws_quantity)#14022 ASC NULLS FIRST, avg(wr_refunded_cash)#14023 ASC NULLS FIRST, avg(wr_fee)#14024 ASC NULLS FIRST], true
-      +- RelationV2[substr(r_reason_desc, 1, 20)#14021, avg(ws_quantity)#14022, avg(wr_refunded_cash)#14023, avg(wr_fee)#14024] TPCDS.WEB_SALES
+RelationV2[none#0, none#1, none#2, none#3] TPCDS.WEB_SALES

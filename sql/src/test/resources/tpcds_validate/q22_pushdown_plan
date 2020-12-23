@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [qoh#58497 ASC NULLS FIRST, i_product_name#58558 ASC NULLS FIRST, i_brand#58559 ASC NULLS FIRST, i_class#58560 ASC NULLS FIRST, i_category#58561 ASC NULLS FIRST], true
-      +- RelationV2[i_product_name#58558, i_brand#58559, i_class#58560, i_category#58561, qoh#58497] TPCDS.INVENTORY
+RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.INVENTORY

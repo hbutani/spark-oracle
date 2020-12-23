@@ -50,15 +50,33 @@ object OraSparkConfig {
     |user to specify split strategy""".stripMargin
     ).
     booleanConf.
-    createWithDefault(false)
+    createWithDefault(true)
 
   val BYTES_PER_SPLIT_TASK =
     buildConf("spark.sql.oracle.querysplit.target")
       .doc(
         """Split pushdown query so that each Task returns these many bytes
-          |(specified in MB). Default is 1""".stripMargin)
+          |(specified in MB). Default is 1MB.
+          |
+          |But number of fetch tasks upper bounded by
+          | `spark.sql.oracle.querysplit.maxfetch.rounds`""".stripMargin)
       .bytesConf(ByteUnit.BYTE)
       .createWithDefault(JavaUtils.byteStringAs("1MB", ByteUnit.BYTE))
+
+  val MAX_SPLIT_FETCH_TASKS =
+    buildConf("spark.sql.oracle.querysplit.maxfetch.rounds")
+      .doc(
+        """We will split the fetching into tasks based on the
+          |`spark.sql.oracle.querysplit.target`, but the maximum number of fetch tasks
+          |will be Math.floor(`this_value` * default_parallelism) of the cluster.
+          |
+          |So suppose `spark.sql.oracle.querysplit.target`=1MB; the fetch size is 100MB, the
+          |defaultParallelism=8, and this_value is 1. That means even though according to the
+          |querysplit.target setting we should have 100 tasks; we will be restricted to
+          | 8 tasks(= 8 * 1)
+          |""".stripMargin)
+      .doubleConf
+      .createWithDefault(1.0)
 
   val ALLOW_SPLITBY_RESULTSET = buildConf(
     "spark.sql.oracle.allow.splitresultset").

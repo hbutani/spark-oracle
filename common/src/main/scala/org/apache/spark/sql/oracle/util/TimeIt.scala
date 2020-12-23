@@ -19,16 +19,20 @@ package org.apache.spark.sql.oracle.util
 
 import org.apache.spark.internal.Logging
 
-trait TimeIt extends Logging {
+trait TimeIt { self : Logging =>
 
   def timeIt[U](action : String)(actionFn : => U) : U = {
-    val sTime = System.currentTimeMillis()
-    val r = actionFn
-    val eTime = System.currentTimeMillis()
-    logDebug(s"${Thread.currentThread().getName} " +
-      s"$action = ${eTime - sTime}, " +
-      s"Memory: ${Runtime.getRuntime.freeMemory() / (1000 * 1000)}")
-    r
+    if (log.isInfoEnabled) {
+      val sTime = System.currentTimeMillis()
+      val r = actionFn
+      val eTime = System.currentTimeMillis()
+      logInfo(s"${Thread.currentThread().getName} " +
+        s"$action = ${eTime - sTime}, " +
+        s"Memory: ${Runtime.getRuntime.freeMemory() / (1000 * 1000)}")
+      r
+    } else {
+      actionFn
+    }
   }
 
 }

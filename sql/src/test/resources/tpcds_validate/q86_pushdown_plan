@@ -1,7 +1,7 @@
 GlobalLimit 100
 +- LocalLimit 100
-   +- Sort [lochierarchy#106145 DESC NULLS LAST, CASE WHEN (lochierarchy#106145 = 0) THEN i_category#106238 END ASC NULLS FIRST, rank_within_parent#106146 ASC NULLS FIRST], true
-      +- Project [total_sum#106144, i_category#106238, i_class#106239, lochierarchy#106145, rank_within_parent#106146]
-         +- Window [rank(_w3#106254) windowspecdefinition(_w1#106252, _w2#106253, _w3#106254 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rank_within_parent#106146], [_w1#106252, _w2#106253], [_w3#106254 DESC NULLS LAST]
-            +- Aggregate [i_category#106238, i_class#106239, spark_grouping_id#106237L], [sum(ws_net_paid#106176) AS total_sum#106144, i_category#106238, i_class#106239, (cast((shiftright(spark_grouping_id#106237L, 1) & 1) as tinyint) + cast((shiftright(spark_grouping_id#106237L, 0) & 1) as tinyint)) AS lochierarchy#106145, (cast((shiftright(spark_grouping_id#106237L, 1) & 1) as tinyint) + cast((shiftright(spark_grouping_id#106237L, 0) & 1) as tinyint)) AS _w1#106252, CASE WHEN (cast((shiftright(spark_grouping_id#106237L, 0) & 1) as tinyint) = 0) THEN i_category#106238 END AS _w2#106253, sum(ws_net_paid#106176) AS _w3#106254]
-               +- RelationV2[WS_NET_PAID#106176, i_category#106238, i_class#106239, spark_grouping_id#106237L] TPCDS.WEB_SALES
+   +- !Sort [none#3 DESC NULLS LAST, CASE WHEN (none#3 = 0) THEN none#1 END ASC NULLS FIRST, none#4 ASC NULLS FIRST], true
+      +- !Project [none#0, none#1, none#2, none#3, none#7]
+         +- !Window [rank(none#6) windowspecdefinition(none#4, none#5, none#6 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#4, none#5], [none#6 DESC NULLS LAST]
+            +- Aggregate [none#1, none#2, none#3L], [sum(none#0) AS #0, none#1, none#2, (cast((shiftright(none#3L, 1) & 1) as tinyint) + cast((shiftright(none#3L, 0) & 1) as tinyint)) AS #1, (cast((shiftright(none#3L, 1) & 1) as tinyint) + cast((shiftright(none#3L, 0) & 1) as tinyint)) AS #2, CASE WHEN (0 = cast((shiftright(none#3L, 0) & 1) as tinyint)) THEN none#1 END AS #3, sum(none#0) AS #4]
+               +- RelationV2[none#0, none#1, none#2, none#3L] TPCDS.WEB_SALES

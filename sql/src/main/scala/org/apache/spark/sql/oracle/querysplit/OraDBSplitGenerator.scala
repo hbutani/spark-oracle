@@ -21,6 +21,7 @@ import scala.collection.mutable.ArrayBuffer
 import oracle.spark.{DataSourceKey, ORASQLUtils}
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.oracle.util.TimeIt
 
 /**
  * Following are the ways in which we split a pushdown query:
@@ -45,12 +46,15 @@ case class OraPartitionSplit(partitions : Seq[String]) extends OraDBSplit
 case class OraRowIdSplit(start : String, stop : String) extends OraDBSplit
 
 /**
- * Given a Query's output stats(bytes, rowCOunt) and a potential targetTable
- * the splits are created using the following rules and procedures:
+ * Given a Query's output stats(bytes, rowCOunt), the maximum number of fetch tasks,
+ * and a potential targetTable the splits are created using the following rules and procedures:
  *
  * {{{
  *   degree_of_parallelism = outputBytes / bytesPerTask
- *   numSplits = Math.ceil(degree_of_parallel).toInt
+ *   numSplits = Math.min(
+ *     Math.ceil(degree_of_parallel).toInt,
+ *     Math.max(maxFetchTasks, 2)
+ *   )
  *   rowsPerSplit = Math.ceil(rowCount / numSplits.toDouble).toInt
  * }}}
  *
@@ -75,7 +79,6 @@ case class OraRowIdSplit(start : String, stop : String) extends OraDBSplit
  *    `CREATE JOB system privilege`. The Splits are setup by invoking
  *    `DBMS_PARALLEL_EXECUTE.CREATE_CHUNKS_BY_ROWID` with `chunk_size = rowsPerSplit`
  *
-
  * @param dsKey
  * @param outputBytes
  * @param rowCount
@@ -86,14 +89,18 @@ class OraDBSplitGenerator(dsKey : DataSourceKey,
                            outputBytes : Long,
                            rowCount : Long,
                            bytesPerTask : Long,
-                           targetTableO : Option[TableAccessDetails])
-  extends Logging {
+                           targetTableO : Option[TableAccessDetails],
+                          maxFetchTasks : Int)
+  extends Logging with TimeIt {
 
   import OraDBSplitGenerator._
 
   private lazy val degree_of_parallel : Double = outputBytes / bytesPerTask.toDouble
 
-  private lazy val numSplits : Int = Math.ceil(degree_of_parallel).toInt
+  private lazy val numSplits : Int = Math.min(
+    Math.ceil(degree_of_parallel).toInt,
+    Math.max(maxFetchTasks, 2)
+  )
 
   private def noSplitList = IndexedSeq(OraNoSplit)
 
@@ -187,6 +194,7 @@ class OraDBSplitGenerator(dsKey : DataSourceKey,
       Math.ceil(rCnt / numSplits.toDouble).toInt
     }
 
+    timeIt(s"Construct row splits for table '${table.name}'")(
     ORASQLUtils.perform(
       dsKey,
       s"build row-id splits for table ${table.scheme}.${table.name}"
@@ -227,10 +235,11 @@ class OraDBSplitGenerator(dsKey : DataSourceKey,
 
       splitList
     }
+    )
   }
 
   def generateSplitList : IndexedSeq[OraDBSplit] = {
-    if (degree_of_parallel < 1.0) {
+    if (numSplits <= 1) {
       noSplitList
     } else if (!targetTableO.isDefined) {
       resultSplitList

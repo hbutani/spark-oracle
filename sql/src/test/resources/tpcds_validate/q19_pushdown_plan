@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [ext_price#57673 DESC NULLS LAST, brand#57672 ASC NULLS FIRST, brand_id#57671 ASC NULLS FIRST, i_manufact_id#57738 ASC NULLS FIRST, i_manufact#57739 ASC NULLS FIRST], true
-      +- RelationV2[brand_id#57671, brand#57672, i_manufact_id#57738, i_manufact#57739, ext_price#57673] TPCDS.DATE_DIM
+RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.DATE_DIM

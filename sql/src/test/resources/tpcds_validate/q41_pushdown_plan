@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [i_product_name#5297 ASC NULLS FIRST], true
-      +- RelationV2[i_product_name#5297] TPCDS.ITEM
+RelationV2[none#0] TPCDS.ITEM

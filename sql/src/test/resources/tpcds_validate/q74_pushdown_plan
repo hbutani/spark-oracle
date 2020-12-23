@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [customer_id#96892 ASC NULLS FIRST, customer_id#96892 ASC NULLS FIRST, customer_id#96892 ASC NULLS FIRST], true
-      +- RelationV2[customer_id#96892, customer_first_name#96893, customer_last_name#96894] TPCDS.CUSTOMER
+RelationV2[none#0, none#1, none#2] TPCDS.CUSTOMER

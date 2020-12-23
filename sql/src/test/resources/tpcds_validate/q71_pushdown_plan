@@ -1,2 +1,1 @@
-Sort [ext_price#11296 DESC NULLS LAST, brand_id#11294 ASC NULLS FIRST], true
-+- RelationV2[brand_id#11294, brand#11295, t_hour#11497, t_minute#11498, ext_price#11296] TPCDS.ITEM
+RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.ITEM

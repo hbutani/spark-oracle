@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [sumsales#14978 ASC NULLS FIRST, ss_customer_sk#14982 ASC NULLS FIRST], true
-      +- RelationV2[ss_customer_sk#14982, sumsales#14978] TPCDS.STORE_SALES
+RelationV2[none#0, none#1] TPCDS.STORE_SALES

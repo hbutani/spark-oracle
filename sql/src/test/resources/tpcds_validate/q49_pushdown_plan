@@ -1,20 +1,20 @@
 GlobalLimit 100
 +- LocalLimit 100
-   +- Sort [channel#77686 ASC NULLS FIRST, return_rank#77684 ASC NULLS FIRST, currency_rank#77685 ASC NULLS FIRST], true
-      +- Aggregate [channel#77686, item#77681, return_ratio#77682, return_rank#77684, currency_rank#77685], [channel#77686, item#77681, return_ratio#77682, return_rank#77684, currency_rank#77685]
+   +- Sort [none#0 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST], true
+      +- !Aggregate [none#0, none#1, none#2, none#3, none#4], [none#0, none#1, none#2, none#3, none#4]
          +- Union false, false
-            :- Project [web AS channel#77686, item#77681, return_ratio#77682, return_rank#77684, currency_rank#77685]
-            :  +- Filter ((return_rank#77684 <= 10) OR (currency_rank#77685 <= 10))
-            :     +- Window [rank(currency_ratio#77683) windowspecdefinition(currency_ratio#77683 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS currency_rank#77685], [currency_ratio#77683 ASC NULLS FIRST]
-            :        +- Window [rank(return_ratio#77682) windowspecdefinition(return_ratio#77682 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS return_rank#77684], [return_ratio#77682 ASC NULLS FIRST]
-            :           +- RelationV2[item#77681, return_ratio#77682, currency_ratio#77683] TPCDS.WEB_SALES
-            :- Project [catalog AS channel#77692, item#77687, return_ratio#77688, return_rank#77690, currency_rank#77691]
-            :  +- Filter ((return_rank#77690 <= 10) OR (currency_rank#77691 <= 10))
-            :     +- Window [rank(currency_ratio#77689) windowspecdefinition(currency_ratio#77689 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS currency_rank#77691], [currency_ratio#77689 ASC NULLS FIRST]
-            :        +- Window [rank(return_ratio#77688) windowspecdefinition(return_ratio#77688 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS return_rank#77690], [return_ratio#77688 ASC NULLS FIRST]
-            :           +- RelationV2[item#77687, return_ratio#77688, currency_ratio#77689] TPCDS.CATALOG_SALES
-            +- Project [store AS channel#77698, item#77693, return_ratio#77694, return_rank#77696, currency_rank#77697]
-               +- Filter ((return_rank#77696 <= 10) OR (currency_rank#77697 <= 10))
-                  +- Window [rank(currency_ratio#77695) windowspecdefinition(currency_ratio#77695 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS currency_rank#77697], [currency_ratio#77695 ASC NULLS FIRST]
-                     +- Window [rank(return_ratio#77694) windowspecdefinition(return_ratio#77694 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS return_rank#77696], [return_ratio#77694 ASC NULLS FIRST]
-                        +- RelationV2[item#77693, return_ratio#77694, currency_ratio#77695] TPCDS.STORE_SALES
+            :- !Project [web AS #0, none#0, none#1, none#3, none#4]
+            :  +- !Filter ((10 >= none#3) OR (10 >= none#4))
+            :     +- Window [rank(none#2) windowspecdefinition(none#2 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#2 ASC NULLS FIRST]
+            :        +- Window [rank(none#1) windowspecdefinition(none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1 ASC NULLS FIRST]
+            :           +- RelationV2[none#0, none#1, none#2] TPCDS.WEB_SALES
+            :- !Project [catalog AS #0, none#0, none#1, none#3, none#4]
+            :  +- !Filter ((10 >= none#3) OR (10 >= none#4))
+            :     +- Window [rank(none#2) windowspecdefinition(none#2 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#2 ASC NULLS FIRST]
+            :        +- Window [rank(none#1) windowspecdefinition(none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1 ASC NULLS FIRST]
+            :           +- RelationV2[none#0, none#1, none#2] TPCDS.CATALOG_SALES
+            +- !Project [store AS #0, none#0, none#1, none#3, none#4]
+               +- !Filter ((10 >= none#3) OR (10 >= none#4))
+                  +- Window [rank(none#2) windowspecdefinition(none#2 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#2 ASC NULLS FIRST]
+                     +- Window [rank(none#1) windowspecdefinition(none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1 ASC NULLS FIRST]
+                        +- RelationV2[none#0, none#1, none#2] TPCDS.STORE_SALES

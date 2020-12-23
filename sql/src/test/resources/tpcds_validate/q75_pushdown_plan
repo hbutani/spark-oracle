@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [sales_cnt_diff#98002 ASC NULLS FIRST], true
-      +- RelationV2[prev_year#97998, year#97999, i_brand_id#98053, i_class_id#98055, i_category_id#98057, i_manufact_id#98059, prev_yr_cnt#98000, curr_yr_cnt#98001, sales_cnt_diff#98002, sales_amt_diff#98003] TPCDS.CATALOG_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9] TPCDS.CATALOG_SALES

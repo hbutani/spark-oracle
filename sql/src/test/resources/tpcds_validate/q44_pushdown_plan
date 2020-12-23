@@ -1,19 +1,19 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [rnk#74640 ASC NULLS FIRST], true
-      +- Project [rnk#74640, i_product_name#74715 AS best_performing#74646, i_product_name#74737 AS worst_performing#74647]
-         +- Join Inner, (i_item_sk#74716 = item_sk#74641)
-            :- Project [rnk#74640, item_sk#74641, I_PRODUCT_NAME#74715]
-            :  +- Join Inner, (i_item_sk#74694 = item_sk#74636)
-            :     :- Project [item_sk#74636, rnk#74640, item_sk#74641]
-            :     :  +- Join Inner, (rnk#74640 = rnk#74645)
-            :     :     :- Project [item_sk#74636, rnk#74640]
-            :     :     :  +- Filter (isnotnull(rnk#74640) AND (rnk#74640 < 11))
-            :     :     :     +- Window [rank(rank_col#74637) windowspecdefinition(rank_col#74637 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rnk#74640], [rank_col#74637 ASC NULLS FIRST]
-            :     :     :        +- RelationV2[item_sk#74636, rank_col#74637] TPCDS.STORE_SALES
-            :     :     +- Project [item_sk#74641, rnk#74645]
-            :     :        +- Filter (isnotnull(rnk#74645) AND (rnk#74645 < 11))
-            :     :           +- Window [rank(rank_col#74642) windowspecdefinition(rank_col#74642 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rnk#74645], [rank_col#74642 DESC NULLS LAST]
-            :     :              +- RelationV2[item_sk#74641, rank_col#74642] TPCDS.STORE_SALES
-            :     +- RelationV2[I_ITEM_SK#74694, I_PRODUCT_NAME#74715] TPCDS.ITEM
-            +- RelationV2[I_ITEM_SK#74716, I_PRODUCT_NAME#74737] TPCDS.ITEM
+'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [none#0 ASC NULLS FIRST], true
+      +- 'Project [none#0, none#2 AS #0, none#4 AS #1]
+         +- 'Join Inner, (none#1 = none#3)
+            :- 'Project [none#1, none#2, none#4]
+            :  +- 'Join Inner, (none#0 = none#3)
+            :     :- 'Project [none#0, none#1, none#2]
+            :     :  +- 'Join Inner, (none#1 = none#3)
+            :     :     :- !Project [none#0, none#2]
+            :     :     :  +- !Filter ((11 > none#2) AND isnotnull(none#2))
+            :     :     :     +- Window [rank(none#1) windowspecdefinition(none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1 ASC NULLS FIRST]
+            :     :     :        +- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+            :     :     +- !Project [none#0, none#2]
+            :     :        +- !Filter ((11 > none#2) AND isnotnull(none#2))
+            :     :           +- Window [rank(none#1) windowspecdefinition(none#1 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#1 DESC NULLS LAST]
+            :     :              +- RelationV2[none#0, none#1] TPCDS.STORE_SALES
+            :     +- RelationV2[none#0, none#1] TPCDS.ITEM
+            +- RelationV2[none#0, none#1] TPCDS.ITEM

@@ -1,17 +1,17 @@
-Sort [order_count#55509L ASC NULLS FIRST], true
-+- Aggregate [count(distinct cs_order_number#55529) AS order_count#55509L, sum(cs_ext_ship_cost#55540) AS total_shipping_cost#55510, sum(cs_net_profit#55545) AS total_net_profit#55511]
-   +- Project [CS_ORDER_NUMBER#55529, CS_EXT_SHIP_COST#55540, CS_NET_PROFIT#55545]
-      +- Join Inner, (cs_call_center_sk#55523 = cc_call_center_sk#55587)
-         :- Project [CS_CALL_CENTER_SK#55523, CS_ORDER_NUMBER#55529, CS_EXT_SHIP_COST#55540, CS_NET_PROFIT#55545]
-         :  +- Join Inner, (cs_ship_addr_sk#55522 = ca_address_sk#55574)
-         :     :- Project [CS_SHIP_ADDR_SK#55522, CS_CALL_CENTER_SK#55523, CS_ORDER_NUMBER#55529, CS_EXT_SHIP_COST#55540, CS_NET_PROFIT#55545]
-         :     :  +- Join Inner, (cs_ship_date_sk#55514 = d_date_sk#55546)
-         :     :     :- Join LeftAnti, (CS_ORDER_NUMBER#55529 = cr_order_number#55668)
-         :     :     :  :- Project [CS_SHIP_DATE_SK#55514, CS_SHIP_ADDR_SK#55522, CS_CALL_CENTER_SK#55523, CS_ORDER_NUMBER#55529, CS_EXT_SHIP_COST#55540, CS_NET_PROFIT#55545]
-         :     :     :  :  +- Join LeftSemi, ((CS_ORDER_NUMBER#55529 = cs_order_number#55635) AND NOT (CS_WAREHOUSE_SK#55526 = cs_warehouse_sk#55632))
-         :     :     :  :     :- RelationV2[CS_SHIP_DATE_SK#55514, CS_SHIP_ADDR_SK#55522, CS_CALL_CENTER_SK#55523, CS_WAREHOUSE_SK#55526, CS_ORDER_NUMBER#55529, CS_EXT_SHIP_COST#55540, CS_NET_PROFIT#55545] TPCDS.CATALOG_SALES
-         :     :     :  :     +- RelationV2[CS_WAREHOUSE_SK#55632, CS_ORDER_NUMBER#55635] TPCDS.CATALOG_SALES
-         :     :     :  +- RelationV2[CR_ORDER_NUMBER#55668] TPCDS.CATALOG_RETURNS
-         :     :     +- RelationV2[D_DATE_SK#55546] TPCDS.DATE_DIM
-         :     +- RelationV2[CA_ADDRESS_SK#55574] TPCDS.CUSTOMER_ADDRESS
-         +- RelationV2[CC_CALL_CENTER_SK#55587] TPCDS.CALL_CENTER
+'Sort [none#0L ASC NULLS FIRST], true
++- 'Aggregate [count(distinct none#0) AS #0L, sum(none#1) AS #1, sum(none#2) AS #2]
+   +- 'Project [none#1, none#2, none#3]
+      +- 'Join Inner, (none#0 = none#4)
+         :- 'Project [none#1, none#2, none#3, none#4]
+         :  +- 'Join Inner, (none#0 = none#5)
+         :     :- 'Project [none#1, none#2, none#3, none#4, none#5]
+         :     :  +- 'Join Inner, (none#0 = none#6)
+         :     :     :- 'Join LeftAnti, (none#3 = none#6)
+         :     :     :  :- 'Project [none#0, none#1, none#2, none#4, none#5, none#6]
+         :     :     :  :  +- 'Join LeftSemi, ((none#4 = none#8) AND NOT (none#3 = none#7))
+         :     :     :  :     :- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.CATALOG_SALES
+         :     :     :  :     +- RelationV2[none#0, none#1] TPCDS.CATALOG_SALES
+         :     :     :  +- RelationV2[none#0] TPCDS.CATALOG_RETURNS
+         :     :     +- RelationV2[none#0] TPCDS.DATE_DIM
+         :     +- RelationV2[none#0] TPCDS.CUSTOMER_ADDRESS
+         +- RelationV2[none#0] TPCDS.CALL_CENTER

@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [i_item_id#65769 ASC NULLS FIRST, i_item_desc#65772 ASC NULLS FIRST, s_store_id#65740 ASC NULLS FIRST, s_store_name#65744 ASC NULLS FIRST], true
-      +- RelationV2[i_item_id#65769, i_item_desc#65772, s_store_id#65740, s_store_name#65744, store_sales_quantity#65575, store_returns_quantity#65576, catalog_sales_quantity#65577] TPCDS.STORE_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.STORE_SALES

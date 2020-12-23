@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [s_store_name#74317 ASC NULLS FIRST, s_store_id#74313 ASC NULLS FIRST, sun_sales#74254 ASC NULLS FIRST, mon_sales#74255 ASC NULLS FIRST, tue_sales#74256 ASC NULLS FIRST, wed_sales#74257 ASC NULLS FIRST, thu_sales#74258 ASC NULLS FIRST, fri_sales#74259 ASC NULLS FIRST, sat_sales#74260 ASC NULLS FIRST], true
-      +- RelationV2[s_store_name#74317, s_store_id#74313, sun_sales#74254, mon_sales#74255, tue_sales#74256, wed_sales#74257, thu_sales#74258, fri_sales#74259, sat_sales#74260] TPCDS.DATE_DIM
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8] TPCDS.DATE_DIM

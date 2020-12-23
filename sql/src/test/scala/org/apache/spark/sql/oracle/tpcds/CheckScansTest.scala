@@ -60,17 +60,30 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
    */
   ignore("exec") { td =>
 
-  // Failed queries q66
+    // Failed queries q66
 
-  TestOracleHive.setConf("spark.sql.catalog.oracle.use_resultset_cache", "false")
+    TestOracleHive.setConf("spark.sql.catalog.oracle.use_resultset_cache", "false")
+      /*
+       * enable querySplitting
+       * set task target to 4MB
+       * max fetch tasks = 4 on a laptop with 8 task-slots(cores)
+       */
+    TestOracleHive.setConf("spark.sql.oracle.enable.querysplitting", "true")
+    TestOracleHive.setConf("spark.sql.oracle.querysplit.target", "4MB")
+    TestOracleHive.setConf("spark.sql.oracle.querysplit.maxfetch.rounds", "0.5")
 
     val ab = ArrayBuffer[String]()
+
+    def include(qNm : String) : Boolean = {
+      // Set("q24-2", "q80", "q47").contains(qNm)
+      true
+    }
 
     val excludeSet = Set("q14-1", "q14-2", "q23-2")
 
     val resList = ArrayBuffer[(String, Long)]()
 
-    for ((qNm, q) <- TPCDSQueries.queries if !excludeSet.contains(qNm)) {
+    for ((qNm, q) <- TPCDSQueries.queries if include(qNm) && !excludeSet.contains(qNm)) {
       try {
         println(s"Query ${qNm} : ")
         val df = TestOracleHive.sql(q.sql)
@@ -86,7 +99,7 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
       }
     }
 
-    resList.foreach {t => println(s"${t._1} = ${t._2 / 1000.0} secs")}
+    resList.sortBy(t => t._2).foreach {t => println(s"${t._1} = ${t._2 / 1000.0} secs")}
     println(s"Failed queries ${ab.mkString(",")}")
   }
 

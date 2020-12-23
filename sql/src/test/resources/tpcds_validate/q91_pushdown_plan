@@ -1,2 +1,1 @@
-Sort [Returns_Loss#14671 DESC NULLS LAST], true
-+- RelationV2[Call_Center#14668, Call_Center_Name#14669, Manager#14670, Returns_Loss#14671] TPCDS.CALL_CENTER
+RelationV2[none#0, none#1, none#2, none#3] TPCDS.CALL_CENTER

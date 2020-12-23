@@ -1,2 +1,1 @@
-Sort [cnt#12443L DESC NULLS LAST, c_last_name#12538 ASC NULLS FIRST], true
-+- RelationV2[c_last_name#12538, c_first_name#12537, c_salutation#12536, c_preferred_cust_flag#12539, ss_ticket_number#12453, cnt#12443L] TPCDS.STORE_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5L] TPCDS.STORE_SALES

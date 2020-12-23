@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [total_cnt#11932L DESC NULLS LAST, i_item_desc#11989 ASC NULLS FIRST, w_warehouse_name#11973 ASC NULLS FIRST, d_week_seq#12025 ASC NULLS FIRST], true
-      +- RelationV2[i_item_desc#11989, w_warehouse_name#11973, d_week_seq#12025, no_promo#11930L, promo#11931L, total_cnt#11932L] TPCDS.CATALOG_SALES
+RelationV2[none#0, none#1, none#2, none#3L, none#4L, none#5L] TPCDS.CATALOG_SALES

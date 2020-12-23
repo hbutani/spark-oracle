@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [i_item_id#104121 ASC NULLS FIRST], true
-      +- RelationV2[i_item_id#104121, i_item_desc#104124, i_current_price#104125] TPCDS.ITEM
+RelationV2[none#0, none#1, none#2] TPCDS.ITEM

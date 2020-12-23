@@ -1,17 +1,17 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [ca_state#70018 ASC NULLS FIRST, cd_gender#70024 ASC NULLS FIRST, cd_marital_status#70025 ASC NULLS FIRST, cd_dep_count#70029 ASC NULLS FIRST, cd_dep_employed_count#70030 ASC NULLS FIRST, cd_dep_college_count#70031 ASC NULLS FIRST], true
-      +- Aggregate [ca_state#70018, cd_gender#70024, cd_marital_status#70025, cd_dep_count#70029, cd_dep_employed_count#70030, cd_dep_college_count#70031], [ca_state#70018, cd_gender#70024, cd_marital_status#70025, cd_dep_count#70029, count(1) AS cnt1#69989L, min(cd_dep_count#70029) AS min(cd_dep_count)#70219, max(cd_dep_count#70029) AS max(cd_dep_count)#70220, avg(cd_dep_count#70029) AS avg(cd_dep_count)#70221, cd_dep_employed_count#70030, count(1) AS cnt2#69990L, min(cd_dep_employed_count#70030) AS min(cd_dep_employed_count)#70222, max(cd_dep_employed_count#70030) AS max(cd_dep_employed_count)#70223, avg(cd_dep_employed_count#70030) AS avg(cd_dep_employed_count)#70224, cd_dep_college_count#70031, count(1) AS cnt3#69991L, min(cd_dep_college_count#70031) AS min(cd_dep_college_count)#70225, max(cd_dep_college_count#70031) AS max(cd_dep_college_count)#70226, avg(cd_dep_college_count#70031) AS avg(cd_dep_college_count)#70227]
-         +- Project [CA_STATE#70018, CD_GENDER#70024, CD_MARITAL_STATUS#70025, CD_DEP_COUNT#70029, CD_DEP_EMPLOYED_COUNT#70030, CD_DEP_COLLEGE_COUNT#70031]
-            +- Join Inner, (cd_demo_sk#70023 = c_current_cdemo_sk#69994)
-               :- Project [C_CURRENT_CDEMO_SK#69994, CA_STATE#70018]
-               :  +- Join Inner, (c_current_addr_sk#69996 = ca_address_sk#70010)
-               :     :- Project [C_CURRENT_CDEMO_SK#69994, C_CURRENT_ADDR_SK#69996]
-               :     :  +- Filter (exists#70624 OR exists#70625)
-               :     :     +- Join ExistenceJoin(exists#70625), (C_CUSTOMER_SK#69992 = cs_ship_customer_sk#70155)
-               :     :        :- Join ExistenceJoin(exists#70624), (C_CUSTOMER_SK#69992 = ws_bill_customer_sk#70090)
-               :     :        :  :- RelationV2[C_CUSTOMER_SK#69992, C_CURRENT_CDEMO_SK#69994, C_CURRENT_ADDR_SK#69996] TPCDS.CUSTOMER
-               :     :        :  +- RelationV2[WS_BILL_CUSTOMER_SK#70090] TPCDS.WEB_SALES
-               :     :        +- RelationV2[CS_SHIP_CUSTOMER_SK#70155] TPCDS.CATALOG_SALES
-               :     +- RelationV2[CA_ADDRESS_SK#70010, CA_STATE#70018] TPCDS.CUSTOMER_ADDRESS
-               +- RelationV2[CD_DEMO_SK#70023, CD_GENDER#70024, CD_MARITAL_STATUS#70025, CD_DEP_COUNT#70029, CD_DEP_EMPLOYED_COUNT#70030, CD_DEP_COLLEGE_COUNT#70031] TPCDS.CUSTOMER_DEMOGRAPHICS
+'GlobalLimit 100
++- 'LocalLimit 100
+   +- 'Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#13 ASC NULLS FIRST], true
+      +- 'Aggregate [none#0, none#1, none#2, none#3, none#4, none#5], [none#0, none#1, none#2, none#3, count(1) AS #0L, min(none#3) AS #1, max(none#3) AS #2, avg(none#3) AS #3, none#4, count(1) AS #4L, min(none#4) AS #5, max(none#4) AS #6, avg(none#4) AS #7, none#5, count(1) AS #8L, min(none#5) AS #9, max(none#5) AS #10, avg(none#5) AS #11]
+         +- 'Project [none#1, none#3, none#4, none#5, none#6, none#7]
+            +- 'Join Inner, (none#0 = none#2)
+               :- 'Project [none#0, none#3]
+               :  +- 'Join Inner, (none#1 = none#2)
+               :     :- 'Project [none#1, none#2]
+               :     :  +- 'Filter (none#3 OR none#4)
+               :     :     +- 'Join ExistenceJoin(exists#13226), (none#0 = none#4)
+               :     :        :- 'Join ExistenceJoin(exists#13225), (none#0 = none#3)
+               :     :        :  :- RelationV2[none#0, none#1, none#2] TPCDS.CUSTOMER
+               :     :        :  +- RelationV2[none#0] TPCDS.WEB_SALES
+               :     :        +- RelationV2[none#0] TPCDS.CATALOG_SALES
+               :     +- RelationV2[none#0, none#1] TPCDS.CUSTOMER_ADDRESS
+               +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.CUSTOMER_DEMOGRAPHICS

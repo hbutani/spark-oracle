@@ -135,6 +135,7 @@ object OracleTestConf {
     conf
       .set("spark.sql.catalog.oracle.url",
         "jdbc:oracle:thin:@den02ads:1531/cdb1_pdb7.regress.rdbms.dev.us.oracle.com")
+        // "jdbc:oracle:thin:@slcaa334:1531/cdb1_pdb7.regress.rdbms.dev.us.oracle.com")
       .set("spark.sql.catalog.oracle.user", "tpcds")
       .set("spark.sql.catalog.oracle.password", "tpcds")
 

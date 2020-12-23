@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [ca_country#1002 ASC NULLS FIRST, ca_state#1003 ASC NULLS FIRST, ca_county#1004 ASC NULLS FIRST, i_item_id#1001 ASC NULLS FIRST], true
-      +- RelationV2[i_item_id#1001, ca_country#1002, ca_state#1003, ca_county#1004, agg1#849, agg2#850, agg3#851, agg4#852, agg5#853, agg6#854, agg7#855] TPCDS.CATALOG_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10] TPCDS.CATALOG_SALES

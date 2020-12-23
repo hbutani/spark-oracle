@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [s_store_name#78453 ASC NULLS FIRST, s_company_id#78464 ASC NULLS FIRST, s_street_number#78466 ASC NULLS FIRST, s_street_name#78467 ASC NULLS FIRST, s_street_type#78468 ASC NULLS FIRST, s_suite_number#78469 ASC NULLS FIRST, s_city#78470 ASC NULLS FIRST, s_county#78471 ASC NULLS FIRST, s_state#78472 ASC NULLS FIRST, s_zip#78473 ASC NULLS FIRST], true
-      +- RelationV2[s_store_name#78453, s_company_id#78464, s_street_number#78466, s_street_name#78467, s_street_type#78468, s_suite_number#78469, s_city#78470, s_county#78471, s_state#78472, s_zip#78473, 30_days#78400L, 31_60_days#78401L, 61_90_days#78402L, 91_120_days#78403L, above120_days#78404L] TPCDS.STORE_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9, none#10L, none#11L, none#12L, none#13L, none#14L] TPCDS.STORE_SALES

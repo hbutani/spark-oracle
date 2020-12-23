@@ -22,9 +22,10 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.connector.read.oracle.OraUnknownDistribution
 import org.apache.spark.sql.connector.read.partitioning.Partitioning
-import org.apache.spark.sql.oracle.{OraSparkConfig, OraSQLImplicits, SQLSnippet}
+import org.apache.spark.sql.oracle.{OraSparkConfig, OraSparkUtils, OraSQLImplicits, SQLSnippet}
 import org.apache.spark.sql.oracle.expressions.{OraExpressions, OraLiteralSql}
 import org.apache.spark.sql.oracle.operators.{OraPlan, OraTableScan}
+import org.apache.spark.sql.oracle.util.TimeIt
 
 trait OraSplitStrategy {
 
@@ -232,7 +233,7 @@ case class OraResultSplitStrategy(splitList : IndexedSeq[OraDBSplit],
  *    a target split table.
  *
  */
-object OraSplitStrategy extends Logging {
+object OraSplitStrategy extends Logging with TimeIt {
 
   private def apply(splitList : IndexedSeq[OraDBSplit],
                     targettable : Option[TableAccessDetails],
@@ -259,7 +260,15 @@ object OraSplitStrategy extends Logging {
     } else {
       val splitScope = QuerySplitAnalyzer.splitCandidates(oraPlan)
       val planComplex = splitScope.candidateTables.isEmpty
-      val planInfoO = OraExplainPlan.constructPlanInfo(dsKey, oraPlan, !planComplex)
+      val planInfoO = timeIt(
+        s"""build Plan for: ${oraPlan.orasql.sql.substring(0, 30)}...
+           |""".stripMargin)(
+        OraExplainPlan.constructPlanInfo(dsKey, oraPlan, !planComplex)
+      )
+      val maxFetchTasks : Int = {
+        val maxFetchRnds = OraSparkConfig.getConf(OraSparkConfig.MAX_SPLIT_FETCH_TASKS)
+        Math.floor(OraSparkUtils.defaultParallelism(sparkSession) * maxFetchRnds).toInt
+      }
 
       if (!planInfoO.isDefined) {
         NoSplitStrategy
@@ -277,7 +286,9 @@ object OraSplitStrategy extends Logging {
             planInfo.bytes,
             planInfo.rowCount,
             bytesPerTask,
-            targetTable).generateSplitList
+            targetTable,
+            maxFetchTasks
+          ).generateSplitList
           val scn = ORASQLUtils.currentSCN(dsKey)
           OraSplitStrategy(splitList, targetTable, scn)
         }

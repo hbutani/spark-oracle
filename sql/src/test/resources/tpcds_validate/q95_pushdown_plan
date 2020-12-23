@@ -1,3 +1,1 @@
-Sort [order_count#111356L ASC NULLS FIRST], true
-+- Aggregate [count(distinct ws_order_number#111378) AS order_count#111356L, sum(ws_ext_ship_cost#111389) AS total_shipping_cost#111357, sum(ws_net_profit#111394) AS total_net_profit#111358]
-   +- RelationV2[WS_ORDER_NUMBER#111378, WS_EXT_SHIP_COST#111389, WS_NET_PROFIT#111394] TPCDS.WEB_SALES
+RelationV2[none#0L, none#1, none#2] TPCDS.WEB_SALES

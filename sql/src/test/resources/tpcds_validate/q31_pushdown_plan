@@ -1,2 +1,1 @@
-Sort [ca_county#67098 ASC NULLS FIRST], true
-+- RelationV2[ca_county#67098, d_year#67069, web_q1_q2_increase#67034, store_q1_q2_increase#67035, web_q2_q3_increase#67036, store_q2_q3_increase#67037] TPCDS.STORE_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.STORE_SALES

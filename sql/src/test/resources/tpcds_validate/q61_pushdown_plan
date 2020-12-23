@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [promotions#85925 ASC NULLS FIRST, total#85926 ASC NULLS FIRST], true
-      +- RelationV2[promotions#85925, total#85926, (CAST((CAST(CAST(promotions AS DECIMAL(15,4)) AS DECIMAL(15,4)) / CAST(CAST(total AS DECIMAL(15,4)) AS DECIMAL(15,4))) AS DECIMAL(35,20)) * CAST(CAST(100 AS DECIMAL(3,0)) AS DECIMAL(35,20)))#86214] TPCDS.STORE_SALES
+RelationV2[none#0, none#1, none#2] TPCDS.STORE_SALES

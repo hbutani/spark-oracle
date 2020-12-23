@@ -47,7 +47,7 @@ class SupportsNamespacesTest extends AbstractTest {
     assert(
       ex.getMessage ==
         """Unsupported Action on Oracle Catalog: alter namespace: [SetProperty]
-      | you should perform this using Oracle SQL;""".stripMargin)
+      | you should perform this using Oracle SQL""".stripMargin)
 
     ex = intercept[UnsupportedAction] {
       TestOracleHive.sql("create namespace oracle.newschema").show()
@@ -55,7 +55,7 @@ class SupportsNamespacesTest extends AbstractTest {
     assert(
       ex.getMessage ==
         """Unsupported Action on Oracle Catalog: create namespace
-          | create schema using Oracle DDL;""".stripMargin)
+          | create schema using Oracle DDL""".stripMargin)
 
     ex = intercept[UnsupportedAction] {
       TestOracleHive.sql("alter namespace oracle.tpcds set properties (prop1 = 'a')").show()
@@ -63,7 +63,7 @@ class SupportsNamespacesTest extends AbstractTest {
     assert(
       ex.getMessage ==
         """Unsupported Action on Oracle Catalog: alter namespace: [SetProperty]
-          | you should perform this using Oracle SQL;""".stripMargin)
+          | you should perform this using Oracle SQL""".stripMargin)
 
     ex = intercept[SparkException] {
       TestOracleHive.sql("drop namespace oracle.tpcds").show()
@@ -79,7 +79,7 @@ class SupportsNamespacesTest extends AbstractTest {
     assert(
       ex.getMessage ==
         """Unsupported Action on Oracle Catalog: drop namespace
-          | drop schema using Oracle DDL;""".stripMargin)
+          | drop schema using Oracle DDL""".stripMargin)
   }
 
   test("showTables") { td =>

@@ -1,6 +1,6 @@
 GlobalLimit 100
 +- LocalLimit 100
-   +- Sort [i_category#91180 ASC NULLS FIRST, i_class#91181 ASC NULLS FIRST, i_brand#91182 ASC NULLS FIRST, i_product_name#91183 ASC NULLS FIRST, d_year#91184 ASC NULLS FIRST, d_qoy#91185 ASC NULLS FIRST, d_moy#91186 ASC NULLS FIRST, s_store_id#91187 ASC NULLS FIRST, sumsales#91064 ASC NULLS FIRST, rk#91065 ASC NULLS FIRST], true
-      +- Filter (isnotnull(rk#91065) AND (rk#91065 <= 100))
-         +- Window [rank(sumsales#91064) windowspecdefinition(i_category#91180, sumsales#91064 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rk#91065], [i_category#91180], [sumsales#91064 DESC NULLS LAST]
-            +- RelationV2[i_category#91180, i_class#91181, i_brand#91182, i_product_name#91183, d_year#91184, d_qoy#91185, d_moy#91186, s_store_id#91187, sumsales#91064] TPCDS.STORE_SALES
+   +- !Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST, none#6 ASC NULLS FIRST, none#7 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#9 ASC NULLS FIRST], true
+      +- !Filter (isnotnull(none#9) AND (100 >= none#9))
+         +- Window [rank(none#8) windowspecdefinition(none#0, none#8 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0], [none#8 DESC NULLS LAST]
+            +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8] TPCDS.STORE_SALES

@@ -20,6 +20,7 @@ import java.io.{File, IOException, PrintWriter}
 import java.util.Date
 
 import scala.collection.mutable.ArrayBuffer
+
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.InternalRow
@@ -254,6 +255,12 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
     TestOracleHive.setConf("spark.sql.catalog.oracle.use_resultset_cache", "false")
     TestOracleHive.setConf("spark.sql.files.openCostInBytes", (128 * 1024 * 1024).toString)
     TestOracleHive.setConf("spark.sql.files.maxPartitionBytes", (16 * 1024 * 1024).toString)
+    /*
+     * enable querySplitting
+     * max fetch tasks = 4 on a laptop with 8 task-slots(cores)
+     */
+    TestOracleHive.setConf("spark.sql.oracle.enable.querysplitting", "true")
+    TestOracleHive.setConf("spark.sql.oracle.querysplit.maxfetch.rounds", "0.5")
 
     TestOracleHive.sql("use oracle")
   }
@@ -470,8 +477,8 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
     if (storedPlan != pushPlan.canonicalized.treeString) {
       diffResult.warning(
         "Push Plan has Changed",
+        Some(currPlan),
         None,
-        Some(currPlan)
       )
     }
   }

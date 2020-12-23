@@ -58,7 +58,7 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
     assert(
       ex.getMessage ==
         """Unsupported Action on Oracle Catalog: Cannot create table
-          | Method is supported but hasn't been implemented yet;""".stripMargin)
+          | Method is supported but hasn't been implemented yet""".stripMargin)
 
     /*
      * 3. Valid table creation, but no yet implemented
@@ -75,7 +75,7 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
     assert(
       ex.getMessage ==
         """Unsupported Action on Oracle Catalog: Cannot create table
-        | Method is supported but hasn't been implemented yet;""".stripMargin)
+        | Method is supported but hasn't been implemented yet""".stripMargin)
 
     /*
      * 4. InValid table creation, not object store location
@@ -91,7 +91,7 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
       ex.getMessage ==
         """Unsupported Action on Oracle Catalog: Cannot create table
           | Currently only object store resident tables of parquet format can be created
-          | via Spark SQL. For other cases, create table using Oracle DDL;""".stripMargin)
+          | via Spark SQL. For other cases, create table using Oracle DDL""".stripMargin)
 
   }
 
@@ -105,7 +105,7 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
       ex.getMessage ==
         """Unsupported Action on Oracle Catalog: drop table
           | For Oracle managed tables issue Oracle drop table DDL
-          |For External tables: currently you have to issue Oracle drop table DDL;""".stripMargin)
+          |For External tables: currently you have to issue Oracle drop table DDL""".stripMargin)
 
   }
 
@@ -140,7 +140,7 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
         ex.getMessage ==
           """Unsupported Action on Oracle Catalog: alter table
             | For Oracle managed tables issue Oracle DDL
-            |For External tables: Currently you have to drop and recreate table;""".stripMargin)
+            |For External tables: Currently you have to drop and recreate table""".stripMargin)
     }
   }
 
@@ -156,7 +156,7 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
       ex.getMessage ==
         """Unsupported Action on Oracle Catalog: rename table
           | For Oracle managed tables issue Oracle DDL
-          |For External tables: Currently you have to drop and recreate table;""".stripMargin)
+          |For External tables: Currently you have to drop and recreate table""".stripMargin)
   }
 
 }

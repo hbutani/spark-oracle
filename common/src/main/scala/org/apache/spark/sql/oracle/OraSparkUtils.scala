@@ -74,6 +74,9 @@ object OraSparkUtils {
     Dataset.ofRows(sqlContext.sparkSession, lP)
   }
 
+  def defaultParallelism(sparkSession: SparkSession) : Int =
+    sparkSession.sparkContext.schedulerBackend.defaultParallelism()
+
   def throwAnalysisException[T](msg: => String): T = {
     throw new AnalysisException(msg)
   }

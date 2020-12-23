@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [channel#99390 ASC NULLS FIRST, col_name#99391 ASC NULLS FIRST, d_year#99452 ASC NULLS FIRST, d_qoy#99456 ASC NULLS FIRST, i_category#99436 ASC NULLS FIRST], true
-      +- RelationV2[channel#99390, col_name#99391, d_year#99452, d_qoy#99456, i_category#99436, sales_cnt#99399L, sales_amt#99400] TPCDS.STORE_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5L, none#6] TPCDS.STORE_SALES

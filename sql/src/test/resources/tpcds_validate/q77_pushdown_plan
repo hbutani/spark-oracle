@@ -1,4 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- Sort [channel#100788 ASC NULLS FIRST, id#100789 ASC NULLS FIRST], true
-      +- RelationV2[channel#100788, id#100789, sales#100336, returns#100337, profit#100338] TPCDS.STORE_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4] TPCDS.STORE_SALES
