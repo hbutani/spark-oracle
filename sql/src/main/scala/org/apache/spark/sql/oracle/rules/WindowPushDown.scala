@@ -18,13 +18,29 @@
 package org.apache.spark.sql.oracle.rules
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.SortOrder
-import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Sort, Window}
+import org.apache.spark.sql.catalyst.plans.logical.Window
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
-import org.apache.spark.sql.oracle.expressions.{OraExpression, OraExpressions}
+import org.apache.spark.sql.oracle.expressions.OraExpressions
 import org.apache.spark.sql.oracle.operators.OraQueryBlock
 
+/**
+ *  - the [[ExtractWindowExpressions]] Spark rule breaksdown Window Expressions in a Query Block
+ *    into a sequence of Window Operators, each of which contains
+ *    [[org.apache.spark.sql.catalyst.expressions.WindowExpression]]
+ *    with the same `partition` and `order` specification.
+ *  - the [[ResolveWindowFrame]] Spark rule ensures the validity of
+ *    [[org.apache.spark.sql.catalyst.expressions.WindowFrame]]s in
+ *    [[org.apache.spark.sql.catalyst.expressions.WindowExpression]]s.
+ *  - [[Window]] operators project all their child output `+`
+ *    [[Window.windowExpressions]] defined.
+ *
+ * @param inDSScan
+ * @param inOraScan
+ * @param inQBlk
+ * @param pushdownCatalystOp
+ * @param sparkSession
+ */
 case class WindowPushDown(inDSScan: DataSourceV2ScanRelation,
                           inOraScan: OraScan,
                           inQBlk: OraQueryBlock,
@@ -35,15 +51,15 @@ case class WindowPushDown(inDSScan: DataSourceV2ScanRelation,
 
   override private[rules] def pushdownSQL: Option[OraQueryBlock] = {
     if (currQBlk.canApply(pushdownCatalystOp)) {
-      val windowOpp = pushdownCatalystOp
+      val windowOp = pushdownCatalystOp
       val pushdownProjList =
-        buildCleanedProjectList(windowOpp.windowExpressions, currQBlk.catalystProjectList)
+        buildCleanedProjectList(windowOp.windowExpressions, currQBlk.catalystProjectList)
       for(
         oraSelExpressions <- OraExpressions.unapplySeq(pushdownProjList)
       ) yield {
         currQBlk.copyBlock(
-          select = oraSelExpressions,
-          catalystProjectList = windowOpp.windowExpressions)
+          select = currQBlk.select ++ oraSelExpressions,
+          catalystProjectList = currQBlk.catalystProjectList ++ windowOp.windowExpressions)
       }
     } else {
       None

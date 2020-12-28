@@ -8,8 +8,8 @@
                :  +- 'Join Inner, (none#1 = none#2)
                :     :- 'Project [none#1, none#2]
                :     :  +- 'Filter (none#3 OR none#4)
-               :     :     +- 'Join ExistenceJoin(exists#13226), (none#0 = none#4)
-               :     :        :- 'Join ExistenceJoin(exists#13225), (none#0 = none#3)
+               :     :     +- 'Join ExistenceJoin(exists#13214), (none#0 = none#4)
+               :     :        :- 'Join ExistenceJoin(exists#13213), (none#0 = none#3)
                :     :        :  :- RelationV2[none#0, none#1, none#2] TPCDS.CUSTOMER
                :     :        :  +- RelationV2[none#0] TPCDS.WEB_SALES
                :     :        +- RelationV2[none#0] TPCDS.CATALOG_SALES

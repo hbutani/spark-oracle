@@ -48,6 +48,19 @@ trait OraQueryBlockState { self: OraSingleQueryBlock =>
     orderBy.isDefined
   }
 
+  /**
+   * Query Block collapsing rules for window expressions:
+   *  -  don't collapse multi Window operators because parent
+   *     Window expression may be calculated based on a child
+   *     Window expression.
+   *  - don't 'rewrite' Project and Filter expressions so
+   *    they are collapsed into the current query block
+   *    because multi invocations of a window expression
+   *    may not be combined and calculated once in Oracle.
+   *  - don't collapse a Sort into a Query Block with
+   *    window expressions because Sort expression may
+   *    refer to window expression. (TODO, this maybe ok)
+   */
   lazy val hasWindow : Boolean = {
     select.map {oE =>
       oE.map(_.catalystExpr).collect {
@@ -65,16 +78,16 @@ trait OraQueryBlockState { self: OraSingleQueryBlock =>
     }.getOrElse(false)
 
   def canApply(plan: LogicalPlan): Boolean = plan match {
-    case p: Project => !hasOrder || !hasWindow
-    case s: Sort => !hasOrder
-    case w: Window => !(hasWindow || hasComputedShape)
-    case f: Filter => !(hasOrder || hasOuterJoin || hasAggregate)
+    case p: Project => !(hasOrder || hasWindow)
+    case s: Sort => !(hasOrder || hasWindow)
+    case w: Window => !(hasOrder || hasWindow || hasComputedShape)
+    case f: Filter => !(hasOrder || hasOuterJoin || hasAggregate || hasWindow)
     case j@Join(_, _, (LeftOuter | RightOuter | FullOuter), _, _) =>
       !(hasComputedShape || hasFilter || hasAggregate || hasLatJoin || hasOrder)
     case j: Join => !(hasComputedShape || hasAggregate || hasLatJoin || hasOrder)
     case e: Expand => !(hasComputedShape || hasAggregate || hasLatJoin || hasOrder)
     case a: Aggregate => !(hasComputedShape || hasAggregate || hasOrder)
-    case gl : GlobalLimit => !(hasOuterJoin || hasAggregate || hasOrder)
+    case gl : GlobalLimit => !(hasOuterJoin || hasAggregate || hasOrder || hasWindow)
   }
 
   def canApplyFilter : Boolean = !(hasOrder || hasOuterJoin || hasAggregate)

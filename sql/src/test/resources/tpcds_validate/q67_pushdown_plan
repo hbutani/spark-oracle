@@ -1,6 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- !Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#4 ASC NULLS FIRST, none#5 ASC NULLS FIRST, none#6 ASC NULLS FIRST, none#7 ASC NULLS FIRST, none#8 ASC NULLS FIRST, none#9 ASC NULLS FIRST], true
-      +- !Filter (isnotnull(none#9) AND (100 >= none#9))
-         +- Window [rank(none#8) windowspecdefinition(none#0, none#8 DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#0], [none#8 DESC NULLS LAST]
-            +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8] TPCDS.STORE_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7, none#8, none#9] TPCDS.STORE_SALES

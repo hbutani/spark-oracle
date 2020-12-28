@@ -17,27 +17,24 @@
 
 package org.apache.spark.sql.oracle.translation
 
-// scalastyle:off line.size.limit println
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
+import org.apache.spark.sql.hive.test.oracle.TestOracleHive
+import org.apache.spark.sql.oracle.tpcds.TPCDSQueries
+
+
 class WindowTranslationTests extends AbstractTranslationTest {
 
-  testPushdown("SUM",
-    """select SUM(ws_ext_sales_price) from web_sales
-      """.stripMargin
-  )
+  val windowTestQueries = Seq(
+    "q12", "q20", "q44", "q47", "q49", "q51", "q53", "q57",
+    "q63", "q67", "q89", "q98")
 
-  testPushdown("Col Name Resolution",
-    """|SELECT SUM(ws_ext_sales_price) OVER
-      |         (PARTITION BY ws_bill_customer_sk ORDER BY ws_item_sk)
-      |         AS ws
-      |  FROM web_sales limit 100
-      """.stripMargin
-  )
+  // TODO: handle bit shift expression from spark grouping function
+  val notPushdown = Seq("q36", "q70", "q86")
 
-  testPushdown("Col Name Resolution",
-    """|SELECT SUM(ws_ext_sales_price) OVER
-       |         (PARTITION BY ws_bill_customer_sk)
-       |         AS ws
-       |  FROM web_sales limit 100
-      """.stripMargin
-  )
+  for ((qNm, q) <- TPCDSQueries.queries if windowTestQueries.contains(qNm)) {
+    test(qNm) { td =>
+      val plan = TestOracleHive.sql(q.sql).queryExecution.optimizedPlan
+      assert(plan.isInstanceOf[DataSourceV2ScanRelation])
+    }
+  }
 }

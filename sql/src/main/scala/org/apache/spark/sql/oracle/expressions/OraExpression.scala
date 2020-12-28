@@ -19,7 +19,7 @@ package org.apache.spark.sql.oracle.expressions
 
 import java.util.Locale
 
-import org.apache.spark.sql.catalyst.expressions.{And, Coalesce, Expression, IsNotNull, IsNull, Literal, WindowExpression}
+import org.apache.spark.sql.catalyst.expressions.{And, Coalesce, Expression, IsNotNull, IsNull, Literal}
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.catalyst.util.truncatedString
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
@@ -146,7 +146,7 @@ object OraExpression {
       case Casts(oE) => oE
       case Aggregates(oE) => oE
       case Sorts(oE) => oE
-      case Window(oE) => oE
+      case Windows(oE) => oE
       case IgnoreExpressions(oE) => oE
       case _ => null
     })

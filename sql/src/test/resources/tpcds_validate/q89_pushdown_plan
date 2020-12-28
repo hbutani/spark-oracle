@@ -1,7 +1,1 @@
-GlobalLimit 100
-+- LocalLimit 100
-   +- !Sort [CheckOverflow((cast(none#6 as decimal(38,17)) - cast(none#7 as decimal(38,17))), DecimalType(38,17), true) ASC NULLS FIRST, none#3 ASC NULLS FIRST], true
-      +- !Project [none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#8]
-         +- !Filter (0.100000 < CASE WHEN NOT (0E-22 = none#8) THEN CheckOverflow((cast(abs(CheckOverflow((cast(none#6 as decimal(38,17)) - cast(none#8 as decimal(38,17))), DecimalType(38,17), true)) as decimal(38,22)) / none#8), DecimalType(38,6), true) ELSE null END)
-            +- Window [avg(none#7) windowspecdefinition(none#0, none#2, none#3, none#4, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#0, none#2, none#3, none#4]
-               +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.ITEM
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.ITEM

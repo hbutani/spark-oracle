@@ -1,4 +1,1 @@
-!Sort [none#2 ASC NULLS FIRST, none#3 ASC NULLS FIRST, none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST, none#6 ASC NULLS FIRST], true
-+- !Project [none#0, none#1, none#2, none#3, none#4, none#5, CheckOverflow((cast(CheckOverflow((100.000000000000000000 * none#6), DecimalType(38,14), true) as decimal(38,18)) / none#8), DecimalType(38,6), true) AS #0]
-   +- Window [sum(none#7) windowspecdefinition(none#3, specifiedwindowframe(RowFrame, unboundedpreceding$(), unboundedfollowing$())) AS #0], [none#3]
-      +- RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6, none#7] TPCDS.STORE_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5, none#6] TPCDS.STORE_SALES

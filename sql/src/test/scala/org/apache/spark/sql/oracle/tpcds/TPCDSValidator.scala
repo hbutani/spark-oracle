@@ -24,7 +24,7 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.plans.logical.{LocalRelation, LogicalPlan}
+import org.apache.spark.sql.catalyst.plans.logical.{GlobalLimit, LocalLimit, LocalRelation, LogicalPlan, Sort}
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.{OraSparkConfig, OraSparkUtils, SparkSessionExtensions}
 import org.apache.spark.sql.types.{DataType, StringType, StructType}
@@ -37,9 +37,9 @@ import org.apache.spark.sql.types.{DataType, StringType, StructType}
  *  Working directory: /Users/hbutani/newdb/spark-oracle/sql
  * }}}
  */
-object TPCDSValidator extends App {
+object TPCDSValidator {
 
-  override def main(args : Array[String]) : Unit = {
+  def main(args : Array[String]) : Unit = {
     val a = parseArgs(args)
     new TPCDSValidator(a).run
   }
@@ -239,6 +239,45 @@ object TPCDSValidator extends App {
     Arguments(dbInstance, wallet_loc, outFolder, queries, rebuildQueries, rebuildPlans)
   }
 
+  private val KNOWN_ISSUES : Map[String, String] = Map(
+    "q67" ->
+      """Oracle SQL: Creating a query block for order-by seems to change the resultset order.
+        |So the following 2 return results in different orders even though their plans are the same.
+        |The 2nd query returns the results in the wrong order.
+        |
+        |select i_category
+        |     , sum(coalesce(ss_sales_price * ss_quantity, 0)) sumsales
+        |from store_sales, item
+        |where ss_item_sk = i_item_sk
+        |group by rollup(i_category)
+        |order by i_category ASC nulls first
+        |
+        |select i_category, sumsales
+        |from
+        |(
+        |    select i_category
+        |         , sum(coalesce(ss_sales_price * ss_quantity, 0)) sumsales
+        |    from store_sales, item
+        |    where ss_item_sk = i_item_sk
+        |    group by rollup(i_category)
+        |)
+        |order by i_category ASC nulls first
+        |;
+        |""".stripMargin
+  )
+
+  private def dumpKnownIssues(buf : StringBuilder) : Unit = {
+    buf.append(
+      """KNOWN ISSUES:
+        |-------------
+        |""".stripMargin)
+    for ((qNm, issue) <- KNOWN_ISSUES) {
+      buf.append(s"Query ${qNm}:\n")
+      buf.append(issue)
+    }
+    buf.append("===========================================\n")
+  }
+
 }
 
 class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
@@ -329,10 +368,14 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
         |  num_queries= (total=${totCount}, pass=${passCount}, warn=${warningCount}, fail=${failCount})
         |  skipped queries= ${skippedQueries.toList.sorted.mkString(",")}
         |  failed queries= ${failQNms.mkString(",")}
+        |  queries with issues= ${KNOWN_ISSUES.keySet.mkString(",")}
         |
         |""".stripMargin
     )
     qDiffs.foreach(_.dump(buf))
+
+    dumpKnownIssues(buf)
+
     writeReport(buf.toString())
     println(buf)
     // scalastyle:on println
@@ -354,6 +397,16 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
     } else {
       v
     }
+  }
+
+  private def isSorted(nonPushPlan : LogicalPlan) : Boolean = {
+    nonPushPlan match {
+      case s : Sort => true
+      case ll : LocalLimit => isSorted(ll.child)
+      case gl : GlobalLimit => isSorted(gl.child)
+      case _ => false
+    }
+
   }
 
   private def validateResults(pushDF: DataFrame,
@@ -494,7 +547,7 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
         executeAndSaveResult(qNm, sql, false)
 
         // uncomment if you want the pushdown results
-        // to comapre with non-pushdown results.
+        // to compare with non-pushdown results.
         // DON'T checkin pushdown results.
         // executeAndSaveResult(qNm, sql, true)
       }
@@ -509,7 +562,9 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
         validatePlan(qNm, pushPlan, resultDiff)
       }
 
-      validateResults(pushDF, nonPushDF, resultDiff, 0.0)
+      validateResults(pushDF, nonPushDF, resultDiff, 0.0,
+        isSorted(nonPushDF.queryExecution.optimizedPlan)
+      )
 
       resultDiff
     } catch {

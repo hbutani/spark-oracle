@@ -1,13 +1,1 @@
-'GlobalLimit 100
-+- 'LocalLimit 100
-   +- 'Sort [none#0 ASC NULLS FIRST, none#1 ASC NULLS FIRST], true
-      +- 'Filter ((isnotnull(none#5) AND (none#4 > none#5)) AND isnotnull(none#4))
-         +- 'Window [max(none#2) windowspecdefinition(none#0, none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0, max(none#3) windowspecdefinition(none#0, none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #1], [none#0], [none#1 ASC NULLS FIRST]
-            +- 'Project [CASE WHEN isnotnull(none#0) THEN none#0 ELSE none#3 END AS #0, CASE WHEN isnotnull(none#1) THEN none#1 ELSE none#4 END AS #1, none#2 AS #2, none#5 AS #3]
-               +- 'Join FullOuter, ((none#1 = none#4) AND (none#0 = none#3))
-                  :- !Project [none#0, none#1, none#4]
-                  :  +- Window [sum(none#2) windowspecdefinition(none#3, none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#3], [none#1 ASC NULLS FIRST]
-                  :     +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.WEB_SALES
-                  +- !Project [none#0, none#1, none#4]
-                     +- Window [sum(none#2) windowspecdefinition(none#3, none#1 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS #0], [none#3], [none#1 ASC NULLS FIRST]
-                        +- RelationV2[none#0, none#1, none#2, none#3] TPCDS.STORE_SALES
+RelationV2[none#0, none#1, none#2, none#3, none#4, none#5] TPCDS.WEB_SALES
