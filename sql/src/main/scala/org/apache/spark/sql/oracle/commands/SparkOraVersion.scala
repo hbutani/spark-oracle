@@ -35,7 +35,7 @@ case class SparkOraVersion(dummyArg: String = null) extends RunnableCommand with
     Seq(
       s"version     : ${BuildInfo.spark_ora_version}",
       s"git_commit  : ${BuildInfo.spark_ora_revision}",
-      s"git_branch  : ${BuildInfo.spark_ora_revision}",
+      s"git_branch  : ${BuildInfo.spark_ora_branch}",
       s"build_date  : ${BuildInfo.spark_ora_build_date}").map(Row(_))
   }
 }

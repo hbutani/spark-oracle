@@ -34,7 +34,7 @@ object BuildInfo {
     val resourceStream = Thread
       .currentThread()
       .getContextClassLoader
-      .getResourceAsStream("spark_ora-version-info.properties")
+      .getResourceAsStream("spark-oracle-version-info.properties")
 
     try {
       val unknownProp = "<unknown>"
