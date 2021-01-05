@@ -48,7 +48,7 @@ trait OraScan {
   def dsKey: DataSourceKey
   def oraPlan: OraPlan
 
-  @transient protected lazy val splitStrategy : OraSplitStrategy =
+  @transient protected lazy val (splitStrategy : OraSplitStrategy, _) =
     OraSplitStrategy.generateSplits(dsKey, oraPlan)(sparkSession)
 
   /*

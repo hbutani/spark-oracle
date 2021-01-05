@@ -19,9 +19,10 @@ package org.apache.spark.sql.oracle.parsing
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.catalyst.parser.ParserInterface
+import org.apache.spark.sql.catalyst.parser.{ParseException, ParserInterface}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.oracle.OraSparkUtils
+import org.apache.spark.sql.oracle.commands.{ExplainPushdown, SparkOraVersion}
 import org.apache.spark.sql.oracle.rules.OraLogicalRules
 import org.apache.spark.sql.types.{DataType, StructType}
 
@@ -46,9 +47,33 @@ class OraParser(baseParser : ParserInterface) extends ParserInterface {
     }
   }
 
+  val sparkOraExtensionsParser = new SparkOraExtensionsParser(baseParser)
+
   override def parsePlan(sqlText: String): LogicalPlan = {
     ensurePushdownRuleRegistered(OraSparkUtils.currentSparkSession)
-    baseParser.parsePlan(sqlText)
+
+    val extensionsPlan = sparkOraExtensionsParser.parseExtensions(sqlText)
+
+    if (extensionsPlan.successful ) {
+      extensionsPlan.get
+    } else {
+      try {
+        baseParser.parsePlan(sqlText)
+      } catch {
+        case pe : ParseException =>
+          val splFailureDetails =
+            extensionsPlan.asInstanceOf[SparkOraExtensionsParser#NoSuccess].msg
+          throw new ParseException(pe.command,
+            s"""${pe.message}
+               |[
+               |Also failed to parse as spark-ora extensions:
+               | ${splFailureDetails}
+               |]""".stripMargin,
+            pe.start,
+            pe.stop
+          )
+      }
+    }
   }
 
   def parseExpression(sqlText: String): Expression =
@@ -69,4 +94,39 @@ class OraParser(baseParser : ParserInterface) extends ParserInterface {
   override def parseDataType(sqlText: String): DataType =
     baseParser.parseDataType(sqlText)
 
+}
+
+
+private[parsing] class SparkOraExtensionsParser(val baseParser : ParserInterface)
+  extends AbstractLightWeightSQLParser {
+
+  private def sparkSession = SparkSession.getActiveSession.get
+
+  protected val SPARK_ORA = Keyword("SPARK_ORA")
+  protected val VERSION = Keyword("VERSION")
+  protected val EXPLAIN = Keyword("EXPLAIN")
+  protected val ORACLE = Keyword("ORACLE")
+  protected val PUSHDOWN = Keyword("PUSHDOWN")
+
+  def parseExtensions(input: String): ParseResult[LogicalPlan] = synchronized {
+    // Initialize the Keywords.
+    initLexical
+    phrase(start)(new lexical.Scanner(input))
+  }
+
+  override protected def start: Parser[LogicalPlan] =
+    sparkOraVersion | explainPushdown
+
+
+  private lazy val sparkOraVersion : Parser[LogicalPlan] =
+    SPARK_ORA ~ VERSION ^^ {
+      case _ => SparkOraVersion()
+    }
+
+  private lazy val explainPushdown : Parser[LogicalPlan] =
+    (EXPLAIN ~ ORACLE ~ PUSHDOWN) ~> restInput ^^ {
+      case sqlText =>
+        val df = sparkSession.sql(sqlText)
+        ExplainPushdown(df.queryExecution.sparkPlan)
+    }
 }

@@ -41,13 +41,37 @@ package object querysplit {
                                   alias : String,
                                   row_count : Long,
                                   bytes : Long,
-                                  partitionRange : Option[(Int, Int)])
+                                  partitionRange : Option[(Int, Int)]) {
+
+    def explain(append : String => Unit) : Unit = {
+      if (!partitionRange.isDefined) {
+        append(s"""name=${tabNm}, row_count=${row_count}, bytes=${bytes}""")
+      } else {
+        val (sP, eP) = partitionRange.get
+        // scalastyle:off line.size.limit
+        append(s"""name=${tabNm}, row_count=${row_count}, bytes=${bytes}, partitions=($sP, $eP)""")
+        // scalastyle:on
+      }
+    }
+
+  }
 
   case class PlanInfo(
                        rowCount : Long,
                        bytes : Long,
                        tabAccesses : Seq[TableAccessOperation]
-                     )
+                     ) {
+    def explain(append : String => Unit) : Unit = {
+      append(s"rowCount = ${rowCount}, bytes=${bytes}\n")
+      if (tabAccesses.nonEmpty) {
+        append(s"split target candidates:\n")
+        for (t <- tabAccesses) {
+          t.explain(append)
+          append("\n")
+        }
+      }
+    }
+  }
 
   def ORA_SYS_PARTITION(pNm : String) : Boolean = pNm.startsWith("SYS")
 
@@ -76,9 +100,9 @@ package object querysplit {
       } else {
         None
       }
-
-
     }
+
+    def explain(append : String => Unit) : Unit = tabAccessOp.explain(append)
   }
 
   case class SplitCandidate(alias : Option[String],

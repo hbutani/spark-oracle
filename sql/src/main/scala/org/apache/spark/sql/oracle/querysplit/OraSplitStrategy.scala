@@ -106,6 +106,8 @@ trait OraSplitStrategy {
   protected def literalsql(v : Any) : OraLiteralSql =
     new OraLiteralSql(v.toString)
 
+  def explain(append: String => Unit): Unit
+
 }
 
 case object NoSplitStrategy extends OraSplitStrategy {
@@ -113,6 +115,9 @@ case object NoSplitStrategy extends OraSplitStrategy {
 
   override def splitOraSQL(oraTblScan: OraTableScan, splitId : Int): Option[SQLSnippet] =
     None
+
+  def explain(append: String => Unit): Unit =
+    append("Query is not split\n")
 }
 
 case class OraRowIdSplitStrategy(splitList : IndexedSeq[OraDBSplit],
@@ -135,6 +140,20 @@ case class OraRowIdSplitStrategy(splitList : IndexedSeq[OraDBSplit],
         )
       )
     } else None
+  }
+
+  def explain(append: String => Unit): Unit = {
+    append("Query split by row ids")
+
+    append("\nTarget table:\n")
+    targetTable.explain(append)
+
+    append("\nSplits:\n")
+    for (s <- splitList) {
+      s.explain(append)
+      append("\n")
+    }
+
   }
 }
 
@@ -174,6 +193,21 @@ case class OraPartitionSplitStrategy(splitList : IndexedSeq[OraDBSplit],
 
     } else None
   }
+
+  def explain(append: String => Unit): Unit = {
+    append("Query split by partitions\n")
+
+    append("\nTarget table:\n")
+    targetTable.explain(append)
+
+    append("\nSplits:\n")
+    for (s <- splitList) {
+      s.explain(append)
+      append("\n")
+    }
+
+
+  }
 }
 
 case class OraResultSplitStrategy(splitList : IndexedSeq[OraDBSplit],
@@ -202,6 +236,18 @@ case class OraResultSplitStrategy(splitList : IndexedSeq[OraDBSplit],
     }
 
     osql"${sqlSnip}${ordByCl}${SQLSnippet.nl}${offsetCl}"
+  }
+
+  def explain(append: String => Unit): Unit = {
+    append("Query split by result rows")
+    append(s"\nscn: ${scn}\n")
+
+    append("\nSplits:\n")
+    for (s <- splitList) {
+      s.explain(append)
+      append("\n")
+    }
+
   }
 }
 
@@ -252,11 +298,11 @@ object OraSplitStrategy extends Logging with TimeIt {
   def generateSplits(dsKey : DataSourceKey,
                      oraPlan : OraPlan)(
       implicit sparkSession : SparkSession
-  ) : OraSplitStrategy = {
+  ) : (OraSplitStrategy, Option[PlanInfo]) = {
     val qrySplitEnabled = OraSparkConfig.getConf(OraSparkConfig.ENABLE_ORA_QUERY_SPLITTING)
 
     if (!qrySplitEnabled ) {
-      NoSplitStrategy
+      (NoSplitStrategy, None)
     } else {
       val splitScope = QuerySplitAnalyzer.splitCandidates(oraPlan)
       val planComplex = splitScope.candidateTables.isEmpty
@@ -271,14 +317,14 @@ object OraSplitStrategy extends Logging with TimeIt {
       }
 
       if (!planInfoO.isDefined) {
-        NoSplitStrategy
+        (NoSplitStrategy, planInfoO)
       } else {
         val planInfo = planInfoO.get
         val bytesPerTask: Long = OraSparkConfig.getConf(OraSparkConfig.BYTES_PER_SPLIT_TASK)
         val resultSplitEnabled = OraSparkConfig.getConf(OraSparkConfig.ALLOW_SPLITBY_RESULTSET)
 
         if (planInfo.bytes < bytesPerTask || (planComplex && !resultSplitEnabled)) {
-          NoSplitStrategy
+          (NoSplitStrategy, planInfoO)
         } else {
           val targetTable: Option[TableAccessDetails] =
             buildTableAccess(planInfo.tabAccesses, splitScope.candidateTables)
@@ -290,7 +336,7 @@ object OraSplitStrategy extends Logging with TimeIt {
             maxFetchTasks
           ).generateSplitList
           val scn = ORASQLUtils.currentSCN(dsKey)
-          OraSplitStrategy(splitList, targetTable, scn)
+          (OraSplitStrategy(splitList, targetTable, scn), planInfoO)
         }
       }
     }

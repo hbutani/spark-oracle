@@ -35,15 +35,31 @@ import org.apache.spark.sql.oracle.util.TimeIt
  *    split by `rowId` ranges using the predicate
  *    ` rowid BETWEEN ? AND ?`
  */
-sealed trait OraDBSplit
+sealed trait OraDBSplit {
+  def explain(append : String => Unit) : Unit
+}
 
-case object OraNoSplit extends OraDBSplit
+case object OraNoSplit extends OraDBSplit {
+  def explain(append : String => Unit) : Unit = ()
+}
 
-case class OraResultSplit(offset : Long, numRows : Long) extends OraDBSplit
+case class OraResultSplit(offset : Long, numRows : Long) extends OraDBSplit {
+  def explain(append : String => Unit) : Unit = {
+    append(s"offset = ${offset}, numRows=${numRows}")
+  }
+}
 
-case class OraPartitionSplit(partitions : Seq[String]) extends OraDBSplit
+case class OraPartitionSplit(partitions : Seq[String]) extends OraDBSplit {
+  def explain(append : String => Unit) : Unit = {
+    append(s"partitions = ${partitions.mkString(",")}")
+  }
+}
 
-case class OraRowIdSplit(start : String, stop : String) extends OraDBSplit
+case class OraRowIdSplit(start : String, stop : String) extends OraDBSplit {
+  def explain(append : String => Unit) : Unit = {
+    append(s"start-rowId = ${start}, end-rowId=${stop}")
+  }
+}
 
 /**
  * Given a Query's output stats(bytes, rowCOunt), the maximum number of fetch tasks,
