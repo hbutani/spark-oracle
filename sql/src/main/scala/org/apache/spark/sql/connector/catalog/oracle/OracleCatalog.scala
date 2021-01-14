@@ -47,7 +47,8 @@ class OracleCatalog
     extends CatalogPlugin
     with CatalogExtension
     with StagingTableCatalog
-    with OraExternalTableDDLSupport {
+    with OraExternalTableDDLSupport
+      with OraCatalogFunctionActions {
 
   private var _name: String = _
   private var metadataManager: OracleMetadataManager = _

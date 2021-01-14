@@ -21,7 +21,7 @@ import org.apache.spark.sql.catalyst.trees.TreeNode
 
 package object oracle {
 
-  trait UnSupportedActionHelper[T <: TreeNode[T]] {
+  private[oracle] trait UnSupportedActionHelper[T <: TreeNode[T]] {
 
     /*
      * Such as 'Illegal' or 'Unsupported'
@@ -50,4 +50,9 @@ package object oracle {
       apply(action, node, Some(reason))
 
   }
+
+  implicit def toOraSparkSess(sparkSession: SparkSession) : OraSparkSessionExts =
+    OraSparkSessionExts(sparkSession)
+
+  implicit def toSparkSess(oSS : OraSparkSessionExts) : SparkSession = oSS.sparkSession
 }

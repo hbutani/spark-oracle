@@ -144,6 +144,14 @@ object OraLiterals {
     val sqlType: Int
 
     protected def readResultSet(rs: ResultSet, pos: Int): T
+
+    def readValue(rs: ResultSet, pos: Int) : T =
+      readResultSet(rs, pos)
+    def readOptionValue(rs: ResultSet, pos: Int) : Option[T] = {
+      val v : T = readResultSet(rs, pos)
+      if (rs.wasNull()) None else Some(v)
+    }
+
     protected def setIRow(oRow: InternalRow, pos: Int, v: T): Unit
     protected def readIRow(iRow: InternalRow, pos: Int): T
     protected def readLiteral(lit: Literal): T

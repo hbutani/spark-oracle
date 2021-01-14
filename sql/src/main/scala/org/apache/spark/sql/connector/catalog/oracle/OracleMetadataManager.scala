@@ -48,7 +48,8 @@ import org.apache.spark.util.{ShutdownHookManager, Utils}
  *
  * @param cMap
  */
-private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String]) extends Logging {
+private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
+  extends Logging with OraFunctionDefLoader {
 
   val connInfo = ConnectionInfo.connectionInfo(cMap)
   val catalogOptions = OracleCatalogOptions.catalogOptions(cMap)

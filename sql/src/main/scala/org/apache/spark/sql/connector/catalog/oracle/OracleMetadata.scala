@@ -27,7 +27,7 @@ import org.apache.spark.sql.connector.expressions.{LogicalExpressions, Transform
 import org.apache.spark.sql.oracle.OraSparkUtils
 import org.apache.spark.sql.types.{StructField, StructType}
 
-object OracleMetadata {
+object OracleMetadata extends OraFunctionDefs {
 
   trait OracleMetadataException extends AnalysisException
 
@@ -54,6 +54,15 @@ object OracleMetadata {
       action: String,
       alternate: Option[String] = Some("you should perform this using Oracle SQL")): Nothing =
     throw new UnsupportedAction(action, alternate)
+
+  class InvalidAction(action: String, suggestRemedies: Option[String])
+    extends AnalysisException(
+      s"Invalid Action on Oracle Catalog: ${action}" +
+        s"${if (suggestRemedies.isDefined) "\n " + suggestRemedies.get else ""}")
+
+  def invalidAction(action: String,
+                    suggestRemedies: Option[String]): Nothing =
+    throw new InvalidAction(action, suggestRemedies)
 
   object OraPartitionType extends Enumeration {
     val RANGE = Value("RANGE")

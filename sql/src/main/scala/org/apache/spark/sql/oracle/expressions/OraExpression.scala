@@ -147,6 +147,7 @@ object OraExpression {
       case Aggregates(oE) => oE
       case Sorts(oE) => oE
       case Windows(oE) => oE
+      case OraNativeFunctions(oE) => oE
       case IgnoreExpressions(oE) => oE
       case _ => null
     })

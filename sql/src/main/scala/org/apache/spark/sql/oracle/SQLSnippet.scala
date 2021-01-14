@@ -222,7 +222,11 @@ object SQLSnippet {
 
   def call(fn: String, args: SQLSnippet*): SQLSnippet = {
     val fnSnip = literalSnippet(fn)
-    osql"$fnSnip(${join(args, comma, true)})"
+    if (args.nonEmpty) {
+      osql"$fnSnip(${join(args, comma, true)})"
+    } else {
+      osql"$fnSnip"
+    }
   }
   def operator(op: String, args: SQLSnippet*): SQLSnippet = {
     val opSnip = literalSnippet(op)

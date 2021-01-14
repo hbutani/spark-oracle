@@ -230,13 +230,18 @@ object OraDataType {
     (s.toUpperCase(Locale.ROOT), length, precision, scale) match {
       case ("CHAR", Some(l), None, None) => OraChar(l, true)
       case ("VARCHAR2", Some(l), None, None) => OraVarchar2(l, true)
+      case ("VARCHAR2", None, None, None) =>
+        OraVarchar2(OraSparkConfig.getConf(OraSparkConfig.VARCHAR2_MAX_LENGTH), true)
       case ("NCHAR", Some(l), None, None) => OraNChar(l)
       case ("NVARCHAR2", Some(l), None, None) => OraNVarchar2(l)
-      case ("NUMBER", None, p, s) =>
+      case ("NVARCHAR2", None, None, None) =>
+        OraNVarchar2(OraSparkConfig.getConf(OraSparkConfig.VARCHAR2_MAX_LENGTH))
+      case ("NUMBER", _, p, s) =>
         OraNumber.checkSupported(p, s)
         OraNumber(p, s)
       case ("FLOAT", None, p, None) => OraFloat(p)
       case ("LONG", None, None, None) => OraLong
+      case ("BINARY_INTEGER", None, None, None) => OraNumber(Some(9), None)
       case ("BINARY_FLOAT", None, None, None) => OraBinaryFloat
       case ("BINARY_DOUBLE", None, None, None) => OraBinaryDouble
       case ("DATE", None, None, None) => OraDate

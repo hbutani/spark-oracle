@@ -72,6 +72,11 @@ object OracleTestConf {
     .set("spark.sql.catalog.oracle.fetchSize", "100000")
     .set("spark.sql.oracle.enable.querysplitting", "false")
     // .set("spark.sql.oracle.max_string_size", "32767")
+  /* Use these settings to turn off some of the code generation
+    .set("spark.sql.codegen.factoryMode", "NO_CODEGEN")
+    .set("spark.sql.codegen.maxFields", "0")
+    .set("spark.sql.codegen.wholeStage", "false")
+   */
 
   lazy val localConf: SparkConf = {
 
