@@ -18,14 +18,16 @@
 package org.apache.spark.sql.oracle.expressions
 
 import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.connector.catalog.oracle.OraNativeRowFuncInvoke
+import org.apache.spark.sql.connector.catalog.oracle.{OraNativeAggFuncInvoke, OraNativeRowFuncInvoke}
 
 object OraNativeFunctions {
 
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
       case cE@OraNativeRowFuncInvoke(fnDef, _, OraExpressions(oEs @ _*)) =>
-        OraFnExpression(fnDef.oraql_name, cE, oEs)
+        OraFnExpression(fnDef.orasql_fnname, cE, oEs)
+      case cE@OraNativeAggFuncInvoke(fnDef, _, OraExpressions(oEs @ _*)) =>
+        OraFnExpression(fnDef.orasql_fnname, cE, oEs)
       case _ => null
     })
 

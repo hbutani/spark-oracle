@@ -17,16 +17,17 @@
 
 package org.apache.spark.sql.connector.catalog.oracle
 
-import java.sql.Types
+import java.util.Locale
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.control.Breaks._
 
 import oracle.spark.ORASQLUtils.performDSQuery
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.FunctionIdentifier
-import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Unevaluable, UserDefinedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Unevaluable, UnevaluableAggregate, UserDefinedExpression}
 import org.apache.spark.sql.oracle.expressions.OraLiterals
 import org.apache.spark.sql.oracle.expressions.OraLiterals.JDBCGetSet
 import org.apache.spark.sql.types.{DataType, IntegerType, StringType}
@@ -51,18 +52,23 @@ trait OraFunctionDefs { self : OracleMetadata.type =>
         s" args={${args.mkString(",")}}"
   }
 
+  private def fixOraFnNames(nm : String) : String = {
+    if (nm.toUpperCase(Locale.ROOT) == "SYS.STANDARD.USER") {
+      "USER"
+    } else {
+      nm
+    }
+  }
+
   case class OraFuncDef(packageName : Option[String],
+                        owner : String,
                         name : String,
                         isAggregate : Boolean,
                         sigs : IndexedSeq[OraFunctionSignature]) {
 
     val qualNm = s"${packageName.map(_ + ".").getOrElse("")}${name}"
 
-    lazy val oraql_name = if (packageName == Some("STANDARD")) {
-      name
-    } else {
-      qualNm
-    }
+    lazy val orasql_fnname = fixOraFnNames(s"${owner}.${qualNm}")
 
     override def toString: String =
       s"""name=${qualNm},isAggregate=${isAggregate}
@@ -95,9 +101,11 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
     val funcSigs = ArrayBuffer[OraFunctionSignature]()
     val issues = ArrayBuffer[String]()
     var isAgg : Option[String] = None
+    var owner : String = null
 
     val strJdbcGetSet = OraLiterals.jdbcGetSet(StringType).asInstanceOf[JDBCGetSet[String]]
     val intJdbcGetSet = OraLiterals.jdbcGetSet(IntegerType).asInstanceOf[JDBCGetSet[Int]]
+
 
     performDSQuery(
       dsKey,
@@ -105,23 +113,24 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
         |select coalesce(p.overload, 'None'), p.subprogram_id,
         |       argument_name, position,
         |       data_type, data_length, data_precision, data_scale,
-        |       in_out, aggregate
+        |       in_out, aggregate, p.owner
         |from ALL_PROCEDURES p join ALL_ARGUMENTS a on
         |      p.object_id = a.object_id and
         |      p.subprogram_id = a.subprogram_id and
         |      coalesce(p.overload, 'null')  = coalesce(a.overload, 'null')
-        |where coalesce(p.object_name, 'null') =  coalesce(?, 'null') and
-        |      p.PROCEDURE_NAME = ?
+        |where p.object_name =  ? and
+        |      coalesce(p.PROCEDURE_NAME, 'null') = coalesce(?, 'null') and
+        |      p.object_type in ('FUNCTION', 'PROCEDURE', 'PACKAGE')
         |order by coalesce(p.overload, 'None'), p.subprogram_id, position
         |""".stripMargin,
       "retrieve function definition details",
       {ps =>
-        if (packageName.isDefined) {
-          ps.setString(1, packageName.get)
-        } else {
-          ps.setNull(1, Types.VARCHAR)
-        }
-        ps.setString(2, funcName)
+        val object_name = packageName.getOrElse(funcName)
+        val procedure_name : String = if (packageName.isDefined) {
+          funcName
+        } else null
+        ps.setString(1, object_name)
+        ps.setString(2, procedure_name)
       }
     ) { rs =>
       var curr_subPgmId : Int = -1
@@ -137,6 +146,11 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
         }
       }
 
+      def addIssue(issue : String) : Unit = {
+        issues += issue
+        curr_errors = true
+      }
+
       while (rs.next()) {
         val subPgmId = intJdbcGetSet.readValue(rs, 2)
         val argNm = strJdbcGetSet.readValue(rs, 3)
@@ -145,6 +159,7 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
 
         if (!isAgg.isDefined) {
           isAgg = strJdbcGetSet.readOptionValue(rs, 10)
+          owner = strJdbcGetSet.readValue(rs, 11)
         }
 
         breakable {
@@ -160,12 +175,12 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
           }
 
           if (pos == prior_pos) {
-            issues += s"Not supported: subProgram ${curr_subPgmId} has multiple args for" +
-              s" the same position: ${pos}"
+            addIssue(s"Not supported: subProgram ${curr_subPgmId} has multiple args for" +
+              s" the same position: ${pos}")
             break
           } else if (pos > prior_pos + 1) {
-            issues += s"Not supported: subProgram ${curr_subPgmId} missing arg at position" +
-              s" ${prior_pos + 1}"
+            addIssue(s"Not supported: subProgram ${curr_subPgmId} missing arg at position" +
+              s" ${prior_pos + 1}")
             prior_pos = pos
             break
           } else {
@@ -173,8 +188,8 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
           }
 
           if (pos > 0 && inOut != "IN") {
-            issues += s"Not supported: subProgram ${curr_subPgmId}, " +
-              s"argument ${argNm}: is '${inOut}', only 'IN' arguments supported"
+            addIssue(s"Not supported: subProgram ${curr_subPgmId}, " +
+              s"argument ${argNm}: is '${inOut}', only 'IN' arguments supported")
             break
           }
 
@@ -186,9 +201,8 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
              OraDataType.create(datatype, length, precision, scale)
           } catch {
             case e : UnsupportedOraDataType =>
-              issues += s"SubProgram ${curr_subPgmId}, Argument ${argNm} dataType is" +
-                s" not supported: ${e.getMessage()}"
-              curr_errors = true
+              addIssue(s"SubProgram ${curr_subPgmId}, Argument ${argNm} dataType is" +
+                s" not supported: ${e.getMessage()}")
               break
           }
           currArgs += OraFuncArg(argNm, oDT)
@@ -207,7 +221,7 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
         logInfo(s"Issues while loading function defintion '${qualNm}':\n${issues.mkString("\n")}")
       }
 
-      val fnDef = OraFuncDef(packageName, funcName, isAgg.getOrElse("NO") == "YES", funcSigs)
+      val fnDef = OraFuncDef(packageName, owner, funcName, isAgg.getOrElse("NO") == "YES", funcSigs)
 
       logInfo(
         s"""Oracle function definition loaded for '${qualNm}':
@@ -255,11 +269,21 @@ class OraNativeRowFuncInvokeBuilder(val fnDef : OracleMetadata.OraFuncDef)
     }
   }
 
+  private def oraNativeFunc(fnDef : OracleMetadata.OraFuncDef,
+                            sigIdx : Int,
+                            children : Seq[Expression]) : Expression = {
+    if (fnDef.isAggregate) {
+      OraNativeAggFuncInvoke(fnDef, sigIdx, children)
+    } else {
+      OraNativeRowFuncInvoke(fnDef, sigIdx, children)
+    }
+  }
+
   override def apply(args: Seq[Expression]): Expression = {
     val sig = (0 until fnDef.sigs.size).find(i => isMatch(args, fnDef.sigs(i)))
 
     sig.
-      map(i => OraNativeRowFuncInvoke(fnDef, i, fnArgs(args, i))).
+      map(i => oraNativeFunc(fnDef, i, fnArgs(args, i))).
       getOrElse(
         throw new AnalysisException(
           s"""Failed to resolve invocation on oracle function ${fnDef.name} on:
@@ -280,7 +304,24 @@ class OraNativeRowFuncInvokeBuilder(val fnDef : OracleMetadata.OraFuncDef)
 case class OraNativeRowFuncInvoke(fnDef : OracleMetadata.OraFuncDef,
                                   sigIdx : Int,
                                   children : Seq[Expression]
-                                 ) extends Expression with UserDefinedExpression with Unevaluable {
+                                 )
+  extends Expression with UserDefinedExpression with Unevaluable {
+  private val overloadFuncDef = fnDef.sigs(sigIdx)
+
+  override def nullable: Boolean = true
+
+  override def dataType: DataType = overloadFuncDef.retType.catalystType
+}
+
+case class OraNativeAggFuncInvoke(fnDef : OracleMetadata.OraFuncDef,
+                                  sigIdx : Int,
+                                  children : Seq[Expression]
+                                 )
+extends UnevaluableAggregate with Logging
+  with UserDefinedExpression {
+
+  assert(fnDef.isAggregate)
+
   private val overloadFuncDef = fnDef.sigs(sigIdx)
 
   override def nullable: Boolean = true

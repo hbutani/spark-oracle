@@ -38,53 +38,61 @@ abstract class FunctionRegistrationTest extends AbstractTest
     println(
       TestOracleHive.sparkSession.registerOracleFunctions(Some("STANDARD"), standard_funcs : _*)
     )
+
+    println(
+      TestOracleHive.sparkSession.registerOracleFunctions(Some("DBMS_STANDARD"), "LOGIN_USER")
+    )
+
+    println(
+      TestOracleHive.sparkSession.registerOracleFunctions(Some("DBMS_UTILITY"), "GET_CPU_TIME")
+    )
+
+    println(
+      TestOracleHive.sparkSession.registerOracleFunctions(None, "STRAGG")
+    )
+
     // scalastyle:on
   }
 
+  val q1 = """
+             |select oracle.ADD_MONTHS(C_DATE, 1) add_months,
+             |       oracle.bitand(c_short, c_int) bit_and,
+             |       oracle.LAST_DAY(C_DATE) last_day,
+             |       oracle.MONTHS_BETWEEN(oracle.NEXT_DAY(C_DATE, 'TUESDAY'),
+             |       oracle.LAST_DAY(C_DATE)) mon_betw,
+             |       oracle.user() ouser,
+             |       oracle.ORA_CONTEXT('USERENV', 'CLIENT_PROGRAM_NAME') ora_client_pgm,
+             |       oracle.login_user() login_usr,
+             |       oracle.GET_CPU_TIME() cpu_time
+             |from sparktest.unit_test
+             |""".stripMargin
+
+  val q2 =
+    """
+      |select c_char_5, oracle.stragg(c_char_1)
+      |from sparktest.unit_test
+      |group by c_char_5""".stripMargin
+
 
   test("register-and_query") { td =>
-
-    val df = TestOracleHive.sql(
-      """
-        |select oracle.ADD_MONTHS(C_DATE, 1) add_months,
-        |       oracle.bitand(c_short, c_int) bit_and,
-        |       oracle.LAST_DAY(C_DATE) last_day,
-        |       oracle.MONTHS_BETWEEN(oracle.NEXT_DAY(C_DATE, 'TUESDAY'),
-        |       oracle.LAST_DAY(C_DATE)) mon_betw,
-        |       oracle.user() ouser,
-        |       oracle.ORA_CONTEXT('USERENV', 'CLIENT_PROGRAM_NAME') ora_client_pgm
-        |from sparktest.unit_test
-        |""".stripMargin
-    )
-
-    df.show()
+    TestOracleHive.sql(q1).show()
   }
 
   test("pushdown-off") { td =>
 
     try {
       OraSparkConfig.setConf(OraSparkConfig.ENABLE_ORA_PUSHDOWN, false)
-      val df = TestOracleHive.sql(
-        """
-          |select oracle.ADD_MONTHS(C_DATE, 1) add_months,
-          |       oracle.bitand(c_short, c_int) bit_and,
-          |       oracle.LAST_DAY(C_DATE) last_day,
-          |       oracle.MONTHS_BETWEEN(oracle.NEXT_DAY(C_DATE, 'TUESDAY'),
-          |       oracle.LAST_DAY(C_DATE)) mon_betw,
-          |       oracle.user() ouser,
-          |       oracle.ORA_CONTEXT('USERENV', 'CLIENT_PROGRAM_NAME') ora_client_pgm
-          |from sparktest.unit_test
-          |""".stripMargin
-      )
-
       val ex: Exception = intercept[UnsupportedOperationException] {
-        df.show()
+        TestOracleHive.sql(q1).show()
       }
       println(ex.getMessage)
     } finally {
-      OraSparkConfig.setConf(OraSparkConfig.ENABLE_ORA_PUSHDOWN, false)
+      OraSparkConfig.setConf(OraSparkConfig.ENABLE_ORA_PUSHDOWN, true)
     }
+  }
 
+  test("aggfunc") {td =>
+    TestOracleHive.sql(q2).show()
   }
 
 }
