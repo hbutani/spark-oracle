@@ -18,16 +18,35 @@
 package org.apache.spark.sql.oracle.expressions
 
 import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.connector.catalog.oracle.{OraNativeAggFuncInvoke, OraNativeRowFuncInvoke}
+import org.apache.spark.sql.connector.catalog.oracle.{OracleMetadata, OraNativeAggFuncInvoke, OraNativeRowFuncInvoke}
 
 object OraNativeFunctions {
+
+  /**
+   * Handle any vagaries of oracle native function invocations here.
+   * - only one so far is generate `USER` instead of `USER()`
+   *
+   * @param fnDef
+   * @param cE
+   * @param childOEs
+   * @return
+   */
+  private def oraFnInvokeExpr(fnDef : OracleMetadata.OraFuncDef,
+                              cE : Expression,
+                             childOEs: Seq[OraExpression]) : OraExpression = {
+    if (fnDef.owner == "SYS" && fnDef.name == "USER") {
+      new OraLiteralSql("USER")
+    } else {
+      OraFnExpression(fnDef.orasql_fnname, cE, childOEs)
+    }
+  }
 
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
       case cE@OraNativeRowFuncInvoke(fnDef, _, OraExpressions(oEs @ _*)) =>
-        OraFnExpression(fnDef.orasql_fnname, cE, oEs)
+        oraFnInvokeExpr(fnDef, cE, oEs)
       case cE@OraNativeAggFuncInvoke(fnDef, _, OraExpressions(oEs @ _*)) =>
-        OraFnExpression(fnDef.orasql_fnname, cE, oEs)
+        oraFnInvokeExpr(fnDef, cE, oEs)
       case _ => null
     })
 

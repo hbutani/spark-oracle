@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql
 
+import scala.language.implicitConversions
+
 import org.apache.spark.sql.catalyst.trees.TreeNode
 
 package object oracle {

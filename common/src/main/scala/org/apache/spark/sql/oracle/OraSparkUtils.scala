@@ -51,6 +51,8 @@ object OraSparkUtils {
     spkSessionO.getOrElse(???)
   }
 
+  def getSparkClassLoader: ClassLoader = Utils.getSparkClassLoader
+
   def currentSparkContext: SparkContext = currentSparkSession.sparkContext
 
   def currentSQLConf: SQLConf = {
