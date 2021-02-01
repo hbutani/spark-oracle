@@ -47,6 +47,10 @@ jdbc-examples
 # tests
 sql/src/test/scala/org/apache/spark/sql/oracle/experiments
 
+# macros/tests
+macros/src/test/scala
+
+
 # docker
 docker/driver
 docker/worker

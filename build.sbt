@@ -56,11 +56,18 @@ lazy val orastuff = project
   .settings(libraryDependencies ++= oracle.dependencies)
   .dependsOn(common)
 
+lazy val macros = project
+  .in(file("macros"))
+  .disablePlugins(AssemblyPlugin)
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= scala.dependencies)
+  .dependsOn(common)
+
 lazy val sql = project
   .in(file("sql"))
   .disablePlugins(AssemblyPlugin)
   .settings(commonSettings: _*)
-  .dependsOn(common, orastuff)
+  .dependsOn(common, orastuff, macros)
 
 lazy val mllib = project
   .in(file("mllib"))
