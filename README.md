@@ -1,16 +1,21 @@
 # spark-oracle
-- See [Project Wiki](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/home) for details
-- See [Quick Start](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Quick-Start-Guide) 
-  or [Developer Env.](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Developer-Env)
-  to get started.
   
 ## Current Status
-- Good support for SQL pushdown to the extent that more than 95(of 99) TPCDS queries
+- Catalog integration(see [this page](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Oracle-Catalog) for details)
+- Good support for SQL pushdown(see [Operator](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Operator-Translation)
+  and [Expression](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Expression-Translation) translation pages)
+  to the extent that more than 95(of 99) [TPCDS queries](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/TPCDS-Queries)
   are completely pushed to Oracle instance.
-- Available as an extension jar for Spark 3 environments.  
-- Language integration beyond SQL and DML are in active development.
+- Available as a spark extension(https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/releases)
+  for Spark 3 environments.  
+- [Language integration beyond SQL](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Language-Integration)
+  and [DML](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/-/wikis/Write-Path-Flow) are in active development.
+- See [Project Wiki](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/home) for details.
+- See [Quick Start](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Quick-Start-Guide)
+  or [Developer Env.](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Developer-Env)
+  to get started.
 - See [Demo](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Demo) for a step-by-step
-  guide on how to try many features.
+  guide of many of the features.
 
 ## Background and Motivation
 - Currently Data Lakes comprising of Oracle Data Warehouse and Apache Spark
