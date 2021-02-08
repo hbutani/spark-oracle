@@ -50,8 +50,10 @@ class MacrosTest extends AbstractTest {
   }
   // scalastyle:on
 
-  test("basicMacros") { td =>
+  test("compileTime") { td =>
     handleMacroOutput(TestOracleHive.sparkSession.udm((i: Int) => i))
+
+    handleMacroOutput(TestOracleHive.sparkSession.udm((i: Int) => i + 1))
 
     handleMacroOutput(TestOracleHive.sparkSession.udm((i: Int) => {
       val j = 5
@@ -63,16 +65,9 @@ class MacrosTest extends AbstractTest {
       val j = 5
       j
     }))
-
-//    val a = Array(5)
-//    handleMacroOutput(TestOracleHive.sparkSession.udm((i: Int) => {
-//      val j = a(0)
-//      j
-//    }))
-
   }
 
-  test("runtimeCompile") {td =>
+  test("basics") {td =>
 
     handleMacroOutput(eval[Int, Int](q"(i : Int) => i"))
 
@@ -89,9 +84,90 @@ class MacrosTest extends AbstractTest {
           val j = 5
           j
         }"""))
+
+    handleMacroOutput(eval[Int, Int](reify {
+      (i : Int) => org.apache.spark.SPARK_BRANCH.length + i
+    }.tree))
+
+    handleMacroOutput(eval[Int, Int](reify {(i : Int) =>
+      val b = Array(5, 6)
+      val j = b(0)
+      i + j + Math.abs(j)}.tree))
+
+    handleMacroOutput(eval[Int, Int](
+      q"""{(i : Int) =>
+          val b = Array(5)
+          val j = 5
+          j
+        }"""))
   }
 
-  test("macroPlan") { td =>
+  test("udts") {td =>
+    import macrotest.ExampleStructs.Point
+    handleMacroOutput(eval[Point, Point](
+      reify {(p : Point) =>
+          Point(1, 2)
+        }.tree
+    )
+    )
+
+    handleMacroOutput(eval[Point, Int](
+      reify {(p : Point) =>
+        p.x + p.y
+      }.tree
+    )
+    )
+
+    handleMacroOutput(eval[Point, Int](
+      reify {(p : Point) =>
+        Point(p.x + p.y, p.y)
+      }.tree
+    )
+    )
+  }
+
+  test("tuples") {td =>
+    handleMacroOutput(eval[Tuple2[Int, Int], Tuple2[Int, Int]](
+      reify {(t : Tuple2[Int, Int]) =>
+        (t._2, t._1)
+      }.tree
+    )
+    )
+
+    handleMacroOutput(eval[Tuple2[Int, Int], Tuple2[Int, Int]](
+      reify {(t : Tuple2[Int, Int]) =>
+        t._2 -> t._1
+      }.tree
+    )
+    )
+
+    handleMacroOutput(eval[Tuple4[Float, Double, Int, Int], Tuple2[Int, Int]](
+      reify {(t : Tuple4[Float, Double, Int, Int]) =>
+        (t._4 + t._3, t._4)
+      }.tree
+    )
+    )
+  }
+
+  test("arrays") {td =>
+    handleMacroOutput(eval[Int, Int](
+      reify {(i : Int) =>
+          val b = Array(5, i)
+          val j = b(0)
+          j + b(1)
+        }.tree))
+  }
+
+  test("maps") {td =>
+    handleMacroOutput(eval[Int, Int](
+      reify {(i : Int) =>
+          val b = Map(0 -> i, 1 -> (i + 1))
+          val j = b(0)
+          j + b(1)
+        }.tree))
+  }
+
+  test("macroVsFuncPlan") { td =>
 
     TestOracleHive.sparkSession.registerMacro("fnM", {
       TestOracleHive.sparkSession.udm((i: Int) => i + 1)
@@ -109,6 +185,29 @@ class MacrosTest extends AbstractTest {
     println(
       s"""Function based Plan:
          |${dfF.queryExecution.analyzed}""".stripMargin
+    )
+
+  }
+
+  test("macroPlan") { td =>
+
+    import TestOracleHive.sparkSession.implicits._
+
+    TestOracleHive.sparkSession.registerMacro("m1",
+      TestOracleHive.sparkSession.udm(
+        {(i : Int) =>
+          val b = Array(5, 6)
+          val j = b(0)
+          val k = new java.sql.Date(System.currentTimeMillis()).getTime
+          i + j + k + Math.abs(j)
+        }
+      )
+    )
+
+    val dfM = TestOracleHive.sql("select m1(c_int) from sparktest.unit_test")
+    println(
+      s"""Macro based Plan:
+         |${dfM.queryExecution.analyzed}""".stripMargin
     )
 
   }

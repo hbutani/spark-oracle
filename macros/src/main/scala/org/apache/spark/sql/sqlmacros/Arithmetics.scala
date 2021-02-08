@@ -26,11 +26,27 @@ trait Arithmetics { self : ExprBuilders with ExprTranslator =>
   object BasicArith {
     def unapply(t: mTree): Option[sparkexpr.Expression] =
       t match {
+          /** Unfortunately cannot pattern match like this, see note on [[ExprBuilders]]
+        case q"${l : sparkexpr.Expression} + ${r: sparkexpr.Expression }" =>
+          Some(sparkexpr.Add(l, r))
+           */
         case q"$lT + $rT" =>
+          for ((l, r) <- binaryArgs(lT, rT))
+            yield sparkexpr.Add(l, r)
+        case _ => None
+      }
+  }
+
+  object JavaMathFuncs {
+    val mathCompanion = macroUniverse.typeOf[java.lang.Math].companion
+    val absFuncs = mathCompanion.decl(TermName("abs"))
+
+    def unapply(t: mTree): Option[sparkexpr.Expression] =
+      t match {
+        case q"$id(..$args)" if args.size == 1 && absFuncs.alternatives.contains(id.symbol) =>
           for (
-            l <- CatalystExpression.unapply(lT.asInstanceOf[mTree]);
-            r <- CatalystExpression.unapply(rT.asInstanceOf[mTree])
-          ) yield sparkexpr.Add(l, r)
+            c <- CatalystExpression.unapply(args(0).asInstanceOf[mTree])
+          ) yield sparkexpr.Abs(c)
         case _ => None
       }
   }

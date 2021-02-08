@@ -17,10 +17,24 @@
 
 package org.apache.spark.sql.sqlmacros
 
-import org.apache.spark.sql.catalyst.{expressions => sparkexpr}
+import org.apache.spark.sql.catalyst.{expressions => sparkexpr, InternalRow}
 import org.apache.spark.sql.oracle.OraSparkUtils
 
-trait ExprBuilders extends Arithmetics  { self : ExprTranslator =>
+/**
+ * Writing match Patterns:
+ * - One cannot write a pattern like this
+ *   {{{q"${l : sparkexpr.Expression} + ${r: sparkexpr.Expression }"}}}
+ *   because the tree for {{{1 + 2}}} is
+ *   {{{Apply(Select(Literal(Constant(1)), TermName("$plus")), List(Literal(Constant(2))))}}}
+ *   and the tree for {{{Array(5}}} is
+ *   {{{Apply(Select(Ident(scala.Array), TermName("apply")), List(Literal(Constant(5))))}}}
+ *   Pattern matching for {{{Array(5}}} triggers a recursive unapply on
+ *   {{{CatalystExpression}}} for the subtree {{{Ident(scala.Array)}}}, which doesn't match
+ *   any valid ''Expression'' pattern; so we attempt to ''evaluate'' the tree, and
+ *   this fails.
+ */
+trait ExprBuilders
+  extends Arithmetics with Collections with Structs with Tuples  { self : ExprTranslator =>
 
   import macroUniverse._
 
@@ -48,12 +62,24 @@ trait ExprBuilders extends Arithmetics  { self : ExprTranslator =>
 
   object StaticValue {
     def unapply(t: mTree): Option[sparkexpr.Expression] =
-      doWithWarning[sparkexpr.Expression](t,
-      "evaluate to a static value",
-      {
-        val v = eval_tree(t)
-        sparkexpr.Literal(v)
-      })
+      for (typInfo <- TypeInfo.unapply(t)) yield {
+        doWithWarning[sparkexpr.Expression](t,
+          "evaluate to a static value",
+          {
+            val v = eval_tree(t)
+            val iRow = InternalRow(v)
+            val lVal = typInfo.exprEnc.objSerializer.eval(iRow)
+            new sparkexpr.Literal(lVal, typInfo.catalystType)
+          }).get
+      }
+  }
+
+  private[sqlmacros] def binaryArgs(lT : mTree, rT : mTree) :
+  Option[(sparkexpr.Expression, sparkexpr.Expression)] = {
+    for (
+      l <- CatalystExpression.unapply(lT);
+      r <- CatalystExpression.unapply(rT)
+    ) yield (l, r)
   }
 
   object CatalystExpression {
@@ -62,6 +88,12 @@ trait ExprBuilders extends Arithmetics  { self : ExprTranslator =>
         case Literals(e) => e
         case Reference(e) => e
         case BasicArith(e) => e
+        case JavaMathFuncs(e) => e
+        case CollectionConstruct(e) => e
+        case CollectionApply(e) => e
+        case TupleConstruct(e) => e
+        case FieldAccess(e) => e
+        case StructConstruct(e) => e
         case StaticValue(e) => e
         case _ => null
       })

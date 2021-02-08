@@ -67,7 +67,7 @@ lazy val sql = project
   .in(file("sql"))
   .disablePlugins(AssemblyPlugin)
   .settings(commonSettings: _*)
-  .dependsOn(common, orastuff, macros)
+  .dependsOn(common, orastuff, macros % "compile->compile;test->test")
 
 lazy val mllib = project
   .in(file("mllib"))
