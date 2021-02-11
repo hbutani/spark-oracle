@@ -37,7 +37,7 @@ class SQLMacro(val c : Context) extends ExprTranslator {
         translateStat(s)
       }
 
-      Some(translateExprTree(stats.last))
+      Some(translateExprTree(stats.last)).map(optimizeExpr)
 
     } catch {
       case MacroTransException => None

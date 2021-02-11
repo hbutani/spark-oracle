@@ -126,6 +126,19 @@ class MacrosTest extends AbstractTest {
     )
   }
 
+  test("optimizeExpr") { td =>
+    import macrotest.ExampleStructs.Point
+    handleMacroOutput(eval[Point, Int](
+      reify {(p : Point) =>
+        val p1 = Point(p.x, p.y)
+        val a = Array(1)
+        val m = Map(1 -> 2)
+        p1.x + p1.y + a(0) + m(1)
+      }.tree
+    )
+    )
+  }
+
   test("tuples") {td =>
     handleMacroOutput(eval[Tuple2[Int, Int], Tuple2[Int, Int]](
       reify {(t : Tuple2[Int, Int]) =>
@@ -165,6 +178,39 @@ class MacrosTest extends AbstractTest {
           val j = b(0)
           j + b(1)
         }.tree))
+  }
+
+  test("datetimes") {td =>
+    import java.sql.Date
+    import java.sql.Timestamp
+    import java.time.ZoneId
+    import java.time.Instant
+    import org.apache.spark.unsafe.types.CalendarInterval
+    import org.apache.spark.sql.sqlmacros.DateTimeUtils._
+
+    handleMacroOutput(eval[Date, Int](
+      reify {(dt : Date) =>
+        val dtVal = dt
+        val dtVal2 = new Date(System.currentTimeMillis())
+        val tVal = new Timestamp(System.currentTimeMillis())
+        val dVal3 = localDateToDays(java.time.LocalDate.of(2000, 1, 1))
+        val t2 = instantToMicros(Instant.now())
+        val t3 = stringToTimestamp("2000-01-01", ZoneId.systemDefault()).get
+        val t4 = daysToMicros(dtVal, ZoneId.systemDefault())
+        getDayInYear(dtVal) + getDayOfMonth(dtVal) + getDayOfWeek(dtVal2) +
+          getHours(tVal, ZoneId.systemDefault) + getSeconds(t2, ZoneId.systemDefault) +
+          getMinutes(t3, ZoneId.systemDefault()) +
+          getDayInYear(dateAddMonths(dtVal, getMonth(dtVal2))) +
+          getDayInYear(dVal3) +
+          getHours(
+            timestampAddInterval(t4, new CalendarInterval(1, 1, 1), ZoneId.systemDefault()),
+            ZoneId.systemDefault) +
+          getDayInYear(dateAddInterval(dtVal, new CalendarInterval(1, 1, 1L))) +
+          monthsBetween(t2, t3, true, ZoneId.systemDefault()) +
+          getDayOfMonth(getNextDateForDayOfWeek(dtVal2, "MO")) +
+          getDayInYear(getLastDayOfMonth(dtVal2)) + getDayOfWeek(truncDate(dtVal, "week")) +
+          getHours(toUTCTime(t3, ZoneId.systemDefault().toString), ZoneId.systemDefault())
+      }.tree))
   }
 
   test("macroVsFuncPlan") { td =>

@@ -19,6 +19,7 @@ package org.apache.spark.sql.sqlmacros
 
 import org.apache.spark.sql.catalyst.{expressions => sparkexpr, InternalRow}
 import org.apache.spark.sql.oracle.OraSparkUtils
+import org.apache.spark.sql.types.StringType
 
 /**
  * Writing match Patterns:
@@ -34,7 +35,8 @@ import org.apache.spark.sql.oracle.OraSparkUtils
  *   this fails.
  */
 trait ExprBuilders
-  extends Arithmetics with Collections with Structs with Tuples  { self : ExprTranslator =>
+  extends Arithmetics with Collections with Structs with Tuples
+with DateTime with Options { self : ExprTranslator =>
 
   import macroUniverse._
 
@@ -61,17 +63,27 @@ trait ExprBuilders
   }
 
   object StaticValue {
-    def unapply(t: mTree): Option[sparkexpr.Expression] =
-      for (typInfo <- TypeInfo.unapply(t)) yield {
+    def unapply(t: mTree): Option[sparkexpr.Expression] = {
+      if (t.tpe =:= typeOf[org.apache.spark.unsafe.types.UTF8String]) {
         doWithWarning[sparkexpr.Expression](t,
           "evaluate to a static value",
           {
             val v = eval_tree(t)
-            val iRow = InternalRow(v)
-            val lVal = typInfo.exprEnc.objSerializer.eval(iRow)
-            new sparkexpr.Literal(lVal, typInfo.catalystType)
-          }).get
+            new sparkexpr.Literal(v, StringType)
+          })
+      } else {
+        for (typInfo <- TypeInfo.unapply(t)) yield {
+          doWithWarning[sparkexpr.Expression](t,
+            "evaluate to a static value",
+            {
+              val v = eval_tree(t)
+              val iRow = InternalRow(v)
+              val lVal = typInfo.exprEnc.objSerializer.eval(iRow)
+              new sparkexpr.Literal(lVal, typInfo.catalystType)
+            }).get
+        }
       }
+    }
   }
 
   private[sqlmacros] def binaryArgs(lT : mTree, rT : mTree) :
@@ -94,6 +106,8 @@ trait ExprBuilders
         case TupleConstruct(e) => e
         case FieldAccess(e) => e
         case StructConstruct(e) => e
+        case DateTimePatterns(e) => e
+        case OptionPatterns(e) => e
         case StaticValue(e) => e
         case _ => null
       })

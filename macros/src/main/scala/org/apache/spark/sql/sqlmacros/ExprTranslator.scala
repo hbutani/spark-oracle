@@ -25,7 +25,8 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.types.DataType
 
 
-trait ExprTranslator extends MacrosEnv with ExprBuilders with Logging {
+
+trait ExprTranslator extends MacrosEnv with ExprBuilders with ExprOptimize with Logging {
   import macroUniverse._
 
   object MacroTransException extends Exception
@@ -70,6 +71,15 @@ trait ExprTranslator extends MacrosEnv with ExprBuilders with Logging {
       warn(tree, s"Failed to do $action(exception = ${e.getMessage})")
       None
     }
+  }
+
+  def staticValue[T : TypeTag](tree : mTree, action : String) : Option[T] = {
+    if (tree.tpe <:< typeOf[T]) {
+      doWithWarning[T](tree, "evaluate ZoneId expression a static value", {
+        val v = eval_tree(tree)
+        v.asInstanceOf[T]
+      })
+    } else None
   }
 
   /**
