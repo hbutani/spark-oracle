@@ -36,7 +36,7 @@ import org.apache.spark.sql.types.StringType
  */
 trait ExprBuilders
   extends Arithmetics with Collections with Structs with Tuples
-with DateTime with Options { self : ExprTranslator =>
+with DateTime with Options with RecursiveSparkApply with Conditionals { self : ExprTranslator =>
 
   import macroUniverse._
 
@@ -108,6 +108,9 @@ with DateTime with Options { self : ExprTranslator =>
         case StructConstruct(e) => e
         case DateTimePatterns(e) => e
         case OptionPatterns(e) => e
+        case Predicates(e) => e
+        case IFCase(e) => e
+        case FunctionBuilderApplication(e) => e
         case StaticValue(e) => e
         case _ => null
       })

@@ -40,12 +40,27 @@ class MacrosTest extends AbstractTest {
         """).asInstanceOf[Either[Function1[A1, RT], SQLMacroExpressionBuilder]]
   }
 
+  private def register[A1, RT](nm : String, fnTree : Tree): Unit = {
+    tb.eval(
+      q"""{
+          import org.apache.spark.sql.defineMacros._
+          val ss = org.apache.spark.sql.hive.test.oracle.TestOracleHive.sparkSession
+          ss.registerMacro($nm,ss.udm(${fnTree}))
+        }"""
+    )
+  }
+
   // scalastyle:off println
   private def handleMacroOutput[A1, RT](
       r: Either[Function1[A1, RT], SQLMacroExpressionBuilder]) = {
     r match {
       case Left(fn) => println(s"Failed to create expression for ${fn}")
-      case Right(fb) => println(s"Spark SQL expression is ${fb.macroExpr.toString()}")
+      case Right(fb) =>
+        val s = fb.macroExpr.treeString(false).split("\n").
+          map(s => if (s.length > 100) s.substring(0, 97) + "..." else s).mkString("\n")
+        println(
+        s"""Spark SQL expression is
+           |${s}""".stripMargin)
     }
   }
   // scalastyle:on
@@ -213,6 +228,43 @@ class MacrosTest extends AbstractTest {
       }.tree))
   }
 
+  test("conditionals") { td =>
+    import org.apache.spark.sql.sqlmacros.PredicateUtils._
+    import macrotest.ExampleStructs.Point
+
+    handleMacroOutput(eval[Int, Int](
+      reify { (i: Int) =>
+        val j = if (i > 7 && i < 20 && i.is_not_null) {
+          i
+        } else if (i == 6 || i.in(4, 5) ) {
+          i + 1
+        } else i + 2
+        val k = i match {
+          case 1 => i + 2
+          case _ => i + 3
+        }
+        val l = (j, k) match {
+          case (1, 2) => 1
+          case (3, 4) => 2
+          case _ => 3
+        }
+        val p = Point(k, l)
+        val m = p match {
+          case Point(1, 2) => 1
+          case _ => 2
+        }
+        j + k + l + m
+      }.tree))
+
+    handleMacroOutput(eval[String, Int](
+      reify { (s: String) =>
+        val i = if (s.endsWith("abc")) 1 else 0
+        val j = if (s.contains("abc")) 1 else 0
+        val k = if (s.is_not_null && s.not_in("abc")) 1 else 0
+        i + j + k
+      }.tree))
+  }
+
   test("macroVsFuncPlan") { td =>
 
     TestOracleHive.sparkSession.registerMacro("fnM", {
@@ -256,6 +308,29 @@ class MacrosTest extends AbstractTest {
          |${dfM.queryExecution.analyzed}""".stripMargin
     )
 
+  }
+
+  test("macroWithinMacro") { td =>
+
+    import org.apache.spark.sql.sqlmacros.registered_macros
+
+    register[Int, Long]("m2", reify {(i : Int) =>
+      val b = Array(5, 6)
+      val j = b(0)
+      val k = new java.sql.Date(System.currentTimeMillis()).getTime
+      i + j + k + Math.abs(j)
+    }.tree)
+
+    register[Int, Long]("m3", reify {(i : Int) =>
+      val l : Int = registered_macros.m2(i)
+      i + l
+    }.tree)
+
+    val dfM = TestOracleHive.sql("select m3(c_int) from sparktest.unit_test")
+    println(
+      s"""Macro based Plan:
+         |${dfM.queryExecution.analyzed}""".stripMargin
+    )
   }
 
 }

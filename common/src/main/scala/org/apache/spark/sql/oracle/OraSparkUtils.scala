@@ -43,12 +43,16 @@ object OraSparkUtils {
     org.apache.spark.util.Utils.setLogLevel(org.apache.log4j.Level.toLevel(logLevel))
   }
 
-  def currentSparkSession: SparkSession = {
+  def currentSparkSessionOption : Option[SparkSession] = {
     var spkSessionO = SparkSession.getActiveSession
     if (!spkSessionO.isDefined) {
       spkSessionO = SparkSession.getDefaultSession
     }
-    spkSessionO.getOrElse(???)
+    spkSessionO
+  }
+
+  def currentSparkSession: SparkSession = {
+    currentSparkSessionOption.getOrElse(???)
   }
 
   def getSparkClassLoader: ClassLoader = Utils.getSparkClassLoader

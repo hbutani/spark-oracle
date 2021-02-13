@@ -20,6 +20,7 @@ package org.apache.spark.sql.sqlmacros
 import scala.collection.mutable.{Map => MMap}
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.{expressions => sparkexpr}
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.types.DataType
@@ -30,6 +31,8 @@ trait ExprTranslator extends MacrosEnv with ExprBuilders with ExprOptimize with 
   import macroUniverse._
 
   object MacroTransException extends Exception
+
+  def sparkSession : Option[SparkSession]
 
   val scope = MMap[mTermName, ValInfo]()
 

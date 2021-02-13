@@ -21,8 +21,11 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox._
 
 import org.apache.spark.sql.catalyst.{expressions => sparkexpr}
+import org.apache.spark.sql.oracle.OraSparkUtils
 
 class SQLMacro(val c : Context) extends ExprTranslator {
+
+  lazy val sparkSession = OraSparkUtils.currentSparkSessionOption
 
   def buildExpression(params : Seq[mTree],
                       stats : Seq[mTree]) : Option[sparkexpr.Expression] = {
