@@ -137,7 +137,8 @@ trait ExprTranslator extends MacrosEnv with ExprBuilders with ExprOptimize with 
   case class TypeInfo(mTyp : mType,
                       rTyp : ruType,
                       catalystType : DataType,
-                      exprEnc : ExpressionEncoder[_]) {
+                      _exprEnc : () => ExpressionEncoder[_]) {
+    lazy val exprEnc = _exprEnc()
     override def toString: String = s"""${catalystType.toString}"""
   }
   object TypeInfo {
@@ -146,8 +147,7 @@ trait ExprTranslator extends MacrosEnv with ExprBuilders with ExprOptimize with 
     def unapply(typ : mType) : Option[TypeInfo] = (scala.util.Try {
       val rTyp = convertType(typ)
       val cSchema = MacrosScalaReflection.schemaFor(rTyp)
-      val ee = _expressionEncoder(rTyp)
-      TypeInfo(typ, rTyp, cSchema.dataType, ee)
+      TypeInfo(typ, rTyp, cSchema.dataType, () => _expressionEncoder(rTyp))
     }).toOption
   }
 

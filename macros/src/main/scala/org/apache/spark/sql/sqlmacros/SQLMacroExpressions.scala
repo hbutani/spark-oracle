@@ -57,11 +57,14 @@ case class SQLMacroExpressionBuilder(macroExprSer : Array[Byte])
  * @param argPos
  * @param dataType
  */
+@SerialVersionUID(-4890323739479048322L)
 case class MacroArg(argPos : Int,
                     dataType : DataType)
   extends LeafExpression with Unevaluable {
 
   override def nullable: Boolean = true
+
+  override def sql: String = s"macroarg($argPos)"
 
 }
 

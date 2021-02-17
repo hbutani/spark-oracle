@@ -42,11 +42,7 @@ trait MacrosEnv {
   }
 
   private[sqlmacros] def _expressionEncoder(rTyp : ruType) : ExpressionEncoder[_] = {
-    val eeTree = {
-      import runtimeUniverse._
-      q"org.apache.spark.sql.sqlmacros.MacroUtils.expressionEncoder[$rTyp]()"
-    }
-    ruToolBox.eval(eeTree).asInstanceOf[ExpressionEncoder[_]]
+    MacroUtils.expressionEncoder(rTyp)
   }
 
   def convertTree(tree : mTree) : ruTree = {
@@ -84,5 +80,18 @@ object MacroUtils {
       serializer,
       deserializer,
       ClassTag[T](cls))
+  }
+
+  def expressionEncoder(tpe : ru.Type) : ExpressionEncoder[_] = {
+    import scala.reflect.ClassTag
+
+    val cls = mirror.runtimeClass(tpe)
+    val serializer = serializerForType(tpe)
+    val deserializer = deserializerForType(tpe)
+
+    new ExpressionEncoder(
+      serializer,
+      deserializer,
+      ClassTag(cls))
   }
 }

@@ -60,7 +60,7 @@ class MacrosTest extends AbstractTest {
           map(s => if (s.length > 100) s.substring(0, 97) + "..." else s).mkString("\n")
         println(
         s"""Spark SQL expression is
-           |${s}""".stripMargin)
+           |${fb.macroExpr.sql}""".stripMargin)
     }
   }
   // scalastyle:on
