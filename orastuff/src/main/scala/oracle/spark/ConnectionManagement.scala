@@ -91,9 +91,30 @@ object ConnectionManagement extends DataSources with Logging {
           connInfo.asConnectionProperties,
           connInfo.url)
         logInfo(s"Setting up Connection Pool ${dsKey}")
-        pds.setMaxPoolSize(Runtime.getRuntime.availableProcessors())
-        pds.setConnectionWaitTimeout(1)
 
+        /*
+         * UCP follow-up
+         * 1.
+         * https://github.com/oracle/oracle-db-examples/tree/master/java/jdbc
+         * BasicSamples
+         * - no managing UCP pools: like setAbandonedConnectionTimeout
+         * - also see https://docs.oracle.com/en/database/oracle/oracle-database/21/jjucp/UCP-best-practices.html#GUID-619C7C59-10F8-4035-A21B-DEAA826CD323
+         *
+         * 2. UCP logging
+         * followup UCP guide logging chapter
+         *
+         * 3. Proxy Auth
+         *  https://github.com/oracle/oracle-db-examples/tree/master/java/jdbc/ConnectionSamples
+         *
+         * 4.
+         * https://blogs.oracle.com/dev2dev/some-recommendations-for-connection-leaks-investigations-and-pool-adjustments-in-the-ucp-based-applications
+         */
+
+        pds.setMaxPoolSize(Runtime.getRuntime.availableProcessors() + 2)
+        pds.setConnectionWaitTimeout(1)
+        pds.setValidateConnectionOnBorrow(true)
+        pds.setAbandonedConnectionTimeout(10)
+        pds.setTimeoutCheckInterval(5)
         pds
       }
     }
