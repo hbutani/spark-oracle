@@ -206,7 +206,11 @@ class OraDBSplitGenerator(dsKey : DataSourceKey,
      * }}}
      */
     val rowsPerSplit = {
-      val rCnt = table.oraTable.tabStats.row_count.getOrElse(rowCount)
+      var rCnt = table.oraTable.tabStats.row_count.getOrElse(rowCount)
+      // in case tableStats have stale/missing rowCount, use plan's rowCount.
+      if (rowCount > rCnt) {
+        rCnt = rowCount
+      }
       Math.ceil(rCnt / numSplits.toDouble).toInt
     }
 
