@@ -18,6 +18,7 @@
 package org.apache.spark.sql.sqlmacros
 
 import org.apache.spark.sql.catalyst.{expressions => sparkexpr}
+import org.apache.spark.sql.types.IntegralType
 
 trait Arithmetics { self : ExprBuilders with ExprTranslator =>
 
@@ -33,6 +34,23 @@ trait Arithmetics { self : ExprBuilders with ExprTranslator =>
         case q"$lT + $rT" =>
           for ((l, r) <- binaryArgs(lT, rT))
             yield sparkexpr.Add(l, r)
+        case q"$lT - $rT" =>
+          for ((l, r) <- binaryArgs(lT, rT))
+            yield sparkexpr.Subtract(l, r)
+        case q"$lT * $rT" =>
+          for ((l, r) <- binaryArgs(lT, rT))
+            yield sparkexpr.Multiply(l, r)
+        case q"$lT / $rT" =>
+          for ((l, r) <- binaryArgs(lT, rT))
+            yield
+              if ( l.dataType.isInstanceOf[IntegralType] ) {
+                sparkexpr.IntegralDivide(l, r)
+              } else {
+                sparkexpr.Divide(l, r)
+              }
+        case q"$lT % $rT" =>
+          for ((l, r) <- binaryArgs(lT, rT))
+            yield sparkexpr.Remainder(l, r)
         case _ => None
       }
   }

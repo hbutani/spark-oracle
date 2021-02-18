@@ -45,6 +45,141 @@ object defineMacros {
           sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
       }
     }
+
+    def udm[RT, A1, A2](f: Function2[A1, A2, RT]) :
+    Either[Function2[A1, A2, RT], SQLMacroExpressionBuilder] = macro SQLMacro.udm2_impl[RT, A1, A2]
+
+    def registerMacro[RT : TypeTag, A1 : TypeTag, A2 : TypeTag](nm : String,
+                                                                udm : Either[Function2[A1, A2, RT], SQLMacroExpressionBuilder]
+                                                               ) : Unit = {
+      udm match {
+        case Left(fn) =>
+          sparkSession.udf.register(nm, udf(fn))
+        case Right(sqlMacroBldr) =>
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+      }
+    }
+
+    // GENERATED using [[GenMacroFuncs]
+
+    def udm[RT, A1, A2, A3](f: Function3[A1, A2, A3, RT]) :
+    Either[Function3[A1, A2, A3, RT], SQLMacroExpressionBuilder] = macro SQLMacro.udm3_impl[RT, A1, A2, A3]
+
+    def registerMacro[RT : TypeTag, A1 : TypeTag, A2 : TypeTag, A3 : TypeTag](nm : String,
+                                                                              udm : Either[Function3[A1, A2, A3, RT], SQLMacroExpressionBuilder]
+                                                                             ) : Unit = {
+      udm match {
+        case Left(fn) =>
+          sparkSession.udf.register(nm, udf(fn))
+        case Right(sqlMacroBldr) =>
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+      }
+    }
+
+
+    def udm[RT, A1, A2, A3, A4](f: Function4[A1, A2, A3, A4, RT]) :
+    Either[Function4[A1, A2, A3, A4, RT], SQLMacroExpressionBuilder] = macro SQLMacro.udm4_impl[RT, A1, A2, A3, A4]
+
+    def registerMacro[RT : TypeTag, A1 : TypeTag, A2 : TypeTag, A3 : TypeTag, A4 : TypeTag](nm : String,
+                                                                                            udm : Either[Function4[A1, A2, A3, A4, RT], SQLMacroExpressionBuilder]
+                                                                                           ) : Unit = {
+      udm match {
+        case Left(fn) =>
+          sparkSession.udf.register(nm, udf(fn))
+        case Right(sqlMacroBldr) =>
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+      }
+    }
+
+
+    def udm[RT, A1, A2, A3, A4, A5](f: Function5[A1, A2, A3, A4, A5, RT]) :
+    Either[Function5[A1, A2, A3, A4, A5, RT], SQLMacroExpressionBuilder] = macro SQLMacro.udm5_impl[RT, A1, A2, A3, A4, A5]
+
+    def registerMacro[RT : TypeTag, A1 : TypeTag, A2 : TypeTag, A3 : TypeTag, A4 : TypeTag, A5 : TypeTag](nm : String,
+                                                                                                          udm : Either[Function5[A1, A2, A3, A4, A5, RT], SQLMacroExpressionBuilder]
+                                                                                                         ) : Unit = {
+      udm match {
+        case Left(fn) =>
+          sparkSession.udf.register(nm, udf(fn))
+        case Right(sqlMacroBldr) =>
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+      }
+    }
+
+
+    def udm[RT, A1, A2, A3, A4, A5, A6](f: Function6[A1, A2, A3, A4, A5, A6, RT]) :
+    Either[Function6[A1, A2, A3, A4, A5, A6, RT], SQLMacroExpressionBuilder] = macro SQLMacro.udm6_impl[RT, A1, A2, A3, A4, A5, A6]
+
+    def registerMacro[RT : TypeTag, A1 : TypeTag, A2 : TypeTag, A3 : TypeTag, A4 : TypeTag, A5 : TypeTag, A6 : TypeTag](nm : String,
+                                                                                                                        udm : Either[Function6[A1, A2, A3, A4, A5, A6, RT], SQLMacroExpressionBuilder]
+                                                                                                                       ) : Unit = {
+      udm match {
+        case Left(fn) =>
+          sparkSession.udf.register(nm, udf(fn))
+        case Right(sqlMacroBldr) =>
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+      }
+    }
+
+
+    def udm[RT, A1, A2, A3, A4, A5, A6, A7](f: Function7[A1, A2, A3, A4, A5, A6, A7, RT]) :
+    Either[Function7[A1, A2, A3, A4, A5, A6, A7, RT], SQLMacroExpressionBuilder] = macro SQLMacro.udm7_impl[RT, A1, A2, A3, A4, A5, A6, A7]
+
+    def registerMacro[RT : TypeTag, A1 : TypeTag, A2 : TypeTag, A3 : TypeTag, A4 : TypeTag, A5 : TypeTag, A6 : TypeTag, A7 : TypeTag](nm : String,
+                                                                                                                                      udm : Either[Function7[A1, A2, A3, A4, A5, A6, A7, RT], SQLMacroExpressionBuilder]
+                                                                                                                                     ) : Unit = {
+      udm match {
+        case Left(fn) =>
+          sparkSession.udf.register(nm, udf(fn))
+        case Right(sqlMacroBldr) =>
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+      }
+    }
+
+
+    def udm[RT, A1, A2, A3, A4, A5, A6, A7, A8](f: Function8[A1, A2, A3, A4, A5, A6, A7, A8, RT]) :
+    Either[Function8[A1, A2, A3, A4, A5, A6, A7, A8, RT], SQLMacroExpressionBuilder] = macro SQLMacro.udm8_impl[RT, A1, A2, A3, A4, A5, A6, A7, A8]
+
+    def registerMacro[RT : TypeTag, A1 : TypeTag, A2 : TypeTag, A3 : TypeTag, A4 : TypeTag, A5 : TypeTag, A6 : TypeTag, A7 : TypeTag, A8 : TypeTag](nm : String,
+                                                                                                                                                    udm : Either[Function8[A1, A2, A3, A4, A5, A6, A7, A8, RT], SQLMacroExpressionBuilder]
+                                                                                                                                                   ) : Unit = {
+      udm match {
+        case Left(fn) =>
+          sparkSession.udf.register(nm, udf(fn))
+        case Right(sqlMacroBldr) =>
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+      }
+    }
+
+
+    def udm[RT, A1, A2, A3, A4, A5, A6, A7, A8, A9](f: Function9[A1, A2, A3, A4, A5, A6, A7, A8, A9, RT]) :
+    Either[Function9[A1, A2, A3, A4, A5, A6, A7, A8, A9, RT], SQLMacroExpressionBuilder] = macro SQLMacro.udm9_impl[RT, A1, A2, A3, A4, A5, A6, A7, A8, A9]
+
+    def registerMacro[RT : TypeTag, A1 : TypeTag, A2 : TypeTag, A3 : TypeTag, A4 : TypeTag, A5 : TypeTag, A6 : TypeTag, A7 : TypeTag, A8 : TypeTag, A9 : TypeTag](nm : String,
+                                                                                                                                                                  udm : Either[Function9[A1, A2, A3, A4, A5, A6, A7, A8, A9, RT], SQLMacroExpressionBuilder]
+                                                                                                                                                                 ) : Unit = {
+      udm match {
+        case Left(fn) =>
+          sparkSession.udf.register(nm, udf(fn))
+        case Right(sqlMacroBldr) =>
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+      }
+    }
+
+
+    def udm[RT, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10](f: Function10[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, RT]) :
+    Either[Function10[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, RT], SQLMacroExpressionBuilder] = macro SQLMacro.udm10_impl[RT, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]
+
+    def registerMacro[RT : TypeTag, A1 : TypeTag, A2 : TypeTag, A3 : TypeTag, A4 : TypeTag, A5 : TypeTag, A6 : TypeTag, A7 : TypeTag, A8 : TypeTag, A9 : TypeTag, A10 : TypeTag](nm : String,
+                                                                                                                                                                                 udm : Either[Function10[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, RT], SQLMacroExpressionBuilder]
+                                                                                                                                                                                ) : Unit = {
+      udm match {
+        case Left(fn) =>
+          sparkSession.udf.register(nm, udf(fn))
+        case Right(sqlMacroBldr) =>
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+      }
+    }
   }
 
   implicit def ssWithMacros(ss : SparkSession) : SparkSessionMacroExt = new SparkSessionMacroExt(ss)

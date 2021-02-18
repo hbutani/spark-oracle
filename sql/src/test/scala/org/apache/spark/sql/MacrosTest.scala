@@ -30,17 +30,17 @@ class MacrosTest extends AbstractTest {
 
   private val tb = mirror.mkToolBox()
 
-  private def eval[A1, RT](fnTree : Tree) : Either[Function1[A1, RT], SQLMacroExpressionBuilder] = {
+  private def eval(fnTree : Tree) : Either[_, SQLMacroExpressionBuilder] = {
     tb.eval(
       q"""{
           new org.apache.spark.sql.defineMacros.SparkSessionMacroExt(
              org.apache.spark.sql.hive.test.oracle.TestOracleHive.sparkSession
              ).udm(${fnTree})
           }
-        """).asInstanceOf[Either[Function1[A1, RT], SQLMacroExpressionBuilder]]
+        """).asInstanceOf[Either[_, SQLMacroExpressionBuilder]]
   }
 
-  private def register[A1, RT](nm : String, fnTree : Tree): Unit = {
+  private def register(nm : String, fnTree : Tree): Unit = {
     tb.eval(
       q"""{
           import org.apache.spark.sql.defineMacros._
@@ -51,8 +51,7 @@ class MacrosTest extends AbstractTest {
   }
 
   // scalastyle:off println
-  private def handleMacroOutput[A1, RT](
-      r: Either[Function1[A1, RT], SQLMacroExpressionBuilder]) = {
+  private def handleMacroOutput(r: Either[Any, SQLMacroExpressionBuilder]) = {
     r match {
       case Left(fn) => println(s"Failed to create expression for ${fn}")
       case Right(fb) =>
@@ -84,32 +83,32 @@ class MacrosTest extends AbstractTest {
 
   test("basics") {td =>
 
-    handleMacroOutput(eval[Int, Int](q"(i : Int) => i"))
+    handleMacroOutput(eval(q"(i : Int) => i"))
 
-    handleMacroOutput(eval[java.lang.Integer, java.lang.Integer](q"(i : java.lang.Integer) => i"))
+    handleMacroOutput(eval(q"(i : java.lang.Integer) => i"))
 
 //    val a = Array(5)
 //    handleMacroOutput(eval[Int, Int](q"(i : Int) => a(0)"))
 
-    handleMacroOutput(eval[Int, Int](q"(i : Int) => i + 5"))
+    handleMacroOutput(eval(q"(i : Int) => i + 5"))
 
-    handleMacroOutput(eval[Int, Int](
+    handleMacroOutput(eval(
       q"""{(i : Int) =>
           val b = Array(5)
           val j = 5
           j
         }"""))
 
-    handleMacroOutput(eval[Int, Int](reify {
+    handleMacroOutput(eval(reify {
       (i : Int) => org.apache.spark.SPARK_BRANCH.length + i
     }.tree))
 
-    handleMacroOutput(eval[Int, Int](reify {(i : Int) =>
+    handleMacroOutput(eval(reify {(i : Int) =>
       val b = Array(5, 6)
       val j = b(0)
       i + j + Math.abs(j)}.tree))
 
-    handleMacroOutput(eval[Int, Int](
+    handleMacroOutput(eval(
       q"""{(i : Int) =>
           val b = Array(5)
           val j = 5
@@ -119,21 +118,21 @@ class MacrosTest extends AbstractTest {
 
   test("udts") {td =>
     import macrotest.ExampleStructs.Point
-    handleMacroOutput(eval[Point, Point](
+    handleMacroOutput(eval(
       reify {(p : Point) =>
           Point(1, 2)
         }.tree
     )
     )
 
-    handleMacroOutput(eval[Point, Int](
+    handleMacroOutput(eval(
       reify {(p : Point) =>
         p.x + p.y
       }.tree
     )
     )
 
-    handleMacroOutput(eval[Point, Int](
+    handleMacroOutput(eval(
       reify {(p : Point) =>
         Point(p.x + p.y, p.y)
       }.tree
@@ -143,7 +142,7 @@ class MacrosTest extends AbstractTest {
 
   test("optimizeExpr") { td =>
     import macrotest.ExampleStructs.Point
-    handleMacroOutput(eval[Point, Int](
+    handleMacroOutput(eval(
       reify {(p : Point) =>
         val p1 = Point(p.x, p.y)
         val a = Array(1)
@@ -155,21 +154,21 @@ class MacrosTest extends AbstractTest {
   }
 
   test("tuples") {td =>
-    handleMacroOutput(eval[Tuple2[Int, Int], Tuple2[Int, Int]](
+    handleMacroOutput(eval(
       reify {(t : Tuple2[Int, Int]) =>
         (t._2, t._1)
       }.tree
     )
     )
 
-    handleMacroOutput(eval[Tuple2[Int, Int], Tuple2[Int, Int]](
+    handleMacroOutput(eval(
       reify {(t : Tuple2[Int, Int]) =>
         t._2 -> t._1
       }.tree
     )
     )
 
-    handleMacroOutput(eval[Tuple4[Float, Double, Int, Int], Tuple2[Int, Int]](
+    handleMacroOutput(eval(
       reify {(t : Tuple4[Float, Double, Int, Int]) =>
         (t._4 + t._3, t._4)
       }.tree
@@ -178,7 +177,7 @@ class MacrosTest extends AbstractTest {
   }
 
   test("arrays") {td =>
-    handleMacroOutput(eval[Int, Int](
+    handleMacroOutput(eval(
       reify {(i : Int) =>
           val b = Array(5, i)
           val j = b(0)
@@ -187,7 +186,7 @@ class MacrosTest extends AbstractTest {
   }
 
   test("maps") {td =>
-    handleMacroOutput(eval[Int, Int](
+    handleMacroOutput(eval(
       reify {(i : Int) =>
           val b = Map(0 -> i, 1 -> (i + 1))
           val j = b(0)
@@ -203,7 +202,7 @@ class MacrosTest extends AbstractTest {
     import org.apache.spark.unsafe.types.CalendarInterval
     import org.apache.spark.sql.sqlmacros.DateTimeUtils._
 
-    handleMacroOutput(eval[Date, Int](
+    handleMacroOutput(eval(
       reify {(dt : Date) =>
         val dtVal = dt
         val dtVal2 = new Date(System.currentTimeMillis())
@@ -228,11 +227,66 @@ class MacrosTest extends AbstractTest {
       }.tree))
   }
 
+  test("taxAndDiscount") { td =>
+    import org.apache.spark.sql.sqlmacros.DateTimeUtils._
+    import java.sql.Date
+    import java.time.ZoneId
+
+    handleMacroOutput(eval(
+      reify { (prodCat : String, amt : Double) =>
+        val taxRate = prodCat match {
+          case "grocery" => 0.0
+          case "alcohol" => 10.5
+          case _ => 9.5
+        }
+        val currDate = currentDate(ZoneId.systemDefault())
+        val discount = if (getDayOfWeek(currDate) == 1 && prodCat == "alcohol") 0.05 else 0.0
+
+        amt * ( 1.0 - discount) * (1.0 + taxRate)
+
+      }.tree))
+  }
+
+  test("taxAndDiscountMultiMacro") { td =>
+    import org.apache.spark.sql.sqlmacros.DateTimeUtils._
+    import java.sql.Date
+    import java.time.ZoneId
+
+    import org.apache.spark.sql.sqlmacros.registered_macros
+
+    register("taxRate", reify {(prodCat : String) =>
+      prodCat match {
+        case "grocery" => 0.0
+        case "alcohol" => 10.5
+        case _ => 9.5
+      }
+    }.tree)
+
+    register("discount", reify {(prodCat : String) =>
+      val currDate = currentDate(ZoneId.systemDefault())
+      if (getDayOfWeek(currDate) == 1 && prodCat == "alcohol") 0.05 else 0.0
+    }.tree)
+
+    register("taxAndDiscount", reify {(prodCat : String, amt : Double) =>
+      val taxRate : Double = registered_macros.taxRate(prodCat)
+      val discount : Double = registered_macros.discount(prodCat)
+      amt * ( 1.0 - discount) * (1.0 + taxRate)
+    }.tree)
+
+    val dfM =
+      TestOracleHive.sql("select taxAndDiscount(c_varchar2_40, c_number) from sparktest.unit_test")
+    println(
+      s"""Macro based Plan:
+         |${dfM.queryExecution.analyzed}""".stripMargin
+    )
+
+  }
+
   test("conditionals") { td =>
     import org.apache.spark.sql.sqlmacros.PredicateUtils._
     import macrotest.ExampleStructs.Point
 
-    handleMacroOutput(eval[Int, Int](
+    handleMacroOutput(eval(
       reify { (i: Int) =>
         val j = if (i > 7 && i < 20 && i.is_not_null) {
           i
@@ -256,7 +310,7 @@ class MacrosTest extends AbstractTest {
         j + k + l + m
       }.tree))
 
-    handleMacroOutput(eval[String, Int](
+    handleMacroOutput(eval(
       reify { (s: String) =>
         val i = if (s.endsWith("abc")) 1 else 0
         val j = if (s.contains("abc")) 1 else 0
@@ -314,14 +368,14 @@ class MacrosTest extends AbstractTest {
 
     import org.apache.spark.sql.sqlmacros.registered_macros
 
-    register[Int, Long]("m2", reify {(i : Int) =>
+    register("m2", reify {(i : Int) =>
       val b = Array(5, 6)
       val j = b(0)
       val k = new java.sql.Date(System.currentTimeMillis()).getTime
       i + j + k + Math.abs(j)
     }.tree)
 
-    register[Int, Long]("m3", reify {(i : Int) =>
+    register("m3", reify {(i : Int) =>
       val l : Int = registered_macros.m2(i)
       i + l
     }.tree)
