@@ -216,6 +216,16 @@ object OracleMetadata extends OraFunctionDefs {
       buf.append(s"  Properties: ${properties}")
     }
 
+    private def isPartitionColumn(colNm : String) : Boolean = {
+
+      def isPartColumn(pS : TablePartitionScheme,
+                       colNm : String) : Boolean =
+        pS.columns.contains(colNm) ||
+          pS.subPartitionScheme.map(isPartColumn(_, colNm)).getOrElse(false)
+
+      partitionScheme.map(isPartColumn(_, colNm)).getOrElse(false)
+    }
+
     @transient lazy val columnNameMap: CaseInsensitiveMap[String] =
       CaseInsensitiveMap(columns.map(c => c.name -> c.name).toMap)
 
@@ -225,7 +235,8 @@ object OracleMetadata extends OraFunctionDefs {
     def isPartitioned: Boolean = partitionScheme.isDefined
 
     @transient lazy val (dataSchema: StructType, partitionSchema: StructType) = {
-      val partCols = partitionScheme.map(_.columns.toSet).getOrElse(Set.empty)
+      val partCols = columns.filter(c => isPartitionColumn(c.name))
+        // partitionScheme.map(_.columns.toSet).getOrElse(Set.empty)
       (
         StructType(catalystSchema.fields.filterNot(f => partCols.contains(f.name))),
         StructType(catalystSchema.fields.filter(f => partCols.contains(f.name))))

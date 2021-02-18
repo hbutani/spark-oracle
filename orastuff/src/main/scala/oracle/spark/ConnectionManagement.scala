@@ -113,7 +113,7 @@ object ConnectionManagement extends DataSources with Logging {
         pds.setMaxPoolSize(Runtime.getRuntime.availableProcessors() + 2)
         pds.setConnectionWaitTimeout(1)
         pds.setValidateConnectionOnBorrow(true)
-        pds.setAbandonedConnectionTimeout(10)
+        // pds.setAbandonedConnectionTimeout(10)
         pds.setTimeoutCheckInterval(5)
         pds
       }
