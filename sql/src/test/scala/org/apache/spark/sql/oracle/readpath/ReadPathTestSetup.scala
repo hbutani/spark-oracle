@@ -187,6 +187,62 @@ object ReadPathTestSetup {
       | values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       | """.stripMargin
 
+
+  val unit_test_write_table_ddl =
+    """
+      |create table unit_test_write(
+      |  c_char_1 char(1),
+      |  c_char_5 char(5),
+      |  c_varchar2_10 varchar2(10),
+      |  c_varchar2_40 varchar2(40),
+      |  c_nchar_1 nchar(1),
+      |  c_nchar_5 nchar(5),
+      |  c_nvarchar2_10 nvarchar2(10),
+      |  c_nvarchar2_40 nvarchar2(40),
+      |  c_byte  number(2),
+      |  c_short number(4),
+      |  c_int number(9),
+      |  c_long number(18),
+      |  c_number number(25),
+      |  c_decimal_scale_5 number(25,5),
+      |  c_decimal_scale_8 number(25,8),
+      |--  c_float binary_float,
+      |--  c_double binary_double,
+      |--  c_binary long,
+      |  c_date date,
+      |  c_timestamp timestamp
+      |--  c_timestamp_with_tz timestamp with tz,
+      |--  c_timestamp_with_local_tz timestamp with local tz
+      |)
+      |""".stripMargin
+
+
+  val unit_test_write_partitioned_table_ddl =
+    """
+      |create table unit_test_write_partitioned(
+      |  c_varchar2_40 varchar2(40),
+      |  c_int number(9),
+        state            VARCHAR2(2),
+      | channel          VARCHAR2(1)
+      |)
+      |PARTITION BY LIST (state, channel)
+      |(
+      |    PARTITION yearly_west_direct VALUES (('OR','D'),('UT','D'),('WA','D')),
+      |    PARTITION yearly_west_indirect VALUES (('OR','I'),('UT','I'),('WA','I')),
+      |    PARTITION yearly_south_direct VALUES (('AZ','D'),('TX','D'),('GA','D')),
+      |    PARTITION yearly_south_indirect VALUES (('AZ','I'),('TX','I'),('GA','I')),
+      |    PARTITION yearly_east_direct VALUES (('PA','D'), ('NC','D'), ('MA','D')),
+      |    PARTITION yearly_east_indirect VALUES (('PA','I'), ('NC','I'), ('MA','I')),
+      |    PARTITION yearly_north_direct VALUES (('MN','D'),('WI','D'),('MI','D')),
+      |    PARTITION yearly_north_indirect VALUES (('MN','I'),('WI','I'),('MI','I')),
+      |    PARTITION yearly_ny_direct VALUES ('NY','D'),
+      |    PARTITION yearly_ny_indirect VALUES ('NY','I'),
+      |    PARTITION yearly_ca_direct VALUES ('CA','D'),
+      |    PARTITION yearly_ca_indirect VALUES ('CA','I'),
+      |    PARTITION rest VALUES (DEFAULT)
+      |    )
+      |""".stripMargin
+
   def grantOnTable(tNm: String): String =
     s"grant all privileges on ${tNm} to public"
 

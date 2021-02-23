@@ -74,7 +74,7 @@ class SupportsNamespacesTest extends AbstractTest {
           " Use CASCADE option to drop a non-empty namespace.")
 
     ex = intercept[UnsupportedAction] {
-      TestOracleHive.sql("drop namespace oracle.mikev").show()
+      TestOracleHive.sql("drop namespace oracle.sparktest cascade").show()
     }
     assert(
       ex.getMessage ==
@@ -98,8 +98,5 @@ class SupportsNamespacesTest extends AbstractTest {
     TestOracleHive.sql("show current namespace").show()
     TestOracleHive.sql("show tables").show(1000, false)
 
-    TestOracleHive.sql("use mikev")
-    TestOracleHive.sql("show current namespace").show()
-    TestOracleHive.sql("show tables").show()
   }
 }

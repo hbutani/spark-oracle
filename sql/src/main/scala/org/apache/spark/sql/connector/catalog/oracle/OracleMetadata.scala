@@ -143,7 +143,7 @@ object OracleMetadata extends OraFunctionDefs {
       }
     }
 
-    lazy val transforms: Array[Transform] = {
+    @transient lazy val transforms: Array[Transform] = {
       import LogicalExpressions._
       val arr = ArrayBuffer[Transform]()
 

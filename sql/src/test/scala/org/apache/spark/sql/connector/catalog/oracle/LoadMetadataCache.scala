@@ -22,7 +22,7 @@ import org.apache.spark.sql.oracle.AbstractTest
 /*
 Use to populate the cache for test env
 run with params:
--Dspark.oracle.test.db_instance=mammoth_medium
+-Dspark.oracle.test.db_instance=scale1_tpcds
 -Dspark.oracle.test.db_wallet_loc=/Users/hbutani/oracle/wallet_mammoth
 
 Set Conf
@@ -36,7 +36,7 @@ class LoadMetadataCache
     with TestMetadataValidation {
 
   test("populateMetadataCache") { td =>
-    for ((ns, tbls) <- catalogTableMap;
+    for ((ns, tbls) <- catalogTableMap if loadOraSchemaForTests(ns);
          tbl <- tbls) {
       // scalastyle:off println
       val bldr = new StringBuilder

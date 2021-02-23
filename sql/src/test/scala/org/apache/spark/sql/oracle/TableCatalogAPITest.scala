@@ -25,7 +25,7 @@ import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
 
   test("describeTables") { td =>
-    for ((ns, tbls) <- catalogTableMap;
+    for ((ns, tbls) <- catalogTableMap if (loadOraSchemaForTests(ns));
          tbl <- tbls) {
       TestOracleHive.sql(s"describe extended ${ns}.${tbl}").show(1000, false)
     }

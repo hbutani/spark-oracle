@@ -159,4 +159,13 @@ object ConnectionManagement extends DataSources with Logging {
     pdsMap.keys().nextElement()
   }
 
+  /**
+   * Only use for tests
+   * @return
+   */
+  def getDSPoolInTestEnv : PoolDataSource = {
+    assert(pdsMap.size() == 1)
+    pdsMap.values().iterator().next()
+  }
+
 }

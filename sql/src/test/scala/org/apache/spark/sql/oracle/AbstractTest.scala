@@ -103,6 +103,11 @@ abstract class AbstractTest
     TestOracleHive.sql("use tpcds")
   }
 
+  protected def loadOraSchemaForTests(ns : String) : Boolean = {
+    val lNS = ns.toLowerCase()
+    lNS == "tpcds" || lNS == "sparktest"
+  }
+
   def result(df: DataFrame): Array[Row] = {
     df.collect()
   }

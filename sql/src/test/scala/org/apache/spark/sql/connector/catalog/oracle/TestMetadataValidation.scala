@@ -202,9 +202,9 @@ trait TestMetadataValidation { self: LoadMetadataCache =>
     }
 
     // TODO: foreign_keys, primary_keys, properties
-    for (fkKeys <- tbl.foreignKeys) {
-      val knownFKeys = know_foreign_keys(tblId)
-      val bldr = new StringBuilder
-    }
+//    for (fkKeys <- tbl.foreignKeys) {
+//      val knownFKeys = know_foreign_keys(tblId)
+//      val bldr = new StringBuilder
+//    }
   }
 }
