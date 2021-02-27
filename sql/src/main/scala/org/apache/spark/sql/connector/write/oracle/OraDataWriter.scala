@@ -17,38 +17,70 @@
 
 package org.apache.spark.sql.connector.write.oracle
 
+import oracle.spark.DataSourceInfo
+
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.connector.write.{DataWriter, DataWriterFactory, WriterCommitMessage}
+import org.apache.spark.sql.oracle.expressions.OraLiterals
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.util.{DoubleAccumulator, LongAccumulator}
 
-case class OraDataWriterFactory(writeSpec: OraWriteSpec, tempTableInsertSQL: String)
-    extends DataWriterFactory {
+case class OraDataWriterFactory(dsInfo: DataSourceInfo,
+                                dataSchema : StructType,
+                                tempTableInsertSQL: String,
+                                accumulators : OraDataWriter.OraInsertAccumulators
+                               ) extends DataWriterFactory {
 
   override def createWriter(partitionId: Int, taskId: Long): DataWriter[InternalRow] =
-    OraDataWriter(writeSpec, tempTableInsertSQL)
+    OraDataWriter(partitionId, taskId, dsInfo, dataSchema, tempTableInsertSQL, accumulators)
 }
 
-case class OraDataWriter(writeSpec: OraWriteSpec, tempTableInsertSQL: String)
+case class OraDataWriter(partitionId: Int,
+                         taskId: Long,
+                         dsInfo: DataSourceInfo,
+                         dataSchema : StructType,
+                         tempTableInsertSQL: String,
+                         accumulators : OraDataWriter.OraInsertAccumulators)
     extends DataWriter[InternalRow] {
 
-  /*
-   * TODO
-   *  lazily setup PreparedStatement for temp table insert
-   */
+  import OraLiterals._
 
-  override def write(record: InternalRow): Unit = ???
+  private[this] lazy val oraInsert = OraInsertStatement(dsInfo, tempTableInsertSQL, accumulators)
 
-  /**
-   * Finish batch write of PreparedStatement
-   * Close PreparedStatement
-   * Commit and Close Connection
-   * @return
-   */
-  override def commit(): WriterCommitMessage = ???
+  private[this] lazy val setters: IndexedSeq[JDBCGetSet[_]] =
+    dataSchema.fields.map { attr => jdbcGetSet(attr.dataType)}
 
-  /**
-   * Rollback and Close Connection
-   */
-  override def abort(): Unit = ???
+  override def write(record: InternalRow): Unit = {
+    for (i <- (0 until setters.size)) {
+      setters(i).setValue(record, oraInsert.underlying, i)
+    }
+    oraInsert.addBatch
+  }
 
-  override def close(): Unit = ???
+  override def commit(): WriterCommitMessage = {
+    oraInsert.finish
+    oraInsert.commit()
+    OraDataWriter.OraWriteCommitMessage
+  }
+
+  override def abort(): Unit = oraInsert.abort()
+
+  override def close(): Unit = oraInsert.close()
+}
+
+object OraDataWriter {
+
+  case class OraInsertAccumulators(rowsWritten: LongAccumulator, timeToWriteRows: DoubleAccumulator)
+
+  private val ROW_WRITE_ACCUM_NAME = "oracle.query.rows_written"
+  private val TIME_TO_WRITE_ROWS = "oracle.query.time_to_write_rows_msecs"
+
+  def createAccumulators(sparkSession: SparkSession): OraInsertAccumulators = {
+    val rw = sparkSession.sparkContext.longAccumulator(ROW_WRITE_ACCUM_NAME)
+    val ttwrs = sparkSession.sparkContext.doubleAccumulator(TIME_TO_WRITE_ROWS)
+    OraInsertAccumulators(rw, ttwrs)
+  }
+
+  case object OraWriteCommitMessage extends WriterCommitMessage
 }

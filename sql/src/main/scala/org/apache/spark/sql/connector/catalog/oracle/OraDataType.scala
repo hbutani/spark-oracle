@@ -58,7 +58,7 @@ case class OraNChar(size: Int) extends OraDataType {
 case class OraNVarchar2(size: Int) extends OraDataType {
   @transient lazy val sqlType: Int = Types.NVARCHAR
   @transient lazy val catalystType: DataType = OraDataType.toCatalystType(sqlType)
-  @transient lazy val oraTypeString: String = s"NVARCHAR(${size})"
+  @transient lazy val oraTypeString: String = s"NVARCHAR2(${size})"
 }
 
 case class OraNumber(precision: Option[Int], scale: Option[Int]) extends OraDataType {

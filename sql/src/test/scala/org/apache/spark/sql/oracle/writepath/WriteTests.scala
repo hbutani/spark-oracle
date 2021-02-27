@@ -18,12 +18,30 @@
 package org.apache.spark.sql.oracle.writepath
 
 
-class InsertTests extends AbstractWriteTests {
+abstract class WriteTests extends AbstractWriteTests {
 
   import AbstractWriteTests._
 
-  for(scn <- scenarios) {
-    performTest(scn)
+  ignore("printScenarioDetails") {td =>
+    val scnInfos = scenarios.map(scenarioInfo)
+    val (scnSummaries, scnPlans) = scnInfos.unzip
+
+    // scalastyle:off println
+    println(
+      s"""Scenarios:
+         |${scnSummaries.mkString("\n")}""".stripMargin)
+    println(
+      s"""Scenario Plans:
+         |${scnPlans.mkString("\n")}""".stripMargin)
+
+    // scalastyle:on println
   }
+
+//  for(scn <- scenarios) {
+//    performTest(scn)
+//  }
+
+  performTest(scenarios(0))
+
 
 }

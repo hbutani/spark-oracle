@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.connector.write
 
+import org.apache.spark.sql.oracle.expressions.OraExpression
+
 /**
  * There are 2 write paths:
  *
@@ -66,31 +68,4 @@ package org.apache.spark.sql.connector.write
  *
  * - ''TBD''
  */
-package object oracle {
-
-  object OraWriteKind extends Enumeration {
-
-    val APPEND = Value("APPEND")
-    val UPDATE = Value("UPDATE")
-    val PARTITIONEXCHANGE = Value("PARTITIONEXCHANGE")
-  }
-
-  case class OraSourceUpdateSpec(
-      deleteFilter: Option[String] = None,
-      isTruncate: Boolean = false) {
-
-    def truncate: OraSourceUpdateSpec = {
-      assert(noChangesToSource)
-      this.copy(isTruncate = true)
-    }
-
-    def updateOn(_deleteFilter: String): OraSourceUpdateSpec = {
-      assert(noChangesToSource)
-      this.copy(deleteFilter = Some(_deleteFilter))
-    }
-
-    def noChangesToSource: Boolean =
-      !deleteFilter.isDefined && !isTruncate
-  }
-
-}
+package object oracle {}

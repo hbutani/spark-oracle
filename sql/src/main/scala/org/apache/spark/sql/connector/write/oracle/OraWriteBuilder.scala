@@ -17,14 +17,8 @@
 
 package org.apache.spark.sql.connector.write.oracle
 
-import org.apache.spark.sql.connector.write.{
-  BatchWrite,
-  SupportsDynamicOverwrite,
-  SupportsOverwrite,
-  SupportsTruncate,
-  WriteBuilder
-}
-import org.apache.spark.sql.oracle.expressions.OraExpression
+import org.apache.spark.sql.connector.write._
+import org.apache.spark.sql.oracle.expressions.DataSourceFilterTranslate
 import org.apache.spark.sql.sources.Filter
 
 case class OraWriteBuilder(writeSpec: OraWriteSpec)
@@ -34,17 +28,28 @@ case class OraWriteBuilder(writeSpec: OraWriteSpec)
     with SupportsDynamicOverwrite {
 
   override def overwrite(filters: Array[Filter]): WriteBuilder = {
-    val oraExprs = filters.map(f => OraExpression.convert(f, writeSpec.oraTable))
-    OraWriteBuilder(writeSpec.setDeleteFilters("TODO"))
+
+    val oraExpr =
+      DataSourceFilterTranslate(filters, writeSpec.oraTable).oraExpression
+
+    if (!oraExpr.isDefined) {
+      throw new UnsupportedOperationException(
+        s"""Delete condition filters: ${filters.mkString("[", ",", "]")}
+           |cannot translate to oracle delete expression""".stripMargin
+      )
+    }
+
+    OraWriteBuilder(writeSpec.setDeleteFilters(oraExpr.get))
   }
 
   override def overwriteDynamicPartitions(): WriteBuilder = {
-    OraWriteBuilder(writeSpec.setDynPartitionOverwrite)
+    OraWriteBuilder(writeSpec.setDynPartitionOverwriteMode)
   }
 
-  override def buildForBatch(): BatchWrite = super.buildForBatch()
+  override def buildForBatch(): BatchWrite = OraBatchWrite(writeSpec)
 
   override def truncate(): WriteBuilder = {
     OraWriteBuilder(writeSpec.setTruncate)
   }
+
 }

@@ -31,9 +31,7 @@ import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.read.oracle.OraScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.connector.write.oracle.{
-  OraSourceUpdateSpec,
   OraWriteBuilder,
-  OraWriteKind,
   OraWriteSpec
 }
 import org.apache.spark.sql.sources.Filter
@@ -79,9 +77,7 @@ case class OracleTable(
         dsKey,
         oraTable,
         info.schema(),
-        info.queryId(),
-        OraWriteKind.APPEND,
-        OraSourceUpdateSpec()))
+        info.queryId()))
   }
 
   /*

@@ -17,10 +17,12 @@
 
 package org.apache.spark.sql.connector.write.oracle
 
-import oracle.spark.DataSourceKey
+import oracle.spark.{DataSourceKey, ORASQLUtils}
 
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
-import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriterCommitMessage}
+import org.apache.spark.sql.connector.write.LogicalWriteInfo
+import org.apache.spark.sql.oracle.{OraSparkConfig, SQLSnippet}
+import org.apache.spark.sql.oracle.expressions.OraExpression
 import org.apache.spark.sql.types.StructType
 
 /**
@@ -29,140 +31,196 @@ import org.apache.spark.sql.types.StructType
  * @param oraTable the Oracle table being written to
  * @param inputQuerySchema schema of input Spark Plan
  * @param queryId provided by [[LogicalWriteInfo]]
- * @param writeKind APPEND/UPDATE/PARTITIONEXCHANGE
- * @param srcUpdateSpec in case the action is a [[OraWriteKind.UPDATE]] this
- *                      captures the source rows to update.
+ * @param isDynamicPartition is operation in Dynamic partitionOverwriteMode mode
+ * @param deleteCond predicate to apply to delete existing rows/partitions
+ * @param isTruncate truncate exisitng rows/partitions
  */
 case class OraWriteSpec(
     dsKey: DataSourceKey,
     oraTable: OraTable,
     inputQuerySchema: StructType,
     queryId: String,
-    writeKind: OraWriteKind.Value,
-    srcUpdateSpec: OraSourceUpdateSpec) {
+    isDynamicPartitionMode : Boolean = false,
+    deleteCond: Option[OraExpression] = None,
+    isTruncate: Boolean = false) {
 
-  def setDeleteFilters(predSQL: String): OraWriteSpec = {
-    this.copy(writeKind = OraWriteKind.UPDATE, srcUpdateSpec = srcUpdateSpec.updateOn(predSQL))
+  def setDeleteFilters(_deleteCond: OraExpression): OraWriteSpec = {
+    this.copy(deleteCond = Some(_deleteCond))
   }
 
   def setTruncate: OraWriteSpec = {
-    this.copy(writeKind = OraWriteKind.UPDATE, srcUpdateSpec = srcUpdateSpec.truncate)
+    this.copy(isTruncate = true)
   }
 
-  def setDynPartitionOverwrite: OraWriteSpec = {
-    assert(srcUpdateSpec.noChangesToSource)
-    this.copy(writeKind = OraWriteKind.PARTITIONEXCHANGE)
+  def setDynPartitionOverwriteMode : OraWriteSpec = {
+    assert(!deleteCond.isDefined && !isTruncate)
+    this.copy(isDynamicPartitionMode = true)
   }
 }
 
+/**
+ * Represents a technique for transactionally updating a destination oracle table based
+ * on actions in Spark tasks. Its responsiblity is broken down into:
+ * - createTempTable
+ * - provide the DML statement to write to the temp table. This is used to
+ *   setup [[OraInsertStatement]] and write rows in Spark Tasks.
+ * - prepareForUpdate, this is called before the updateDestTable call.
+ *   here the technique can gather metadata like partitions written.
+ * - updateDestTable
+ */
 trait OraWriteActions extends Serializable {
 
   val writeSpec: OraWriteSpec
 
-  lazy val tempTableName = s"${writeSpec.oraTable.name}_oraspark_${writeSpec.queryId}"
+  lazy val tempTableName = {
+    val s = s"oraspark_${writeSpec.queryId}_${writeSpec.oraTable.name}"
+    val s1 = if ( s.length > 30) {
+      s.substring(0, 30)
+    } else s
+
+    s""""${s1}""""
+  }
+
+  lazy val dest_tab_name = s"${writeSpec.oraTable.schema}.${writeSpec.oraTable.name}"
+
 
   def createTempTableDDL: String
+
+  def insertTempTableDML: String
+
+  def deleteOraTableDML : Option[String]
+
+  def insertOraTableDML: String
+
+  /**
+   * The DDL to drop the table for this job.
+   * @return
+   */
+  def dropTempTableDDL: String =
+    s"drop table ${tempTableName} PURGE"
 
   /**
    * Called when [[org.apache.spark.sql.connector.write.BatchWrite.createBatchWriterFactory]]
    * is invoked.
    */
   def createTempTable: Unit = {
-    // TODO
-    // create the table using the dsKey
+    ORASQLUtils.performDSDDL(writeSpec.dsKey,
+      createTempTableDDL,
+      s"Creating Temp Table ${tempTableName} for insert into ${dest_tab_name}")
   }
 
   /**
-   * The DDL to drop the table for this job.
-   * @return
+   * Called when ''commit'' happens in
+   * [[org.apache.spark.sql.connector.write.BatchWrite]].
+   * Do things like gather the partitions loaded into the temp table.
    */
-  def dropTempTableDDL: String
+  def prepareForUpdate: Unit
+
+
+  /**
+   * Called when [[OraBatchWrite]] is asked to commit the job.
+   */
+  def updateDestTable : Unit
 
   /**
    * Called when ''commit'' or ''abort'' happens in
    * [[org.apache.spark.sql.connector.write.BatchWrite]]
    */
   def dropTempTable: Unit = {
-    // TODO
-    // create the table using the dsKey
+    ORASQLUtils.performDSDDL(writeSpec.dsKey,
+      dropTempTableDDL,
+      s"Dropping Temp Table ${tempTableName}, setup for insert into ${dest_tab_name}")
   }
 
-  def insertTempTableDML: String
-
-  def insertOraTableDML: String
-
-  /**
-   * Called when ''commit'' happens in
-   * [[org.apache.spark.sql.connector.write.BatchWrite]].
-   * Do things like delete dest Table rows that are to be updated;
-   * or gather the partitions loaded into the temp table.
-   */
-  def prepareForInsertIntoOraTable: Unit
-
-  /**
-   * Called when ''commit'' happens in
-   * * [[org.apache.spark.sql.connector.write.BatchWrite]]
-   */
-  def insertIntoOraTable: Unit
-
-  def close: Unit = {
-    // TODO: release resources.
-  }
+  def close: Unit = ()
 }
 
 object OraWriteActions {
 
-  def apply(writeSpec: OraWriteSpec): OraWriteActions = writeSpec.writeKind match {
-    case OraWriteKind.APPEND | OraWriteKind.UPDATE => OraNonPartitionTempTableActions(writeSpec)
-    case OraWriteKind.PARTITIONEXCHANGE => OraPartitionTempTableActions(writeSpec)
+  def apply(writeSpec: OraWriteSpec): OraWriteActions = BasicWriteActions(writeSpec)
+}
+
+/**
+ * - handles all scenarios
+ * - no special processing for inserting into temp table
+ *   - creates a nologging non-partitioned temp table
+ *   - tasks write to it.
+ * - no special processing for deleting existing rows
+ *   - issues a delete
+ * - no special processing foe inserting new rows
+ *   - issues a insert with select * from temp_table
+ *   - select query block has PARALLEL hint on temp_table
+ *   - hint on INSERT can be specified by [[OraSparkConfig.INSERT_INTO_DEST_TABLE_STAT_HINTS]]
+ *
+ * @param writeSpec
+ */
+case class BasicWriteActions(writeSpec: OraWriteSpec) extends OraWriteActions {
+  def createTempTableDDL: String = {
+    val tableSpace = OraSparkConfig.getConf(OraSparkConfig.TABLESPACE_FOR_TEMP_TABLES)
+
+    val tableSpaceClause = if (tableSpace.isDefined) {
+      s"tablespace ${tableSpace.get}"
+    } else ""
+
+    s"""create table ${tempTableName}
+       |${tableSpaceClause} nologging
+       |as select * from ${dest_tab_name} where 1=2""".stripMargin
+  }
+
+  def insertTempTableDML: String = {
+    val colList = writeSpec.oraTable.columns.map(_.name).mkString(", ")
+    val bindList = Seq.fill(colList.size)("?").mkString(", ")
+
+    s"""insert /*+ APPEND */ into ${tempTableName}
+       |( ${colList})
+       |values (${bindList})""".stripMargin
+  }
+
+  def deleteOraTableDML : Option[String] = {
+    if (writeSpec.deleteCond.isDefined || writeSpec.isTruncate) {
+      import org.apache.spark.sql.oracle.OraSQLImplicits._
+
+      val destTab = SQLSnippet.tableQualId(writeSpec.oraTable)
+      val delClause = osql"delete from ${destTab}"
+
+      val delCond = if (writeSpec.deleteCond.isDefined) {
+        osql"where ${writeSpec.deleteCond.get.reifyLiterals}"
+      } else {
+        SQLSnippet.empty
+      }
+      Some(osql"${delClause} ${delCond}".sql)
+    } else None
+  }
+
+  def insertOraTableDML: String = {
+    val insertHints = OraSparkConfig.getConf(OraSparkConfig.INSERT_INTO_DEST_TABLE_STAT_HINTS)
+    val insertHintsClause = if (insertHints.isDefined) {
+      s"/*+ ${insertHints.get} */"
+    } else ""
+
+    s"""insert ${insertHintsClause}
+       |into ${dest_tab_name}
+       |select /*+ PARALLEL(${tempTableName}) */ * from ${tempTableName}""".stripMargin
+  }
+
+  def prepareForUpdate: Unit = ()
+
+  def updateDestTable : Unit = {
+
+    ORASQLUtils.performDSSQLsInTransaction(writeSpec.dsKey,
+      deleteOraTableDML.toSeq :+ insertOraTableDML,
+      s"Update Destination Table ${dest_tab_name} based on rows in ${tempTableName}")
   }
 }
 
-/**
- *  - a non-partitioned temp table is created; its schema is same as the destination table.
- *  - [[DataWriter]] instances write rows to this table.
- *  - On job commit
- *    - for truncate/update, destination rows are first deleted.
- *    - temp table rows are copied into destination table
- *    - temp table is dropped.
- */
-case class OraNonPartitionTempTableActions(writeSpec: OraWriteSpec) extends OraWriteActions {
-
-  override def createTempTableDDL: String = ???
-
-  override def dropTempTableDDL: String = ???
-
-  override def insertTempTableDML: String = ???
-
-  override def insertOraTableDML: String = ???
-
-  override def prepareForInsertIntoOraTable: Unit = ???
-
-  override def insertIntoOraTable: Unit = ???
-}
 
 /**
- *  - a partitioned table is created using
- *  [[https://oracle-base.com/articles/12c/create-table-for-exchange-with-table-12cr2]]
- *  - [[DataWriter]] instances write rows to this table. Ideally input data is shuffled
- *    on partition columns, so each task writes a few partitions.
- *  - On job commit
- *    - query oracle dictionary for partitions created on temp table
- *    - replace destination table partitions for these using
- *      [[https://oracle-base.com/articles/12c/create-table-for-exchange-with-table-12cr2]]
- *    - temp table is dropped.
+ * TODO
+ * Oracle List Partitioned Tables match the semantics of Spark Partitioning.
+ * In this case of `insert overwrite` we can:
+ * - drop partitions based on `partition spec` in insert dml
+ * - exchange partitions from temp table.
+ *
+ * @param writeSpec
  */
-case class OraPartitionTempTableActions(writeSpec: OraWriteSpec) extends OraWriteActions {
-
-  override def createTempTableDDL: String = ???
-
-  override def dropTempTableDDL: String = ???
-
-  override def insertTempTableDML: String = ???
-
-  override def insertOraTableDML: String = ???
-
-  override def prepareForInsertIntoOraTable: Unit = ???
-
-  override def insertIntoOraTable: Unit = ???
-}
+abstract class ListPartitionedWriteAction(val writeSpec: OraWriteSpec) extends OraWriteActions

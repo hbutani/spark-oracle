@@ -95,6 +95,48 @@ object OraSparkConfig {
     booleanConf.
     createWithDefault(true)
 
+  val TABLESPACE_FOR_TEMP_TABLES = buildConf(
+    "spark.sql.oracle.temp_table.tablespace").
+    doc(
+      """For DML operations pushed down from Spark, new rows are first written to a temp table.
+        |At job commit time the destination table is updated.
+        |We cannot create the temp table as an Oracle temp table because
+        |the data needs to accessible from many sessions: connections in the executor slot write rows
+        |and a connection the driver moves data from the temp table to the destination table.
+        |Use this paramater to specify what tablespace should be used to store this temp data.
+        |By default this is not set, and we store the temp data in the default tablespace of
+        |the connection.
+        |""".stripMargin
+    ).stringConf.createOptional
+
+
+  val INSERT_INTO_DEST_TABLE_STAT_HINTS = buildConf(
+    "spark.sql.oracle.insert_into_dest_table.hints").
+    doc(
+      """When moving rows from the temporary table to the destination table
+        |the operation can be optimized by specifying hints on the INSERT:
+        |(See https://docs.oracle.com/en/database/oracle/oracle-database/21/vldbg/parallel-exec-tips.html#GUID-A4227A4C-209A-40B9-9A68-A57803E66C04)
+        |- APPEND hint for doing a direct insert
+        |- PARALLEL hint to trigger parallelizing insert operation.
+        |- NOLOGGING hint to avoid redo-undo log overhead.
+        |
+        |We cannot automate these choices. So users can specify the hints to be applied for a particular DML operation.
+        |
+        |Why cannot we automate these choices?
+        |- NOLOGGING is an operational choice; so we cannot decide this.
+        |- We know whether Insert is an APPEND or OVERWRITE; but since Oracle supports RANGE and INTERVAL partitioning
+        |  an OVERWRITE doesn't mean a reconstruction of a partition.
+        |- Currently there is a single write flow for all use cases.
+        |  In the future we plan to provide a special flow for List partitions. In that case we can infer
+        |  APPEND for the overwrite case.
+        |- See link above; PARALLEL hint on its own either has no effect or will imply APPEND insert mode.
+        |  We cannot make this decision; because APPEND mode implies not using free space in existing blocks.
+        |  This may cause space wasteage that the user is not willing to accept.
+        |
+        |""".stripMargin
+    ).stringConf.createOptional
+
+
   def getConf[T](configEntry : ConfigEntry[T])(
     implicit sparkSession : SparkSession = OraSparkUtils.currentSparkSession
   ) : T = {

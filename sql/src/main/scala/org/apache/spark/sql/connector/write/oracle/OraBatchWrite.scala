@@ -17,12 +17,10 @@
 
 package org.apache.spark.sql.connector.write.oracle
 
-import org.apache.spark.sql.connector.write.{
-  BatchWrite,
-  DataWriterFactory,
-  PhysicalWriteInfo,
-  WriterCommitMessage
-}
+import oracle.spark.ConnectionManagement
+
+import org.apache.spark.sql.connector.write.{BatchWrite, DataWriterFactory, PhysicalWriteInfo, WriterCommitMessage}
+import org.apache.spark.sql.oracle.OraSparkUtils
 
 case class OraBatchWrite(writeSpec: OraWriteSpec) extends BatchWrite {
 
@@ -30,13 +28,21 @@ case class OraBatchWrite(writeSpec: OraWriteSpec) extends BatchWrite {
 
   override def createBatchWriterFactory(info: PhysicalWriteInfo): DataWriterFactory = {
     oraWriteActions.createTempTable
-    OraDataWriterFactory(writeSpec, oraWriteActions.insertTempTableDML)
+    val dsInfo = ConnectionManagement.info(writeSpec.dsKey)
+    val accumulators = OraDataWriter.createAccumulators(OraSparkUtils.currentSparkSession)
+
+    OraDataWriterFactory(
+      dsInfo,
+      writeSpec.oraTable.catalystSchema,
+      oraWriteActions.insertTempTableDML,
+      accumulators
+    )
   }
 
   override def commit(messages: Array[WriterCommitMessage]): Unit = {
     try {
-      oraWriteActions.prepareForInsertIntoOraTable
-      oraWriteActions.insertIntoOraTable
+      oraWriteActions.prepareForUpdate
+      oraWriteActions.updateDestTable
       oraWriteActions.dropTempTable
     } finally {
       oraWriteActions.close

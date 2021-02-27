@@ -129,6 +129,7 @@ object ORASQLUtils extends Logging {
     try {
       pStmt = conn.prepareStatement(stmt)
       setStmtParams(pStmt)
+      pStmt.addBatch()
       pStmt.executeBatch()
     } finally {
       performOrLogFailure(
@@ -313,6 +314,25 @@ object ORASQLUtils extends Logging {
     perform[Boolean](dsKey, s"Performing ${actionDetails}SQL by running Statement: '${stmt}") {
       conn =>
         performSQL(conn, stmt)
+    }
+  }
+
+  def performDSSQLsInTransaction(dsKey: DataSourceKey,
+                                 stmts : Seq[String],
+                                 actionDetails: => String
+                                ): Unit = {
+    perform[Unit](dsKey,
+      s"Performing ${actionDetails}, by running Statements: '${stmts.mkString("\n")}"
+      ) { conn =>
+      conn.setAutoCommit(false)
+      try {
+        for (sql <- stmts) {
+          performSQL(conn, sql)
+        }
+        conn.commit()
+      } finally {
+        conn.setAutoCommit(true)
+      }
     }
   }
 
