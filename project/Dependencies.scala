@@ -65,4 +65,10 @@ object Dependencies {
       "org.apache.derby" % "derby" % derbyVersion % "test",
       "org.scalacheck" %% "scalacheck" % "1.14.1" % "test")
   }
+
+  object docker_builder {
+    val dependencies = Seq(
+      "com.github.scopt" %% "scopt" % scoptVersion
+    )
+  }
 }

@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-import sbt.Keys.{baseDirectory, fullClasspath, resourceGenerators, version}
 import sbt._
+import sbt.Keys.{baseDirectory, fullClasspath, mainClass, resourceGenerators, version}
+import sbtassembly.AssemblyKeys.{assembly, assemblyJarName}
 import sbtassembly.AssemblyPlugin.autoImport.{
-  MergeStrategy,
-  PathList,
   assemblyExcludedJars,
   assemblyMergeStrategy,
-  assemblyOption
+  assemblyOption,
+  MergeStrategy,
+  PathList
 }
-import sbtassembly.AssemblyKeys.assembly
-
+import sbtassembly.AssemblyPlugin.defaultUniversalScript
 import scala.sys.process.Process
 
 object Assembly {
@@ -80,4 +80,21 @@ object Assembly {
       }
     } else Seq.empty
   }
+
+  lazy val dockerBuilderAssembly = Seq(
+    assemblyMergeStrategy in assembly := {
+      case PathList(ps @ _*) if ps.last.endsWith("reflect.properties") =>
+        MergeStrategy.filterDistinctLines
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy.apply(x)
+    },
+    mainClass in assembly := Some("org.apache.spark.oracle.DockerBuilder"),
+    assemblyOption in assembly :=
+      (assemblyOption in assembly).value.copy(
+        prependShellScript = Some(defaultUniversalScript(shebang = false))
+      ),
+    assemblyJarName in assembly := s"sparkOraDockerBuilder-${version.value}"
+  )
+
 }

@@ -99,3 +99,15 @@ lazy val spark_embed = project
   .settings(commonSettings: _*)
   .settings(Assembly.assemblySettings: _*)
   .dependsOn(common, orastuff, sql, mllib)
+
+lazy val dockerbuilder = project.
+  in(file("dockerbuilder"))
+  .settings(commonSettings: _*)
+  .settings(Assembly.dockerBuilderAssembly: _*)
+  .settings(
+    libraryDependencies := docker_builder.dependencies,
+    publishArtifact in (Compile, packageBin) := false,
+    publishArtifact in Test := false,
+    aggregate in assembly := false
+  )
+

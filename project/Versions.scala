@@ -14,5 +14,7 @@ object Versions {
   val hiveVersion = "2.3.7"
   val derbyVersion = "10.12.1.1"
 
+  val scoptVersion = "4.0.0"
+
   val sparkOracleVersion = "0.1.0-SNAPSHOT"
 }
