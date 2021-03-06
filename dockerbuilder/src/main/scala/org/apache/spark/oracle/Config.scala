@@ -32,6 +32,8 @@ case class Config(
     zeppelin_download_url : URI = null,
     spark_ora_zip : File = null) {
 
+  val oracle_wallet_folder_name = "oracle_wallet"
+
   def isValidateOraclePasswordSpec : Option[String] = {
     if (oracle_instance_password == null && oracle_instance_wallet_loc == null) {
       Some(s"Must provide oracle instance password or a wallet location")
@@ -101,7 +103,7 @@ object Config {
             |when running the tpcds demo set it to 4g""".stripMargin),
 
       opt[Int]('c', "spark_cores")
-        .optional()
+        .required()
         .action((x, c) => c.copy(spark_cores = x))
         .text(
           """num_cores for spark.
@@ -116,7 +118,10 @@ object Config {
         }
         .text(
           """jdbc connection information for the oracle instance.
-            |for example: "jdbc:oracle:thin:@den02ads:1531/cdb1_pdb7.regress.rdbms.dev.us.oracle.com"""".stripMargin)
+            |for example: "jdbc:oracle:thin:@10.89.206.230:1531/cdb1_pdb7.regress.rdbms.dev.us.oracle.com
+            |
+            |specify the ip-addr of host; otherwise you may need
+            |to edit the /etc/resolv.conf of the docker container."""".stripMargin)
         ,
 
       opt[String]('u', "oracle_instance_username")
@@ -159,6 +164,7 @@ object Config {
             Utils.isValidSparkVer(v, mjr, mnr).map(failure).getOrElse(success)
           }
         }
+        .validate(x => Utils.validateURL(x.toURL))
         .text(
           """url to download apache spark. Spark version must be 3.1.0 or above.
             |for example: https://downloads.apache.org/spark/spark-3.1.1/spark-3.1.1-bin-hadoop3.2.tgz""".stripMargin)
@@ -176,6 +182,7 @@ object Config {
             Utils.isValidZeppelinVer(v, mjr, mnr).map(failure).getOrElse(success)
           }
         }
+        .validate(x => Utils.validateURL(x.toURL))
         .text(
           """url to download apache zeppelin. Spark version must be 0.9.0 or above.
             |for example: https://downloads.apache.org/zeppelin/zeppelin-0.9.0/zeppelin-0.9.0-bin-netinst.tgz""".stripMargin)

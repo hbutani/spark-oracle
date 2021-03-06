@@ -35,27 +35,52 @@ object DockerBuilder {
 
     log("\nSetting up configuration\n")
 
-    log(s"Downloading spark from ${spark_download_url}\n")
-    Utils.downloadURL(spark_download_url, s => log(s))
+    log("Copy spark oracle zip\n")
+    Utils.copyFile(cfg.spark_ora_zip)
 
-    log("\n")
+    log("Copy or create empty wallet folder\n")
+    if (cfg.oracle_instance_wallet_loc != null) {
+      Utils.copyFolder(oracle_instance_wallet_loc, cfg.oracle_wallet_folder_name)
+    } else {
+      Utils.makeFolder(cfg.oracle_wallet_folder_name)
+    }
 
-    log(s"Downloading zeppelin from ${zeppelin_download_url}\n")
-    log(s"   this can take some time\n")
-    Utils.downloadURL(zeppelin_download_url, s => log(s))
-
-    log("\n")
     log("Setup zeppelin interpreter.json\n")
     Utils.generateFromTemplate(Templates.Interpreter_Json.template,
       Templates.Interpreter_Json.replacementMap(cfg),
       new File(Templates.Interpreter_Json.outFileName)
     )
+
+    log("Setup spark properties file\n")
+    Utils.generateFromTemplate(Templates.Spark_Properties.template,
+      Templates.Spark_Properties.replacementMap(cfg),
+      new File(Templates.Spark_Properties.outFileName)
+    )
+
+    log("Setup zeppelin-env.sh file\n")
+    Utils.generateFromTemplate(Templates.Zeppelin_Env.template,
+      Templates.Zeppelin_Env.replacementMap(cfg),
+      new File(Templates.Zeppelin_Env.outFileName)
+    )
+
+    log("Setup log4j-driver.properties file\n")
+    Utils.generateFromTemplate(Templates.Spark_Ora_Log.template,
+      Templates.Spark_Ora_Log.replacementMap(cfg),
+      new File(Templates.Spark_Ora_Log.outFileName)
+    )
+
+    log("Setup Dockerfile\n")
+    Utils.generateFromTemplate(Templates.Dockerfile.template,
+      Templates.Dockerfile.replacementMap(cfg),
+      new File(Templates.Dockerfile.outFileName)
+    )
+
   }
 
   def main(args : Array[String]) : Unit = {
     OParser.parse(Config.parser, args, Config()) match {
       case Some(config) =>
-      log(config)
+        log(config)
         run(config)
       case _ =>
       // arguments are bad, error message will have been displayed

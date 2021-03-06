@@ -592,13 +592,13 @@
       "properties": {
         "SPARK_HOME": {
           "name": "SPARK_HOME",
-          "value": "/Users/hbutani/spark/spark3.1/dist",
+          "value": "$$spark_home$$",
           "type": "string",
           "description": "Location of spark distribution"
         },
         "spark.master": {
           "name": "spark.master",
-          "value": "local[*]",
+          "value": "$$spark_master$$",
           "type": "string",
           "description": "Spark master uri. local | yarn-client | yarn-cluster | spark master address of standalone mode, ex) spark://master_host:7077"
         },

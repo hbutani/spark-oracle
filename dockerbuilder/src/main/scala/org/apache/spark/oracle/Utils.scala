@@ -20,6 +20,8 @@ package org.apache.spark.oracle
 
 import java.io._
 import java.net.{URI, URL}
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.{FileVisitResult, Files, Path, Paths, SimpleFileVisitor, StandardCopyOption}
 
 import scala.io.Source
 
@@ -81,6 +83,20 @@ object Utils {
     val nm : String = fileNm(url)
     val outFile = new File(nm)
     downloadURL(url, outFile, log)
+  }
+
+  def validateURL(url : URL) : Either[String, Unit] = {
+    val conn = url.openConnection()
+
+    try {
+      conn.connect()
+      Right(())
+    } catch {
+      case e : Exception => Left(
+        s"""Failed to validate download url ${url.toString}:
+           |  ${e.getMessage}""".stripMargin
+      )
+    }
   }
 
   // for example spark-3.1.1-bin-hadoop3.2.tgz
@@ -149,6 +165,43 @@ object Utils {
       } finally {
         in.close()
       }
+    }
+  }
+
+  def copyFile(file : File) : Unit = {
+    val srcPath = file.toPath
+    val destPath = Paths.get("").resolve(file.getName)
+    Files.copy(srcPath, destPath,
+      StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING
+    )
+  }
+
+  def copyFolder(file : File,
+                 destFolderNm : String) : Unit = {
+    val srcPath = file.toPath
+    val destPath = Paths.get("").resolve(destFolderNm)
+
+    // copied from
+    // https://stackoverflow.com/questions/6214703/copy-entire-directory-contents-to-another-directory
+    Files.walkFileTree(srcPath, new SimpleFileVisitor[Path]() {
+      @throws[IOException]
+      override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult = {
+        Files.createDirectories(destPath.resolve(srcPath.relativize(dir)))
+        FileVisitResult.CONTINUE
+      }
+
+      @throws[IOException]
+      override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
+        Files.copy(file, destPath.resolve(srcPath.relativize(file)))
+        FileVisitResult.CONTINUE
+      }
+    })
+  }
+
+  def makeFolder(destFolderNm : String) : Unit = {
+    val destPath = Paths.get("").resolve(destFolderNm)
+    if (!Files.exists(destPath)) {
+      Files.createDirectory(destPath)
     }
   }
 }
