@@ -42,7 +42,7 @@ case class OraInsertStatement(datasourceInfo: DataSourceInfo,
   private var rowCount : Int = 0
   private var totalRowCount : Int = 0
 
-  override def underlying: PreparedStatement = {
+  lazy val underlying: PreparedStatement = {
     conn = {
       val c = ConnectionManagement.getConnectionInExecutor(datasourceInfo)
       val tc = TaskContext.get()
@@ -91,19 +91,19 @@ case class OraInsertStatement(datasourceInfo: DataSourceInfo,
   }
 
   private[oracle] def commit(): Unit = {
-    if (conn != null) {
+    if (conn != null && !conn.isClosed && !conn.getAutoCommit) {
       conn.commit()
     }
   }
 
   private[oracle] def abort(): Unit = {
-    if (conn != null) {
+    if (conn != null && !conn.isClosed) {
       conn.rollback()
     }
   }
 
   private[oracle] def close(): Unit = {
-    if (conn != null) {
+    if (conn != null && !conn.isClosed) {
       conn.close()
     }
   }

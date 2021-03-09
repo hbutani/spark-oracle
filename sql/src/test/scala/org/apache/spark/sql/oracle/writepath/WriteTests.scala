@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql.oracle.writepath
 
+import org.apache.spark.sql.hive.test.oracle.TestOracleHive
+
 
 abstract class WriteTests extends AbstractWriteTests {
 
@@ -37,11 +39,26 @@ abstract class WriteTests extends AbstractWriteTests {
     // scalastyle:on println
   }
 
-//  for(scn <- scenarios) {
-//    performTest(scn)
-//  }
-
   performTest(scenarios(0))
+  performTest(scenarios(1))
+  // performTest(scenarios(2))
+  performTest(scenarios(3))
+  performTest(scenarios(4))
+  performTest(scenarios(5))
+  performTest(scenarios(6))
+  performTest(scenarios(7))
+  performTest(scenarios(8))
+  // performTest(scenarios(9))
+
+  // run to validate src_tab_for_writes data file
+  ignore("validateSrcData") {t =>
+    try {
+      TestOracleHive.sql("use spark_catalog")
+      TestOracleHive.sql("select * from default.src_tab_for_writes").show(1000, false)
+    } finally {
+      TestOracleHive.sql("use oracle.sparktest")
+    }
+  }
 
 
 }

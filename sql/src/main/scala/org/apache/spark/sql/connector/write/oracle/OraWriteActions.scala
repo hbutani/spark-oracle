@@ -169,26 +169,37 @@ case class BasicWriteActions(writeSpec: OraWriteSpec) extends OraWriteActions {
 
   def insertTempTableDML: String = {
     val colList = writeSpec.oraTable.columns.map(_.name).mkString(", ")
-    val bindList = Seq.fill(colList.size)("?").mkString(", ")
+    val bindList = Seq.fill(writeSpec.oraTable.columns.size)("?").mkString(", ")
 
     s"""insert /*+ APPEND */ into ${tempTableName}
        |( ${colList})
        |values (${bindList})""".stripMargin
   }
 
+  /**
+   * - for dynamicPartitionMode delete partitions for which a row exists in the TempTable
+   * - if a `deleteCond` is specified, delete rows based on the partSpec.
+   * @return
+   */
   def deleteOraTableDML : Option[String] = {
-    if (writeSpec.deleteCond.isDefined || writeSpec.isTruncate) {
-      import org.apache.spark.sql.oracle.OraSQLImplicits._
+    import org.apache.spark.sql.oracle.OraSQLImplicits._
 
-      val destTab = SQLSnippet.tableQualId(writeSpec.oraTable)
-      val delClause = osql"delete from ${destTab}"
+    val destTab = SQLSnippet.tableQualId(writeSpec.oraTable)
+    val delClause = osql"delete from ${destTab}"
 
-      val delCond = if (writeSpec.deleteCond.isDefined) {
-        osql"where ${writeSpec.deleteCond.get.reifyLiterals}"
-      } else {
-        SQLSnippet.empty
-      }
-      Some(osql"${delClause} ${delCond}".sql)
+    if (writeSpec.isDynamicPartitionMode) {
+      val partCols = writeSpec.oraTable.partitionSchema.fields.map(_.name)
+      val partColList = partCols.mkString(", ")
+      val dynamicPartListClause = SQLSnippet.literalSnippet(
+        s"(${partColList}) in (select distinct ${partColList} from ${tempTableName})"
+      )
+
+      Some(osql"${delClause} where ${dynamicPartListClause}".sql)
+    } else if (writeSpec.deleteCond.isDefined) {
+      val delCond = osql"${writeSpec.deleteCond.get.reifyLiterals}"
+      Some(osql"${delClause} where ${delCond}".sql)
+    } else if (writeSpec.isTruncate) {
+      Some(osql"${delClause}".sql)
     } else None
   }
 

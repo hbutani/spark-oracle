@@ -27,6 +27,10 @@ case class OraWriteBuilder(writeSpec: OraWriteSpec)
     with SupportsOverwrite
     with SupportsDynamicOverwrite {
 
+  /*
+   * Called in non-dynamic partition mode from OverwriteByExpressionExec
+   * when deleteCond is not just `true`
+   */
   override def overwrite(filters: Array[Filter]): WriteBuilder = {
 
     val oraExpr =
@@ -42,12 +46,19 @@ case class OraWriteBuilder(writeSpec: OraWriteSpec)
     OraWriteBuilder(writeSpec.setDeleteFilters(oraExpr.get))
   }
 
+  /*
+   * Called in dynamic partition mode from OverwritePartitionsDynamicExec
+   */
   override def overwriteDynamicPartitions(): WriteBuilder = {
     OraWriteBuilder(writeSpec.setDynPartitionOverwriteMode)
   }
 
   override def buildForBatch(): BatchWrite = OraBatchWrite(writeSpec)
 
+  /*
+   * Called in non-dynamic partition mode from OverwriteByExpressionExec
+   * when deleteCond is just `true`
+   */
   override def truncate(): WriteBuilder = {
     OraWriteBuilder(writeSpec.setTruncate)
   }

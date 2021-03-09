@@ -17,15 +17,26 @@
 
 package org.apache.spark.sql.oracle.writepath
 
+import java.math.BigDecimal
+import java.sql.{Date, Timestamp}
+
+import oracle.spark.{ConnectionManagement, ORASQLUtils}
+
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.{DataFrame, Dataset}
+import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.connector.catalog.Table
 import org.apache.spark.sql.connector.catalog.oracle.OraMetadataMgrInternalTest
 import org.apache.spark.sql.execution.{QueryExecution, SparkPlan}
 import org.apache.spark.sql.execution.datasources.v2.{AppendDataExec, DeleteFromTableExec, OverwriteByExpressionExec, OverwritePartitionsDynamicExec, V2CommandExec, V2TableWriteExec}
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.readpath.{AbstractReadTests, ReadPathTestSetup}
+import org.apache.spark.sql.oracle.testutils.DataGens.{not_null, null_percent_1, null_percent_15}
 import org.apache.spark.sql.oracle.testutils.TestDataSetup
+import org.apache.spark.sql.oracle.testutils.TestDataSetup._
+import org.apache.spark.sql.types.StructType
+
 
 abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrInternalTest {
 
@@ -65,6 +76,69 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
 
 
   def scenarioInfo(scenario : WriteScenario) : (String, String) = {
+
+    import scala.collection.JavaConverters._
+
+    def appendDetails(op: AppendDataExec): String = {
+      s"""
+         |Append Operation:
+         |  Destination table = ${op.table.name()}
+         |  WriteOptions = ${op.writeOptions.asScala.mkString(",")}
+         |Input query plan:
+         |${op.query.treeString}
+         |""".stripMargin
+    }
+
+    def overWrtByExprDetails(op: OverwriteByExpressionExec): String = {
+      s"""
+         |OverwriteByExpression Operation:
+         |  Destination table = ${op.table.name()}
+         |  Delete Filters = ${op.deleteWhere.mkString(", ")}
+         |  WriteOptions = ${op.writeOptions.asScala.mkString(",")}
+         |Input query plan:
+         |${op.query.treeString}
+         |""".stripMargin
+    }
+
+    def overWrtPartDynDetails(op: OverwritePartitionsDynamicExec): String = {
+      s"""
+         |OverwritePartitionsDynamic Operation:
+         |  Destination table = ${op.table.name()}
+         |  WriteOptions = ${op.writeOptions.asScala.mkString(",")}
+         |Input query plan:
+         |${op.query.treeString}
+         |""".stripMargin
+    }
+
+    def deleteDetails(op : DeleteFromTableExec) : String = {
+      s"""
+         |DeleteFromTable Operation:
+         |  Destination table = ${op.table.asInstanceOf[Table].name()}
+         |  condition = ${op.condition.mkString(", ")}
+         |  """.stripMargin
+    }
+
+    def writeOpInfo(sparkPlan : SparkPlan) : String = {
+      val writeOps = sparkPlan find {
+        case op : V2CommandExec => true
+        case _ => false
+      }
+
+      if (writeOps.size == 0) {
+        "No write operation in Spark Plan"
+      } else if (writeOps.size > 1) {
+        "multiple write operations in Spark Plan"
+      } else {
+        val writeOp = writeOps.head
+        writeOp match {
+          case op: AppendDataExec => appendDetails(op)
+          case op: OverwriteByExpressionExec => overWrtByExprDetails(op)
+          case op: OverwritePartitionsDynamicExec => overWrtPartDynDetails(op)
+          case op : DeleteFromTableExec => deleteDetails(op)
+          case _ => s"Unknown Operator Type: ${writeOp.getClass.getName}"
+        }
+      }
+    }
 
     try {
 
@@ -121,11 +195,14 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
 
         scenarioDF(scenario)
 
+        scenario.validateTest
+
       } finally {
         TestOracleHive.sparkSession.sqlContext.setConf(
           "spark.sql.sources.partitionOverwriteMode",
           "static"
         )
+        scenario.testCleanUp
       }
     }
   }
@@ -133,6 +210,10 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
 
   private def setupWriteSrcTab: Unit = {
     try {
+
+      // Uncomment to create the src_tab_for_writes data file
+      // AbstractWriteTests.write_src_df(1000)
+
       TestOracleHive.sql("use spark_catalog")
 
       val tblExists =
@@ -143,29 +224,11 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
         TestOracleHive.sql(
           s"""
              |create table ${src_tab}(
-             |C_CHAR_1         string      ,
-             |C_CHAR_5         string      ,
-             |C_VARCHAR2_10    string      ,
-             |C_VARCHAR2_40    string      ,
-             |C_NCHAR_1        string      ,
-             |C_NCHAR_5        string      ,
-             |C_NVARCHAR2_10   string      ,
-             |C_NVARCHAR2_40   string      ,
-             |C_BYTE           tinyint     ,
-             |C_SHORT          smallint    ,
-             |C_INT            int         ,
-             |C_LONG           bigint      ,
-             |C_NUMBER         decimal(25,0),
-             |C_DECIMAL_SCALE_5 decimal(25,5),
-             |C_DECIMAL_SCALE_8 decimal(25,8),
-             |C_DATE           date        ,
-             |C_TIMESTAMP      timestamp,
-             |state            string,
-             | channel          string
-             |) using parquet
+             |${AbstractWriteTests.unit_test_table_cols_ddl}
+             |)
+             |using parquet
+             |OPTIONS (path "${AbstractWriteTests.absoluteSrcDataPath}")
              |""".stripMargin).show()
-
-
       }
     } finally {
       TestOracleHive.sql("use oracle.sparktest")
@@ -182,9 +245,8 @@ object AbstractWriteTests {
 
   import org.scalacheck.Gen
   import org.scalacheck.Gen._
-  import scala.collection.JavaConverters._
 
-  val seed = org.scalacheck.rng.Seed.random
+  val seed = org.scalacheck.rng.Seed(1234567)
   val params = Gen.Parameters.default.withInitialSeed(seed)
 
   val src_tab = "src_tab_for_writes"
@@ -194,6 +256,9 @@ object AbstractWriteTests {
     val name: String
     val sql : String
     val dynPartOvwrtMode: Boolean
+
+    def validateTest : Unit = ()
+    def testCleanUp : Unit = ()
   }
 
   case class InsertScenario(
@@ -211,7 +276,49 @@ object AbstractWriteTests {
 
     val name : String = s"Insert Scenario ${id}"
 
-    lazy val sql = insertStat(tableIsPart, insertOvrwt, withPartSpec)
+    lazy val pvals : (String, String) = state_channel_val.next()
+
+    lazy val sql = {
+      if (!tableIsPart) {
+        val dest_tab = "unit_test_write"
+        val sel_list = s"""C_CHAR_1, C_CHAR_5, C_VARCHAR2_10, C_VARCHAR2_40, C_NCHAR_1, C_NCHAR_5,
+                          |C_NVARCHAR2_10, C_NVARCHAR2_40, C_BYTE, C_SHORT, C_INT, C_LONG, C_NUMBER,
+                          |C_DECIMAL_SCALE_5, C_DECIMAL_SCALE_8, C_DATE, C_TIMESTAMP""".stripMargin
+        val qry =
+          s"""select ${sel_list}
+             |from ${qual_src_tab}""".stripMargin
+        val insClausePrefix = if (insertOvrwt) {
+          s"insert overwrite table ${dest_tab}"
+        } else {
+          s"insert into ${dest_tab}"
+        }
+
+        s"""${insClausePrefix}
+           |${qry}""".stripMargin
+
+      } else {
+        val dest_tab = "unit_test_write_partitioned"
+        val sel_list_withoutPSpec = s"c_varchar2_40, c_int, state, channel "
+        val sel_list_withPSpec = s"c_varchar2_40, c_int, channel "
+        val pSpec = s"partition(state = '${pvals._1}')"
+        val qrySelList = if (!withPartSpec) sel_list_withoutPSpec else sel_list_withPSpec
+        val qryCond = if (!withPartSpec) "" else s"where state = '${pvals._1}'"
+        val qry =
+          s"""select ${qrySelList}
+             |from ${qual_src_tab}
+             |${qryCond}""".stripMargin
+
+        val partClause = if (withPartSpec) pSpec else ""
+        val insClausePrefix = if (insertOvrwt) {
+          s"insert overwrite table ${dest_tab}"
+        } else {
+          s"insert into ${dest_tab}"
+        }
+
+        s"""${insClausePrefix} ${partClause}
+           |${qry}""".stripMargin
+      }
+    }
 
     // scalastyle:off line.size.limit
     override def toString: String =
@@ -222,11 +329,101 @@ object AbstractWriteTests {
 
     // scalastyle:on line.size.limit
 
+    /*
+     * - Check that the table/partition has the write number of rows
+     * - For Write with PartSpec, check all other partitions are empty.
+     */
+    override def validateTest: Unit = {
+
+      val dsKey = ConnectionManagement.getDSKeyInTestEnv
+      val query = if (tableIsPart) {
+        if (withPartSpec) {
+          s"""
+            |select count(*)
+            |from sparktest.unit_test_write_partitioned
+            |where state = '${pvals._1}'""".stripMargin
+        } else {
+          "select count(*) from sparktest.unit_test_write_partitioned"
+        }
+      } else {
+        "select count(*) from sparktest.unit_test_write"
+      }
+
+      val numRows = if (tableIsPart && withPartSpec) {
+        srcData_PartCounts(pvals._1)
+      } else 1000
+
+      assert(
+        ORASQLUtils.performDSQuery[Int](
+          dsKey,
+          query,
+          s"validating Insert Scenario ${id}",
+        ) { rs =>
+          rs.next()
+          rs.getInt(1)
+        } == numRows
+      )
+
+      if (tableIsPart && withPartSpec) {
+        assert(
+          ORASQLUtils.performDSQuery[Int](
+            dsKey,
+            s"""
+               |select count(*)
+               |from sparktest.unit_test_write_partitioned
+               |where state != '${pvals._1}'""".stripMargin,
+            s"validating Insert Scenario ${id}",
+          ) { rs =>
+            rs.next()
+            rs.getInt(1)
+          } == 0
+        )
+      }
+    }
+
+    override def testCleanUp : Unit = {
+      val dsKey = ConnectionManagement.getDSKeyInTestEnv
+      val dml = if (tableIsPart) {
+        "truncate table sparktest.unit_test_write_partitioned"
+      } else {
+        "truncate table sparktest.unit_test_write"
+      }
+      ORASQLUtils.performDSDML(
+        dsKey,
+        dml,
+        s"cleaning up Insert Scenario ${id}"
+      )
+    }
+
   }
 
   case class DeleteScenario(id : Int, tableIsPart: Boolean) extends WriteScenario {
     val name : String = s"Delete Scenario ${id}"
-    lazy val sql = deleteStat(tableIsPart)
+    lazy val sql = {
+      if (!tableIsPart) {
+        val cond = s"c_byte = ${non_part_cond_values.next()}"
+        s"""delete from unit_test_write
+           |where ${cond}""".stripMargin
+      } else {
+        val pvals = state_channel_val.next()
+        val pCond = s"state = '${pvals._1}' and channel = '${pvals._2}'"
+        s"""delete from unit_test_write_partitioned
+           |where ${pCond}""".stripMargin
+      }
+    }
+
+    def truncateStat(tableIsPart: Boolean, withPartSpec : Boolean): String = {
+      if (!tableIsPart) {
+        s"""truncate table unit_test_write""".stripMargin
+      } else {
+        val pSpec = if (withPartSpec) {
+          val pvals = state_channel_val.next()
+          s"partition(state = '${pvals._1}', channel = '${pvals._2}')"
+        } else ""
+        s"""truncate table unit_test_write_partitioned ${pSpec}""".stripMargin
+      }
+    }
+
     val dynPartOvwrtMode: Boolean = false
 
     override def toString: String = s"""name=${name}, table_is_part=${tableIsPart}"""
@@ -235,11 +432,27 @@ object AbstractWriteTests {
   case class TruncateScenario(id : Int, tableIsPart: Boolean, withPartSpec : Boolean)
     extends WriteScenario {
     val name : String = s"Truncate Scenario ${id}"
-    lazy val sql = truncateStat(tableIsPart, withPartSpec)
+    lazy val sql = {
+      if (!tableIsPart) {
+        s"""truncate table unit_test_write""".stripMargin
+      } else {
+        val pSpec = if (withPartSpec) {
+          val pvals = state_channel_val.next()
+          s"partition(state = '${pvals._1}', channel = '${pvals._2}')"
+        } else ""
+        s"""truncate table unit_test_write_partitioned ${pSpec}""".stripMargin
+      }
+    }
+
     val dynPartOvwrtMode: Boolean = false
 
     override def toString: String = s"""name=${name}, table_is_part=${tableIsPart}"""
   }
+
+  /*
+   * CompositeScenario(insert 2 parts)
+   * CompositeScenario(insert a  part, overwrite a part)
+   */
 
   val scenarios : Seq[WriteScenario] = Seq(
     InsertScenario(0, false, false, false, false),
@@ -261,70 +474,11 @@ object AbstractWriteTests {
     // TruncateScenario(12, true, true)
   )
 
-  def appendDetails(op: AppendDataExec): String = {
-    s"""
-       |Append Operation:
-       |  Destination table = ${op.table.name()}
-       |  WriteOptions = ${op.writeOptions.asScala.mkString(",")}
-       |Input query plan:
-       |${op.query.treeString}
-       |""".stripMargin
-  }
-
-  def overWrtByExprDetails(op: OverwriteByExpressionExec): String = {
-    s"""
-       |OverwriteByExpression Operation:
-       |  Destination table = ${op.table.name()}
-       |  Delete Filters = ${op.deleteWhere.mkString(", ")}
-       |  WriteOptions = ${op.writeOptions.asScala.mkString(",")}
-       |Input query plan:
-       |${op.query.treeString}
-       |""".stripMargin
-  }
-
-  def overWrtPartDynDetails(op: OverwritePartitionsDynamicExec): String = {
-    s"""
-       |OverwritePartitionsDynamic Operation:
-       |  Destination table = ${op.table.name()}
-       |  WriteOptions = ${op.writeOptions.asScala.mkString(",")}
-       |Input query plan:
-       |${op.query.treeString}
-       |""".stripMargin
-  }
-
-  def deleteDetails(op : DeleteFromTableExec) : String = {
-    s"""
-       |DeleteFromTable Operation:
-       |  Destination table = ${op.table.asInstanceOf[Table].name()}
-       |  condition = ${op.condition.mkString(", ")}
-       |  """.stripMargin
-  }
-
-  def writeOpInfo(sparkPlan : SparkPlan) : String = {
-    val writeOps = sparkPlan find {
-      case op : V2CommandExec => true
-      case _ => false
-    }
-
-    if (writeOps.size == 0) {
-      "No write operation in Spark Plan"
-    } else if (writeOps.size > 1) {
-      "multiple write operations in Spark Plan"
-    } else {
-      val writeOp = writeOps.head
-      writeOp match {
-        case op: AppendDataExec => appendDetails(op)
-        case op: OverwriteByExpressionExec => overWrtByExprDetails(op)
-        case op: OverwritePartitionsDynamicExec => overWrtPartDynDetails(op)
-        case op : DeleteFromTableExec => deleteDetails(op)
-        case _ => s"Unknown Operator Type: ${writeOp.getClass.getName}"
-      }
-    }
-  }
+  val stateGen = oneOf("OR", "AZ", "PA", "MN", "NY", "CA", "OT")
+  val channelGen = oneOf("D", "I", "U")
 
   lazy val state_channel_val: Iterator[(String, String)] = {
-    val stateGen = oneOf("OR", "AZ", "PA", "MN", "NY", "CA", "OT")
-    val channelGen = oneOf("D", "I", "U")
+
     listOfN(500, zip(stateGen, channelGen)).apply(params, seed).get.iterator
   }
 
@@ -334,70 +488,114 @@ object AbstractWriteTests {
     listOfN(500, gen).apply(params, seed).get.iterator
   }
 
-  def insertStat(tableIsPart: Boolean, insertOvrwt: Boolean, withPartSpec: Boolean): String = {
-    if (!tableIsPart) {
-      val dest_tab = "unit_test_write"
-      val sel_list = s"""C_CHAR_1, C_CHAR_5, C_VARCHAR2_10, C_VARCHAR2_40, C_NCHAR_1, C_NCHAR_5,
-                        |C_NVARCHAR2_10, C_NVARCHAR2_40, C_BYTE, C_SHORT, C_INT, C_LONG, C_NUMBER,
-                        |C_DECIMAL_SCALE_5, C_DECIMAL_SCALE_8, C_DATE, C_TIMESTAMP""".stripMargin
-      val qry =
-        s"""select ${sel_list}
-           |from ${qual_src_tab}""".stripMargin
-      val insClausePrefix = if (insertOvrwt) {
-        s"insert overwrite table ${dest_tab}"
-      } else {
-        s"insert into ${dest_tab}"
-      }
-
-      s"""${insClausePrefix}
-         |${qry}""".stripMargin
-
-    } else {
-      val dest_tab = "unit_test_write_partitioned"
-      val pvals = state_channel_val.next()
-      val sel_list_withoutPSpec = s"c_varchar2_40, c_int, state, channel "
-      val sel_list_withPSpec = s"c_varchar2_40, c_int, channel "
-      val pSpec = s"partition(state = '${pvals._1}')"
-      val qrySelList = if (!withPartSpec) sel_list_withoutPSpec else sel_list_withPSpec
-      val qry =
-        s"""select ${qrySelList}
-           |from ${qual_src_tab}""".stripMargin
-
-      val partClause = if (withPartSpec) pSpec else ""
-      val insClausePrefix = if (insertOvrwt) {
-        s"insert overwrite table ${dest_tab}"
-      } else {
-        s"insert into ${dest_tab}"
-      }
-
-      s"""${insClausePrefix} ${partClause}
-         |${qry}""".stripMargin
-    }
+  def constructRow(colValues : IndexedSeq[IndexedSeq[(_, Boolean)]], i : Int) : GenericRow = {
+    new GenericRow(
+      Array(
+      colValues(0)(i)._1.asInstanceOf[String],
+      colValues(1)(i)._1.asInstanceOf[String],
+      colValues(2)(i)._1.asInstanceOf[String],
+      colValues(3)(i)._1.asInstanceOf[String],
+      colValues(4)(i)._1.asInstanceOf[String],
+      colValues(5)(i)._1.asInstanceOf[String],
+      colValues(6)(i)._1.asInstanceOf[String],
+      colValues(7)(i)._1.asInstanceOf[String],
+      colValues(8)(i)._1.asInstanceOf[BigDecimal].byteValueExact(),
+      colValues(9)(i)._1.asInstanceOf[BigDecimal].shortValueExact(),
+      colValues(10)(i)._1.asInstanceOf[BigDecimal].intValueExact(),
+      colValues(11)(i)._1.asInstanceOf[BigDecimal].longValueExact(),
+      colValues(12)(i)._1.asInstanceOf[BigDecimal],
+      colValues(13)(i)._1.asInstanceOf[BigDecimal],
+      colValues(14)(i)._1.asInstanceOf[BigDecimal],
+      colValues(15)(i)._1.asInstanceOf[Date],
+      colValues(16)(i)._1.asInstanceOf[Timestamp],
+      colValues(17)(i)._1.asInstanceOf[String],
+      colValues(18)(i)._1.asInstanceOf[String]
+      )
+    )
   }
 
-  def deleteStat(tableIsPart: Boolean): String = {
-    if (!tableIsPart) {
-      val cond = s"c_byte = ${non_part_cond_values.next()}"
-      s"""delete from unit_test_write
-         |where ${cond}""".stripMargin
-    } else {
-      val pvals = state_channel_val.next()
-      val pCond = s"state = '${pvals._1}' and channel = '${pvals._2}'"
-      s"""delete from unit_test_write_partitioned
-         |where ${pCond}""".stripMargin
+  val unit_test_table_cols_ddl =
+    """
+      |C_CHAR_1         string      ,
+      |C_CHAR_5         string      ,
+      |C_VARCHAR2_10    string      ,
+      |C_VARCHAR2_40    string      ,
+      |C_NCHAR_1        string      ,
+      |C_NCHAR_5        string      ,
+      |C_NVARCHAR2_10   string      ,
+      |C_NVARCHAR2_40   string      ,
+      |C_BYTE           tinyint     ,
+      |C_SHORT          smallint    ,
+      |C_INT            int         ,
+      |C_LONG           bigint      ,
+      |C_NUMBER         decimal(25,0),
+      |C_DECIMAL_SCALE_5 decimal(25,5),
+      |C_DECIMAL_SCALE_8 decimal(25,8),
+      |C_DATE           date        ,
+      |C_TIMESTAMP      timestamp,
+      |state            string,
+      | channel          string""".stripMargin
+
+  val unit_test_table_scheme: DataScheme = IndexedSeq[DataType[(_, Boolean)]](
+    CharDataType(1).withNullsGen(not_null),
+    CharDataType(5).withNullsGen(null_percent_1),
+    Varchar2DataType(10).withNullsGen(null_percent_1),
+    Varchar2DataType(40).withNullsGen(null_percent_15),
+    NCharDataType(1).withNullsGen(null_percent_1),
+    NCharDataType(5).withNullsGen(not_null),
+    NVarchar2DataType(10).withNullsGen(null_percent_15),
+    NVarchar2DataType(40).withNullsGen(null_percent_15),
+    NumberDataType(2, 0).withNullsGen(not_null),
+    NumberDataType(4, 0).withNullsGen(null_percent_1),
+    NumberDataType(9, 0).withNullsGen(null_percent_15),
+    NumberDataType(18, 0).withNullsGen(null_percent_15),
+    NumberDataType(25, 0).withNullsGen(null_percent_15),
+    NumberDataType(25, 5).withNullsGen(null_percent_15),
+    NumberDataType(25, 8).withNullsGen(null_percent_15),
+    // FloatDataType.withNullsGen(null_percent_15),
+    // DoubleDataType.withNullsGen(null_percent_15),
+    DateDataType.withNullsGen(null_percent_15),
+    TimestampDataType.withNullsGen(null_percent_15),
+    CharDataType(2).withGen(stateGen).withNullsGen(not_null),
+    CharDataType(2).withGen(channelGen).withNullsGen(not_null),
+  )
+
+  val unit_test_table_catalyst_schema = StructType.fromDDL(unit_test_table_cols_ddl)
+
+  val srcDataPath =
+    "src/test/resources/data/src_tab_for_writes"
+
+  def absoluteSrcDataPath : String =
+    new java.io.File(srcDataPath).getAbsoluteFile.toPath.toString
+
+  def write_src_df(numRows : Int) : Unit = {
+    val seed = org.scalacheck.rng.Seed.random
+    val params = Gen.Parameters.default.withInitialSeed(seed)
+
+    val colValues : IndexedSeq[IndexedSeq[(_, Boolean)]] =
+      unit_test_table_scheme.map(c =>
+        Gen.listOfN(numRows, c.gen).apply(params, seed).get.toIndexedSeq
+      )
+
+    val rows : Seq[GenericRow] = (0 until numRows) map { i =>
+      constructRow(colValues, i)
     }
+
+    val rowsRDD : RDD[Row] = TestOracleHive.sparkContext.parallelize(rows, 1)
+
+    TestOracleHive.
+      createDataFrame(rowsRDD, unit_test_table_catalyst_schema).
+      write.parquet(srcDataPath)
   }
 
-  def truncateStat(tableIsPart: Boolean, withPartSpec : Boolean): String = {
-    if (!tableIsPart) {
-      s"""truncate table unit_test_write""".stripMargin
-    } else {
-      val pSpec = if (withPartSpec) {
-        val pvals = state_channel_val.next()
-        s"partition(state = '${pvals._1}', channel = '${pvals._2}')"
-      } else ""
-      s"""truncate table unit_test_write_partitioned ${pSpec}""".stripMargin
-    }
-  }
+  val srcData_PartCounts = Map(
+    "MN" -> 134,
+    "AZ" -> 136,
+    "PA" -> 136,
+    "OT" -> 164,
+    "OR" -> 144,
+    "NY" -> 143,
+    "CA" -> 143
+  )
 
 }
