@@ -235,7 +235,7 @@ object OracleMetadata extends OraFunctionDefs {
     def isPartitioned: Boolean = partitionScheme.isDefined
 
     @transient lazy val (dataSchema: StructType, partitionSchema: StructType) = {
-      val partCols = columns.filter(c => isPartitionColumn(c.name))
+      val partCols = columns.filter(c => isPartitionColumn(c.name)).map(_.name)
         // partitionScheme.map(_.columns.toSet).getOrElse(Set.empty)
       (
         StructType(catalystSchema.fields.filterNot(f => partCols.contains(f.name))),
