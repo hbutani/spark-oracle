@@ -30,25 +30,18 @@ import org.apache.spark.sql.oracle.OracleCatalogOptions
 import org.apache.spark.util.Utils
 
 /**
+ * This is DISABLED. No more `OracleCatalogOptions.use_resultset_cache`
+ *
  * If [[OracleCatalogOptions.use_resultset_cache]] is enabled
  * [[ResultSet]]s are saved and served from a local folder.
  *
- * TODO:
- * - switch to
- *   - saving ResultSet as local parquet. Read in RS; create a LocalRel and save as Parquet
- *   - have loadCachedResultSet return a Iterator[InternalRow]
  */
 object ResultSetCache extends  Logging {
 
   private var cacheLoc : File = null
 
   def initCacheLoc(catalogOptions: OracleCatalogOptions) : File = synchronized {
-    if (cacheLoc == null) {
-      cacheLoc = catalogOptions.
-        resultSetCacheLoc.map(new File(_)).
-        getOrElse(Utils.createTempDir())
-    }
-    cacheLoc
+    throw new UnsupportedOperationException("ResultSetCache no more supported")
   }
 
   /*

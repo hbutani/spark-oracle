@@ -25,8 +25,9 @@ import scala.util.Try
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog._
-import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{OraIdentifier, OraTable}
+import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
 import org.apache.spark.sql.connector.expressions.Transform
+import org.apache.spark.sql.oracle.{OracleCatalogOptions, OraSparkUtils}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 
@@ -59,6 +60,8 @@ class OracleCatalog
     metadataManager = new OracleMetadataManager(cMap)
     _name = name
   }
+
+  def catalogOptions : OracleCatalogOptions = metadataManager.catalogOptions
 
   override def name(): String = _name
 
@@ -222,4 +225,11 @@ class OracleCatalog
       properties: util.Map[String, String]): StagedTable = ???
 
   private[oracle] def getMetadataManager: OracleMetadataManager = metadataManager
+}
+
+object OracleCatalog {
+  def oracleCatalog : OracleCatalog = {
+    OraSparkUtils.currentSparkSession.sessionState.
+      catalogManager.catalog("oracle").asInstanceOf[OracleCatalog]
+  }
 }

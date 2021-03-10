@@ -17,10 +17,6 @@
 
 package org.apache.spark.sql.oracle
 
-/**
- * Running this test when on VPN is extremely slow.
- * See issue described in [[oracle.jdbc.internal.ResultSetCache:ensureSAXParserFactorySet]]
- */
 class BasicScanTest extends AbstractTest with PlanTestHelpers {
 
   test(

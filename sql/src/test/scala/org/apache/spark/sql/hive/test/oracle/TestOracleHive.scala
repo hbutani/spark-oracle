@@ -67,8 +67,6 @@ object OracleTestConf {
     .set("spark.sql.catalog.oracle.metadata_cache_loc", "src/test/resources/metadata_cache")
     .set("spark.sql.catalog.oracle.log_and_time_sql.enabled", "true")
     .set("spark.sql.catalog.oracle.log_and_time_sql.log_level", "info")
-    .set("spark.sql.catalog.oracle.use_resultset_cache", "true")
-    .set("spark.sql.catalog.oracle.resultset_cache_loc", "src/test/resources/resultset_cache")
     .set("spark.sql.catalog.oracle.fetchSize", "100000")
     .set("spark.sql.oracle.enable.querysplitting", "false")
     // .set("spark.sql.oracle.max_string_size", "32767")
@@ -148,6 +146,22 @@ object OracleTestConf {
 
   val SPARK_ORACLE_DB_INSTANCE = "spark.oracle.test.db_instance"
   val SPARK_ORACLE_DB_WALLET_LOC = "spark.oracle.test.db_wallet_loc"
+
+  // probability of running a long test
+  val SPARK_ORACLE_RUN_LONG_TEST_PROB = "spark.oracle.test.long_test.run.prob"
+
+  lazy val longTestRunProb : Double = {
+    System.getProperty(SPARK_ORACLE_RUN_LONG_TEST_PROB) match {
+      case x if x != null => scala.util.Try(x.toDouble).getOrElse(1.0)
+      case _ => 1.0
+    }
+  }
+
+  lazy val r = new scala.util.Random
+
+  def runLongTest(prob : Double = longTestRunProb) : Boolean = {
+    r.nextDouble() < prob
+  }
 
 }
 

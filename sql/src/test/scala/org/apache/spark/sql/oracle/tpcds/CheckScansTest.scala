@@ -19,8 +19,8 @@ package org.apache.spark.sql.oracle.tpcds
 
 import scala.collection.mutable.ArrayBuffer
 
-import org.apache.spark.sql.hive.test.oracle.TestOracleHive
-import org.apache.spark.sql.oracle.{AbstractTest, OraSparkConfig, OraSparkUtils, PlanTestHelpers}
+import org.apache.spark.sql.hive.test.oracle.{OracleTestConf, TestOracleHive}
+import org.apache.spark.sql.oracle.{AbstractTest, PlanTestHelpers}
 import org.apache.spark.sql.oracle.tpcds.TPCDSQueries.TPCDSQuerySpec
 
 // scalastyle:off println
@@ -36,7 +36,11 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
 
        */
 
-      showOraQueries(qNm, q.sql)
+      if (OracleTestConf.runLongTest()) {
+        showOraQueries(qNm, q.sql)
+      } else {
+        println(s"Skipping test ${qNm} based on 'spark.oracle.test.long_test.run.prob'")
+      }
 
     }
   }
@@ -62,7 +66,6 @@ class CheckScansTest extends AbstractTest with PlanTestHelpers {
 
     // Failed queries q66
 
-    TestOracleHive.setConf("spark.sql.catalog.oracle.use_resultset_cache", "false")
       /*
        * enable querySplitting
        * set task target to 4MB

@@ -17,9 +17,8 @@
 
 package org.apache.spark.sql.oracle
 
-import org.apache.spark.sql.catalyst.parser.ParseException
+import org.apache.spark.sql.connector.catalog.oracle.{OracleCatalog, OraMetadataMgrInternalTest}
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.UnsupportedAction
-import org.apache.spark.sql.connector.catalog.oracle.OraMetadataMgrInternalTest
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 
 class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
@@ -55,10 +54,20 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
            |location "https://objectstorage.us-ashburn-1.oraclecloud.com/n/idlxex3qf8sf/b/SparkTest/o/t1"""".stripMargin)
     }
 
-    assert(
-      ex.getMessage ==
-        """Unsupported Action on Oracle Catalog: Cannot create table
-          | Method is supported but hasn't been implemented yet""".stripMargin)
+    if (OracleCatalog.oracleCatalog.catalogOptions.oci_credential_name.isDefined) {
+      assert(
+        ex.getMessage ==
+          """Unsupported Action on Oracle Catalog: Cannot create table
+            | Method is supported but hasn't been implemented yet""".stripMargin
+      )
+    } else {
+      assert(
+        ex.getMessage ==
+          """Unsupported Action on Oracle Catalog: Cannot create table
+            | Currently only object store resident tables of parquet format can be created
+            | via Spark SQL. For other cases, create table using Oracle DDL""".stripMargin
+      )
+    }
 
     /*
      * 3. Valid table creation, but no yet implemented
@@ -72,10 +81,20 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
     }
     // scalastyle:on
 
-    assert(
-      ex.getMessage ==
-        """Unsupported Action on Oracle Catalog: Cannot create table
-        | Method is supported but hasn't been implemented yet""".stripMargin)
+    if (OracleCatalog.oracleCatalog.catalogOptions.oci_credential_name.isDefined) {
+      assert(
+        ex.getMessage ==
+          """Unsupported Action on Oracle Catalog: Cannot create table
+            | Method is supported but hasn't been implemented yet""".stripMargin
+      )
+    } else {
+      assert(
+        ex.getMessage ==
+          """Unsupported Action on Oracle Catalog: Cannot create table
+            | Currently only object store resident tables of parquet format can be created
+            | via Spark SQL. For other cases, create table using Oracle DDL""".stripMargin
+      )
+    }
 
     /*
      * 4. InValid table creation, not object store location

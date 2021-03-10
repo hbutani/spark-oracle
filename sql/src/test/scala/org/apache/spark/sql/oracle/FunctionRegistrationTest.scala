@@ -19,7 +19,7 @@ package org.apache.spark.sql.oracle
 
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 
-abstract class FunctionRegistrationTest extends AbstractTest
+class FunctionRegistrationTest extends AbstractTest
   with PlanTestHelpers {
 
   val standard_funcs : Seq[AnyRef] = Seq(

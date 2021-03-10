@@ -54,17 +54,7 @@ trait SparkOraStatement extends Logging { self =>
 
   def executeQuery(): java.sql.ResultSet =
     statementExecute(() => {
-      if (!datasourceInfo.catalogOptions.use_resultset_cache) {
-        performQuery
-      } else {
-        val rsCacheIns = ResultSetCache.Instance(sqlString, datasourceInfo)
-        if (rsCacheIns.exists ) {
-          rsCacheIns.loadCachedResultSet
-        } else {
-          rsCacheIns.saveResultSet(performQuery)
-          rsCacheIns.loadCachedResultSet
-        }
-      }
+      performQuery
     })
 
   def executeUpdate(): Int = statementExecute(() => underlying.executeUpdate())

@@ -291,7 +291,6 @@ class TPCDSValidator(args: TPCDSValidator.Arguments) extends Logging {
     }
 
     new SparkSessionExtensions()(TestOracleHive.sparkSession.extensions)
-    TestOracleHive.setConf("spark.sql.catalog.oracle.use_resultset_cache", "false")
     TestOracleHive.setConf("spark.sql.files.openCostInBytes", (128 * 1024 * 1024).toString)
     TestOracleHive.setConf("spark.sql.files.maxPartitionBytes", (16 * 1024 * 1024).toString)
     /*

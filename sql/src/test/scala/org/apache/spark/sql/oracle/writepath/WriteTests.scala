@@ -20,7 +20,7 @@ package org.apache.spark.sql.oracle.writepath
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 
 
-abstract class WriteTests extends AbstractWriteTests {
+class WriteTests extends AbstractWriteTests {
 
   import AbstractWriteTests._
 
