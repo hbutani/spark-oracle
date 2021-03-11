@@ -70,9 +70,15 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
     Dataset.ofRows(TestOracleHive.sparkSession, qE.analyzed)
   }
 
-  def scenarioQE(scenario : WriteScenario) : QueryExecution = getAroundTestBugQE(scenario.sql)
+  def scenarioQE(scenario : WriteScenario) : Seq[QueryExecution] = scenario match {
+    case cs : CompositeInsertScenario => cs.steps.map(scenarioQE).flatten
+    case _ => Seq(getAroundTestBugQE(scenario.sql))
+  }
 
-  def scenarioDF(scenario : WriteScenario) : DataFrame = getAroundTestBugDF(scenario.sql)
+  def scenarioDF(scenario : WriteScenario) : Seq[DataFrame] = scenario match {
+    case cs : CompositeInsertScenario => cs.steps.map(scenarioDF).flatten
+    case _ => Seq(getAroundTestBugDF(scenario.sql))
+  }
 
 
   def scenarioInfo(scenario : WriteScenario) : (String, String) = {
@@ -149,17 +155,23 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
         )
       }
 
-      val qe = scenarioQE(scenario)
-      (s"""Scenario: ${scenario}
-         |Write Operation details: ${writeOpInfo(qe.sparkPlan)}
-         |""".stripMargin,
-        s"""Scenario: ${scenario.name}
-           |Logical Plan:
-           |${qe.optimizedPlan}
-           |Spark Plan:
-           |${qe.sparkPlan}
-           |""".stripMargin
-        )
+      val r = for (qe <- scenarioQE(scenario)) yield {
+
+        (s"""Scenario: ${scenario}
+           |Write Operation details: ${writeOpInfo(qe.sparkPlan)}
+           |""".stripMargin,
+          s"""Scenario: ${scenario.name}
+             |Logical Plan:
+             |${qe.optimizedPlan}
+             |Spark Plan:
+             |${qe.sparkPlan}
+             |""".stripMargin
+          )
+      }
+
+      val (ops, plans) = r.unzip
+
+      (ops.mkString("\n"), plans.mkString("\n"))
 
     } finally {
       TestOracleHive.sparkSession.sqlContext.setConf(
@@ -167,7 +179,6 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
         "static"
       )
     }
-
 
   }
 
@@ -185,15 +196,17 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
           )
         }
 
-        val qe = scenarioQE(scenario)
-        println(
-          s"""Logical Plan:
-             |${qe.optimizedPlan}
-             |Spark Plan:
-             |${qe.sparkPlan}""".stripMargin
-        )
+        val (qEs, steps) = (scenarioQE(scenario), scenario.steps)
 
-        scenarioDF(scenario)
+        for((qe, step) <- qEs.zip(steps)) {
+          println(
+            s"""Logical Plan:
+               |${qe.optimizedPlan}
+               |Spark Plan:
+               |${qe.sparkPlan}""".stripMargin
+          )
+          scenarioDF(step)
+        }
 
         scenario.validateTest
 
@@ -254,9 +267,11 @@ object AbstractWriteTests {
 
   trait WriteScenario {
     val name: String
-    val sql : String
+    def sql : String
     val dynPartOvwrtMode: Boolean
 
+    def steps : Seq[WriteScenario] = Seq(this)
+    def destTableSizeAfterScenario : Int
     def validateTest : Unit = ()
     def testCleanUp : Unit = ()
   }
@@ -327,6 +342,11 @@ object AbstractWriteTests {
          |${sql}
          |""".stripMargin
 
+
+    override def destTableSizeAfterScenario : Int = if (tableIsPart && withPartSpec) {
+      srcData_PartCounts(pvals._1)
+    } else 1000
+
     // scalastyle:on line.size.limit
 
     /*
@@ -349,10 +369,6 @@ object AbstractWriteTests {
         "select count(*) from sparktest.unit_test_write"
       }
 
-      val numRows = if (tableIsPart && withPartSpec) {
-        srcData_PartCounts(pvals._1)
-      } else 1000
-
       assert(
         ORASQLUtils.performDSQuery[Int](
           dsKey,
@@ -361,7 +377,7 @@ object AbstractWriteTests {
         ) { rs =>
           rs.next()
           rs.getInt(1)
-        } == numRows
+        } == destTableSizeAfterScenario
       )
 
       if (tableIsPart && withPartSpec) {
@@ -427,6 +443,8 @@ object AbstractWriteTests {
     val dynPartOvwrtMode: Boolean = false
 
     override def toString: String = s"""name=${name}, table_is_part=${tableIsPart}"""
+
+    override def destTableSizeAfterScenario : Int = 0
   }
 
   case class TruncateScenario(id : Int, tableIsPart: Boolean, withPartSpec : Boolean)
@@ -447,16 +465,61 @@ object AbstractWriteTests {
     val dynPartOvwrtMode: Boolean = false
 
     override def toString: String = s"""name=${name}, table_is_part=${tableIsPart}"""
+
+    override def destTableSizeAfterScenario : Int = 0
   }
 
-  /*
-   * CompositeScenario(insert 2 parts)
-   * CompositeScenario(insert a  part, overwrite a part)
-   */
+  case class CompositeInsertScenario(name : String,
+                                     tableIsPart: Boolean,
+                                     dynPartOvwrtMode: Boolean,
+                                     override val steps: Seq[WriteScenario],
+                                     numRowsAfterTest : Seq[WriteScenario] => Int =
+                                     steps => steps.map(_.destTableSizeAfterScenario).sum
+                                    ) extends WriteScenario {
+    override def sql: String =
+      throw new UnsupportedOperationException("No sql for a CompositeInsertScenario")
+
+    override def validateTest: Unit = {
+
+      val dsKey = ConnectionManagement.getDSKeyInTestEnv
+      val query = if (tableIsPart) {
+        "select count(*) from sparktest.unit_test_write_partitioned"
+      } else {
+        "select count(*) from sparktest.unit_test_write"
+      }
+
+      assert(
+        ORASQLUtils.performDSQuery[Int](
+          dsKey,
+          query,
+          s"validating Composite Insert Scenario '${name}''",
+        ) { rs =>
+          rs.next()
+          rs.getInt(1)
+        } == destTableSizeAfterScenario
+      )
+    }
+
+    override def testCleanUp : Unit = {
+      val dsKey = ConnectionManagement.getDSKeyInTestEnv
+      val dml = if (tableIsPart) {
+        "truncate table sparktest.unit_test_write_partitioned"
+      } else {
+        "truncate table sparktest.unit_test_write"
+      }
+      ORASQLUtils.performDSDML(
+        dsKey,
+        dml,
+        s"cleaning up Insert Scenario '${name}''"
+      )
+    }
+
+    override def destTableSizeAfterScenario : Int = numRowsAfterTest(steps)
+  }
 
   val scenarios : Seq[WriteScenario] = Seq(
-    InsertScenario(0, false, false, false, false),
-    InsertScenario(1, false, true, false, false),
+    InsertScenario(0, false, false, false, false), // insert non-part
+    InsertScenario(1, false, true, false, false),  // insert overwrite non-part
     DeleteScenario(2, false),
     // TRUNCATE TABLE is not supported for v2 tables.
     // TruncateScenario(3, false, false),
@@ -472,6 +535,74 @@ object AbstractWriteTests {
     // TRUNCATE TABLE is not supported for v2 tables.
     // TruncateScenario(11, true, false),
     // TruncateScenario(12, true, true)
+  )
+
+  val compositeScenarios = Seq(
+    CompositeInsertScenario(
+      "Non-Part multiple inserts",
+      false,
+      false,
+      Seq(
+        InsertScenario(0, false, false, false, false), // insert non-part
+        InsertScenario(0, false, false, false, false) // insert non-part
+      )
+    ),
+    CompositeInsertScenario(
+      "Non-Part insert followed by insert overwrite",
+      false,
+      false,
+      Seq(
+        InsertScenario(0, false, false, false, false), // insert non-part
+        InsertScenario(1, false, true, false, false)  // insert overwrite non-part
+      ),
+      _ => 1000),
+    CompositeInsertScenario(
+      "Multiple part inserts",
+      true,
+      false,
+      Seq(
+        InsertScenario(5, true, false, true, false),  // insert with partSpec
+        InsertScenario(5, true, false, true, false),  // insert with partSpec
+      )
+    ),
+    CompositeInsertScenario(
+      "Part insert followed by insert overwrite of part",
+      true,
+      false,
+      Seq(
+        InsertScenario(5, true, false, true, false),  // insert with partSpec
+        InsertScenario(8, true, true, true, false),  // insert overwrite with partSpec
+      ),
+      steps => {
+        val pVals0 = steps(0).asInstanceOf[InsertScenario].pvals
+        val pVals1 = steps(1).asInstanceOf[InsertScenario].pvals
+
+        if (pVals0._1 == pVals1._1) {
+          steps(1).destTableSizeAfterScenario
+        } else {
+          steps.map(_.destTableSizeAfterScenario).sum
+        }
+      }
+    ),
+    CompositeInsertScenario(
+      "Part insert in dynPart mode followed by insert overwrite in dynPart mode of part",
+      true,
+      false,
+      Seq(
+        InsertScenario(5, true, false, true, false),  // insert with partSpec
+        InsertScenario(9, true, true, true, true),  // insert overwrite with partSpec in dynPartMode
+      ),
+      steps => {
+        val pVals0 = steps(0).asInstanceOf[InsertScenario].pvals
+        val pVals1 = steps(1).asInstanceOf[InsertScenario].pvals
+
+        if (pVals0._1 == pVals1._1) {
+          steps(1).destTableSizeAfterScenario
+        } else {
+          steps.map(_.destTableSizeAfterScenario).sum
+        }
+      }
+    )
   )
 
   val stateGen = oneOf("OR", "AZ", "PA", "MN", "NY", "CA", "OT")

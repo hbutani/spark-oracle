@@ -50,6 +50,12 @@ class WriteTests extends AbstractWriteTests {
   performTest(scenarios(8))
   // performTest(scenarios(9))
 
+  performTest(compositeScenarios(0))
+  performTest(compositeScenarios(1))
+  performTest(compositeScenarios(2))
+  performTest(compositeScenarios(3))
+  performTest(compositeScenarios(4))
+
   // run to validate src_tab_for_writes data file
   ignore("validateSrcData") {t =>
     try {
