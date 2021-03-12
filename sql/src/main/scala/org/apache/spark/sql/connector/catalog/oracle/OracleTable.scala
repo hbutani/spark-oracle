@@ -19,7 +19,7 @@ package org.apache.spark.sql.connector.catalog.oracle
 
 import java.util
 
-import oracle.spark.DataSourceKey
+import oracle.spark.{DataSourceKey, ORASQLUtils}
 import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.SparkSession
@@ -33,19 +33,21 @@ import org.apache.spark.sql.connector.read.ScanBuilder
 import org.apache.spark.sql.connector.read.oracle.OraScanBuilder
 import org.apache.spark.sql.connector.write.{LogicalWriteInfo, WriteBuilder}
 import org.apache.spark.sql.connector.write.oracle.{OraWriteBuilder, OraWriteSpec}
+import org.apache.spark.sql.oracle.SQLSnippet
+import org.apache.spark.sql.oracle.expressions.DataSourceFilterTranslate
 import org.apache.spark.sql.sources.Filter
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 
 case class OracleTable(
-    dsKey: DataSourceKey,
-    oraTable: OraTable,
-    override val properties: util.Map[String, String])
-    extends StagedTable
+                        dsKey: DataSourceKey,
+                        oraTable: OraTable,
+                        override val properties: util.Map[String, String])
+  extends StagedTable
     with SupportsRead
     with SupportsWrite
     with SupportsDelete
-      with SupportsPartitionManagement{
+    with SupportsPartitionManagement {
 
   lazy val tableId = Identifier.of(Array(oraTable.schema), oraTable.name)
 
@@ -59,34 +61,39 @@ case class OracleTable(
   override lazy val partitioning: Array[Transform] =
     oraTable.partitionScheme.map(_.transforms).getOrElse(Array.empty)
 
-  override def commitStagedChanges(): Unit = ???
+  override def commitStagedChanges(): Unit = ()
 
-  override def abortStagedChanges(): Unit = ???
+  override def abortStagedChanges(): Unit = ()
 
   override def newScanBuilder(options: CaseInsensitiveStringMap): ScanBuilder = {
     OraScanBuilder(SparkSession.active, dsKey, tableId, oraTable, options)
   }
 
   override def newWriteBuilder(info: LogicalWriteInfo): WriteBuilder = {
-
-    // TODO
-    // check info.schema() matches oraTable.catalystSchema
-    // add casts if needed? or is this handled by Logical Optimizer.
-
     OraWriteBuilder(
       OraWriteSpec(
         dsKey,
         oraTable,
         info.schema(),
-        info.queryId()))
+        info.queryId()
+      )
+    )
   }
 
-  /*
-   * TODO
-   *  this represents delete dml
-   *  encapsulates delete handling in a OraDelete class
-   */
-  override def deleteWhere(filters: Array[Filter]): Unit = ???
+  override def deleteWhere(filters: Array[Filter]): Unit = {
+    import org.apache.spark.sql.oracle.OraSQLImplicits._
+
+    val oraExpr = DataSourceFilterTranslate(filters, oraTable).oraExpression
+    val destTab = SQLSnippet.tableQualId(oraTable)
+    val delCond = osql"${oraExpr.reifyLiterals}"
+
+    val delStat = osql"delete from ${destTab} where ${delCond}"
+
+    ORASQLUtils.performDSDML(dsKey,
+      delStat.sql,
+      s"Delete on table ${oraTable.schema}.${oraTable.name}"
+    )
+  }
 
   override def partitionSchema(): StructType = oraTable.partitionSchema
 

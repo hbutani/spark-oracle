@@ -27,7 +27,17 @@ case class DataSourceFilterTranslate(fils : Seq[sources.Filter], oraTab : OraTab
 
   private lazy val schema = oraTab.catalystSchema
 
-  def oraExpression : Option[OraExpression] = catalystExpr.flatMap(OraExpression.unapply)
+  def oraExpression : OraExpression = {
+    val oraExprO = catalystExpr.flatMap(OraExpression.unapply)
+
+    if (!oraExprO.isDefined) {
+      throw new UnsupportedOperationException(
+        s"""Delete condition filters: ${fils.mkString("[", ",", "]")}
+           |cannot translate to oracle delete expression""".stripMargin
+      )
+    }
+    oraExprO.get
+  }
 
   private object LiteralVal {
     def unapply(value : Any) : Option[catexpr.Literal] =

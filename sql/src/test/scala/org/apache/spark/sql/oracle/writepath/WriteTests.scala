@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.oracle.writepath
 
+import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 
 
@@ -39,28 +40,55 @@ class WriteTests extends AbstractWriteTests {
     // scalastyle:on println
   }
 
-  performTest(scenarios(0))
-  performTest(scenarios(1))
-  // performTest(scenarios(2))
-  performTest(scenarios(3))
-  performTest(scenarios(4))
-  performTest(scenarios(5))
-  performTest(scenarios(6))
-  performTest(scenarios(7))
-  performTest(scenarios(8))
-  // performTest(scenarios(9))
+  for (scn <- scenarios) performTest(scn)
+  for (scn <- compositeScenarios) performTest(scn)
+  for (scn <- deleteScenarios) performTest(scn)
 
-  performTest(compositeScenarios(0))
-  performTest(compositeScenarios(1))
-  performTest(compositeScenarios(2))
-  performTest(compositeScenarios(3))
-  performTest(compositeScenarios(4))
+  test("negWrongQueryShapeTest") {td =>
+    val ex = intercept[AnalysisException] {
+      val df = getAroundTestBugDF(
+        """
+          |insert into unit_test_write
+          |select C_CHAR_1, C_CHAR_5, C_VARCHAR2_10, C_VARCHAR2_40, C_NCHAR_1, C_NCHAR_5,
+          |       C_NVARCHAR2_10, C_NVARCHAR2_40, C_BYTE, C_SHORT, C_INT, C_LONG, C_NUMBER,
+          |       C_DECIMAL_SCALE_5, C_DECIMAL_SCALE_8, C_DATE
+          |from spark_catalog.default.src_tab_for_writes""".stripMargin
+      )
+      df.show(1000, false)
+    }
 
-  // run to validate src_tab_for_writes data file
+    assert(ex.getMessage.startsWith(
+      "Cannot write to 'SPARKTEST.UNIT_TEST_WRITE', not enough data columns")
+    )
+  }
+
+  test("negTruncateTest") {td =>
+    val ex = intercept[AnalysisException] {
+      TestOracleHive.sql("truncate table unit_test_write").
+        show(1000, false)
+    }
+
+    assert(ex.getMessage.startsWith("TRUNCATE TABLE is not supported for v2 tables."))
+  }
+
+  // run to validate src_tab_for_writes data file and get stats on data
   ignore("validateSrcData") {t =>
     try {
       TestOracleHive.sql("use spark_catalog")
       TestOracleHive.sql("select * from default.src_tab_for_writes").show(1000, false)
+
+      // count = 501
+      TestOracleHive.sql(
+        """select count(*)
+          |from default.src_tab_for_writes
+          |where c_byte < 0""".stripMargin)
+        .show(1000, false)
+
+      TestOracleHive.sql(
+        """select state, channel, count(*)
+          |from default.src_tab_for_writes
+          |group by state, channel""".stripMargin)
+        .show(1000, false)
     } finally {
       TestOracleHive.sql("use oracle.sparktest")
     }

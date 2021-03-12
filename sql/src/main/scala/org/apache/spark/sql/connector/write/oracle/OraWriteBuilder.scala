@@ -32,18 +32,9 @@ case class OraWriteBuilder(writeSpec: OraWriteSpec)
    * when deleteCond is not just `true`
    */
   override def overwrite(filters: Array[Filter]): WriteBuilder = {
-
     val oraExpr =
       DataSourceFilterTranslate(filters, writeSpec.oraTable).oraExpression
-
-    if (!oraExpr.isDefined) {
-      throw new UnsupportedOperationException(
-        s"""Delete condition filters: ${filters.mkString("[", ",", "]")}
-           |cannot translate to oracle delete expression""".stripMargin
-      )
-    }
-
-    OraWriteBuilder(writeSpec.setDeleteFilters(oraExpr.get))
+    OraWriteBuilder(writeSpec.setDeleteFilters(oraExpr))
   }
 
   /*
