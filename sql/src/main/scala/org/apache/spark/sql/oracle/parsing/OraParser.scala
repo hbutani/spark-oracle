@@ -16,13 +16,15 @@
  */
 package org.apache.spark.sql.oracle.parsing
 
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
+import org.apache.spark.sql.catalyst.analysis.{ResolvedTable, UnresolvedTable}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.parser.{ParseException, ParserInterface}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.connector.catalog.oracle.{OracleCatalog, OracleTable}
 import org.apache.spark.sql.oracle.OraSparkUtils
-import org.apache.spark.sql.oracle.commands.{ExplainPushdown, SparkOraVersion}
+import org.apache.spark.sql.oracle.commands.{ExplainPushdown, OraShowPartitions, SparkOraVersion}
 import org.apache.spark.sql.oracle.rules.OraLogicalRules
 import org.apache.spark.sql.types.{DataType, StructType}
 
@@ -107,6 +109,8 @@ private[parsing] class SparkOraExtensionsParser(val baseParser : ParserInterface
   protected val EXPLAIN = Keyword("EXPLAIN")
   protected val ORACLE = Keyword("ORACLE")
   protected val PUSHDOWN = Keyword("PUSHDOWN")
+  protected val SHOW = Keyword("SHOW")
+  protected val PARTITIONS = Keyword("PARTITIONS")
 
   def parseExtensions(input: String): ParseResult[LogicalPlan] = synchronized {
     // Initialize the Keywords.
@@ -115,7 +119,7 @@ private[parsing] class SparkOraExtensionsParser(val baseParser : ParserInterface
   }
 
   override protected def start: Parser[LogicalPlan] =
-    sparkOraVersion | explainPushdown
+    sparkOraVersion | explainPushdown | oracleShowPartitions
 
 
   private lazy val sparkOraVersion : Parser[LogicalPlan] =
@@ -128,5 +132,37 @@ private[parsing] class SparkOraExtensionsParser(val baseParser : ParserInterface
       case sqlText =>
         val df = sparkSession.sql(sqlText)
         ExplainPushdown(df.queryExecution.sparkPlan)
+    }
+
+  private lazy val oracleShowPartitions : Parser[LogicalPlan] =
+    (SHOW ~ ORACLE ~ PARTITIONS) ~> multiPartId ^^ {
+      case mId =>
+      val tab = UnresolvedTable(mId, "show oracle partitions")
+      val resolvedTab = sparkSession.sessionState.analyzer.execute(tab)
+      if (resolvedTab.isInstanceOf[ResolvedTable]) {
+        val resovTab = resolvedTab.asInstanceOf[ResolvedTable]
+        if (resovTab.catalog.isInstanceOf[OracleCatalog]) {
+          OraShowPartitions(resovTab.table.asInstanceOf[OracleTable])
+        } else {
+          throw new AnalysisException(s"Cannot run show oracle partitions" +
+            s" command on a non-oracle table  ${resovTab.identifier}")
+        }
+      } else {
+        throw new AnalysisException(
+          s"Cannot run show oracle partitions command: failed to resolve table ${mId.mkString(".")}"
+        )
+      }
+    }
+
+  private lazy val qualifiedId : Parser[Seq[String]] =
+    (ident ~ ("." ~> ident).?) ^^ {
+      case ~(n, None) => Seq(n)
+      case ~(q, Some(n)) => Seq(q, n)
+    }
+
+  private lazy val multiPartId : Parser[Seq[String]] =
+    ((ident | ORACLE) ~ ("." ~> qualifiedId).?) ^^ {
+      case ~(n, None) => Seq(n)
+      case ~(q, Some(s)) => q +: s
     }
 }

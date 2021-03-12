@@ -273,6 +273,39 @@ object OracleMetadata extends OraFunctionDefs {
     }
 
     def allPartitions : Seq[String] = partitionNameIdxSeq
+
+    private[oracle] def showPartitions : Array[Seq[OraTablePartition]] = {
+
+      /**
+       * each output entry represents a partition-subPartition-... path
+       * return all possible suhc paths under this partition
+       * @return
+       */
+      def showPartitions(oraP : OraTablePartition) : Seq[Seq[OraTablePartition]] = {
+        if (oraP.subPartitions.isEmpty) {
+          Seq(Seq(oraP))
+        } else {
+          for (
+            sP <- oraP.subPartitions.toSeq;
+            sPE : Seq[OraTablePartition] <- showPartitions(sP)
+          ) yield {
+            oraP +: sPE
+          }
+        }
+      }
+
+
+      partitions.map(showPartitions).flatten
+    }
+
+    private[oracle] def showPartitionScheme : Seq[TablePartitionScheme] = {
+
+      def showPartitionScheme(tS : TablePartitionScheme) : Seq[TablePartitionScheme] = {
+        Seq(tS) ++ tS.subPartitionScheme.toSeq.flatMap(showPartitionScheme)
+      }
+
+      partitionScheme.toSeq.flatMap(showPartitionScheme)
+    }
   }
 
   private[oracle] val NAMESPACES_CACHE_KEY = "__namespaces__".getBytes(UTF_8)

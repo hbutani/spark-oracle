@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.oracle
 
+import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.connector.catalog.oracle.{OracleCatalog, OraMetadataMgrInternalTest}
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.UnsupportedAction
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
@@ -176,6 +177,58 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
         """Unsupported Action on Oracle Catalog: rename table
           | For Oracle managed tables issue Oracle DDL
           |For External tables: Currently you have to drop and recreate table""".stripMargin)
+  }
+
+  val partTables = Seq(
+    "SPARKTEST.COMP",
+    "SPARKTEST.UT_SMALL_WRITE_MULTIROW_PARTITION",
+    "SPARKTEST.UNIT_TEST_WRITE_PARTITIONED",
+    "SPARKTEST.SALES_RANGE_PARTITION",
+    "SPARKTEST.SALES_BY_REGION_UNKNOWN_VALUES",
+    "SPARKTEST.SALES_BY_REGION ",
+    "SPARKTEST.SALES_BY_REGION_AND_CHANNEL",
+    "SPARKTEST.QUARTERLY_REGIONAL_SALES",
+    "SPARKTEST.INTERVAL_PAR_DEMO",
+    "SPARKTEST.HASH_PARTITION_TABLE",
+    "SPARKTEST.UNIT_TEST_PARTITIONED",
+    "TPCDS.CATALOG_RETURNS",
+    "TPCDS.STORE_SALES")
+
+  test("showPartitions") { td =>
+    for (t <- partTables) {
+      TestOracleHive.sql(
+        s"show partitions $t"
+      ).show(1000, false)
+    }
+  }
+
+  test("showOraPartitions") { td =>
+    for (t <- partTables) {
+      TestOracleHive.sql(
+        s"show oracle partitions $t"
+      ).show(1000, false)
+    }
+  }
+
+  test("qualShowOraPartitions") { td =>
+    for (t <- partTables) {
+      TestOracleHive.sql(
+        s"show oracle partitions oracle.$t"
+      ).show(1000, false)
+    }
+  }
+
+  test("showOraPartitionsNegTests") { td =>
+
+      val ex = intercept[AnalysisException] {
+        TestOracleHive.sql(s"""show oracle partitions xyz""".stripMargin)
+      }
+
+      assert(
+        ex.getMessage ==
+          "Cannot run show oracle partitions command: failed to resolve table xyz"
+      )
+
   }
 
 }
