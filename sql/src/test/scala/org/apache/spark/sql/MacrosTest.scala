@@ -18,51 +18,12 @@
 package org.apache.spark.sql
 
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
-import org.apache.spark.sql.oracle.AbstractTest
-import org.apache.spark.sql.sqlmacros.SQLMacroExpressionBuilder
 
-class MacrosTest extends AbstractTest {
+class MacrosTest extends MacrosAbstractTest {
 
   import org.apache.spark.sql.defineMacros._
-  import scala.tools.reflect.ToolBox
   import org.apache.spark.sql.catalyst.ScalaReflection._
   import universe._
-
-  private val tb = mirror.mkToolBox()
-
-  private def eval(fnTree : Tree) : Either[_, SQLMacroExpressionBuilder] = {
-    tb.eval(
-      q"""{
-          new org.apache.spark.sql.defineMacros.SparkSessionMacroExt(
-             org.apache.spark.sql.hive.test.oracle.TestOracleHive.sparkSession
-             ).udm(${fnTree})
-          }
-        """).asInstanceOf[Either[_, SQLMacroExpressionBuilder]]
-  }
-
-  private def register(nm : String, fnTree : Tree): Unit = {
-    tb.eval(
-      q"""{
-          import org.apache.spark.sql.defineMacros._
-          val ss = org.apache.spark.sql.hive.test.oracle.TestOracleHive.sparkSession
-          ss.registerMacro($nm,ss.udm(${fnTree}))
-        }"""
-    )
-  }
-
-  // scalastyle:off println
-  private def handleMacroOutput(r: Either[Any, SQLMacroExpressionBuilder]) = {
-    r match {
-      case Left(fn) => println(s"Failed to create expression for ${fn}")
-      case Right(fb) =>
-        val s = fb.macroExpr.treeString(false).split("\n").
-          map(s => if (s.length > 100) s.substring(0, 97) + "..." else s).mkString("\n")
-        println(
-        s"""Spark SQL expression is
-           |${fb.macroExpr.sql}""".stripMargin)
-    }
-  }
-  // scalastyle:on
 
   test("compileTime") { td =>
     handleMacroOutput(TestOracleHive.sparkSession.udm((i: Int) => i))
@@ -274,8 +235,10 @@ class MacrosTest extends AbstractTest {
     }.tree)
 
     val dfM =
-      TestOracleHive.sql("select taxAndDiscount(c_varchar2_40, c_number) from sparktest.unit_test")
-    println(
+      TestOracleHive.sql(
+        "select taxAndDiscount(c_varchar2_40, c_number) from sparktest.unit_test"
+      )
+    printOut(
       s"""Macro based Plan:
          |${dfM.queryExecution.analyzed}""".stripMargin
     )
@@ -328,17 +291,16 @@ class MacrosTest extends AbstractTest {
     TestOracleHive.udf.register("fn", (i: Int) => i + 1)
 
     val dfM = TestOracleHive.sql("select fnM(c_int) from sparktest.unit_test")
-    println(
+    printOut(
       s"""Macro based Plan:
          |${dfM.queryExecution.analyzed}""".stripMargin
     )
 
     val dfF = TestOracleHive.sql("select fn(c_int) from sparktest.unit_test")
-    println(
+    printOut(
       s"""Function based Plan:
          |${dfF.queryExecution.analyzed}""".stripMargin
     )
-
   }
 
   test("macroPlan") { td =>
@@ -357,7 +319,7 @@ class MacrosTest extends AbstractTest {
     )
 
     val dfM = TestOracleHive.sql("select m1(c_int) from sparktest.unit_test")
-    println(
+    printOut(
       s"""Macro based Plan:
          |${dfM.queryExecution.analyzed}""".stripMargin
     )
@@ -381,7 +343,7 @@ class MacrosTest extends AbstractTest {
     }.tree)
 
     val dfM = TestOracleHive.sql("select m3(c_int) from sparktest.unit_test")
-    println(
+    printOut(
       s"""Macro based Plan:
          |${dfM.queryExecution.analyzed}""".stripMargin
     )

@@ -14,29 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.sql.sqlmacros
+package org.apache.spark.sql
 
-import org.apache.spark.sql.catalyst.{expressions => sparkexpr}
+class StringMacrosTest extends MacrosAbstractTest {
 
-trait Options { self: ExprTranslator =>
+  import org.apache.spark.sql.defineMacros._
+  import org.apache.spark.sql.catalyst.ScalaReflection._
+  import universe._
 
-  import macroUniverse._
+  test("basics") { td =>
+    handleMacroOutput(eval(reify {(s : String) =>
+      (s * 3).toLowerCase().
+        toUpperCase().
+        trim.
+        substring(5).
+        substring(0, 5).
+        indexOf("a")}.tree)
+    )
+  }
 
-  object OptionPatterns {
+  test("stringOps") { td =>
+    import org.apache.spark.sql.sqlmacros.StringUtils._
 
-    val someApplySym = typeOf[Some.type].member(TermName("apply"))
-
-    def unapply(t: mTree): Option[sparkexpr.Expression] =
-      t match {
-        case q"$op.get" =>
-          for (
-            e <- CatalystExpression.unapply(op)
-          ) yield sparkexpr.objects.UnwrapOption(e.dataType, e)
-        case q"$id[$_]($op)" if id.symbol == someApplySym =>
-          for (
-            e <- CatalystExpression.unapply(op)
-          ) yield sparkexpr.objects.WrapOption(e, e.dataType)
-        case _ => None
-      }
+    handleMacroOutput(eval(reify {(s : String) =>
+      elt(0, concatWs(" ", s, s, Array(s, s)), s * 3)
+      }.tree)
+    )
   }
 }
