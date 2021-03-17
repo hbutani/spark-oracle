@@ -41,6 +41,8 @@ with Strings { self : ExprTranslator =>
 
   import macroUniverse._
 
+  val predefTyp = typeOf[scala.Predef.type]
+
   object Literals {
     def unapply(t: mTree): Option[sparkexpr.Expression] =
       Option(t match {
@@ -103,8 +105,7 @@ with Strings { self : ExprTranslator =>
         case BasicArith(e) => e
         case StringPatterns(e) => e
         case JavaMathFuncs(e) => e
-        case CollectionConstruct(e) => e
-        case CollectionApply(e) => e
+        case CollectionTrees(e) => e
         case TupleConstruct(e) => e
         case FieldAccess(e) => e
         case StructConstruct(e) => e
