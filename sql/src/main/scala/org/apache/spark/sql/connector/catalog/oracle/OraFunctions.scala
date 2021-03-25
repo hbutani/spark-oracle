@@ -113,7 +113,8 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
         |select coalesce(p.overload, 'None'), p.subprogram_id,
         |       argument_name, position,
         |       data_type, data_length, data_precision, data_scale,
-        |       in_out, aggregate, p.owner
+        |       in_out, aggregate, p.owner,
+        |       type_owner, type_name
         |from ALL_PROCEDURES p join ALL_ARGUMENTS a on
         |      p.object_id = a.object_id and
         |      p.subprogram_id = a.subprogram_id and
@@ -197,8 +198,11 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
           val length = intJdbcGetSet.readOptionValue(rs, 6)
           val precision = intJdbcGetSet.readOptionValue(rs, 7)
           val scale = intJdbcGetSet.readOptionValue(rs, 8)
+          val udtOwner = strJdbcGetSet.readOptionValue(rs, 12)
+          val udtTypNm = strJdbcGetSet.readOptionValue(rs, 13)
+          val datatypeNm = OraDataType.dataTypeName(datatype, udtOwner, udtTypNm)
           val oDT = try {
-             OraDataType.create(datatype, length, precision, scale)
+             OraDataType.create(datatypeNm, length, precision, scale)
           } catch {
             case e : UnsupportedOraDataType =>
               addIssue(s"SubProgram ${curr_subPgmId}, Argument ${argNm} dataType is" +

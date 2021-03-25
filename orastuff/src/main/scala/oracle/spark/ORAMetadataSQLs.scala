@@ -37,6 +37,14 @@ object ORAMetadataSQLs {
            ? := r_sxml;
          end;""".stripMargin
 
+  private val TYP_METADATA_SQL = s"""
+         declare
+           r_sxml clob;
+         begin
+           SELECT DBMS_METADATA.get_sxml ('TYPE', ?, ?) into r_sxml from dual;
+           ? := r_sxml;
+         end;""".stripMargin
+
   /**
    * Return the DBMS_METADATA.get_xml and DBMS_METADATA.get_sxml
    * output for the given table.
@@ -181,6 +189,18 @@ object ORAMetadataSQLs {
       rs.next()
       rs.getString(1)
     }
+  }
+
+  def typeMetadata(dsKey: DataSourceKey, schema: String, typNm: String): String = {
+    var sxml: String = null
+    performDSCall(dsKey, TYP_METADATA_SQL, s"get table metadata for ${schema}.${typNm}", { cs =>
+      cs.setString(1, typNm)
+      cs.setString(2, schema)
+      cs.registerOutParameter(3, Types.CLOB)
+    }, { cs =>
+      sxml = cs.getString(3)
+    })
+    sxml
   }
 
 }

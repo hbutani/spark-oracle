@@ -18,11 +18,10 @@
 package org.apache.spark.sql.connector.catalog.oracle
 
 import java.sql.{JDBCType, Types}
-import java.util.Locale
 
 import org.apache.spark.sql.{types, SparkSession}
 import org.apache.spark.sql.oracle.{OraSparkConfig, OraSparkUtils}
-import org.apache.spark.sql.types.{BooleanType, ByteType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, NumericType, ShortType, StringType, TimestampType}
+import org.apache.spark.sql.types.{ArrayType, BooleanType, ByteType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, MapType, NumericType, ShortType, StringType, StructField, StructType, TimestampType}
 
 /**
  * References:
@@ -191,65 +190,46 @@ case class OraTimestampWithLocalTZ(frac_secs_prec: Option[Int]) extends OraTimes
       s"WITH LOCAL TIME ZONE"
 }
 
+trait OraUDT extends OraDataType {
+  val schema : String
+  val oraTypName : String
+
+  lazy val oraTypeString: String = s"${schema}.${oraTypName}"
+}
+
+case class OraStructField(name : String, oraDT : OraDataType)
+
+case class OraStructType(schema : String,
+                         oraTypName : String,
+                         fields : Array[OraStructField]) extends OraUDT {
+  val sqlType: Int = Types.STRUCT
+  lazy val catalystType: DataType =
+    StructType(fields.map(f => StructField(f.name, f.oraDT.catalystType)))
+}
+
+case class OraArrayType(schema : String,
+                        oraTypName : String,
+                        elemType : OraDataType,
+                        limit : Int) extends OraUDT {
+  val sqlType: Int = Types.ARRAY
+  lazy val catalystType: DataType = ArrayType(elemType.catalystType)
+}
+
+case class OraNestedTableType(schema : String,
+                              oraTypName : String,
+                              valueType : OraDataType) extends OraUDT {
+  val sqlType: Int = Types.ARRAY
+  lazy val catalystType: DataType = MapType(IntegerType, valueType.catalystType)
+}
+
 object OraDataType {
-
-  def typeString(
-      s: String,
-      length: Option[Int],
-      precision: Option[Int],
-      scale: Option[Int]): String = {
-    var r: String = s
-
-    val pDefined = precision.isDefined
-    val sDefined = scale.isDefined
-    val lDefined = length.isDefined
-    val addBrackets = pDefined || sDefined
-    val addComma = pDefined && sDefined
-
-    def add(cond: Boolean, s: => String): Unit = {
-      if (cond) {
-        r += s
-      }
-    }
-
-    add(addBrackets, "(")
-    add(pDefined, precision.get.toString)
-    add(addComma, ", ")
-    add(sDefined, scale.get.toString)
-    add(addBrackets, ")")
-    add(lDefined, length.get.toString)
-
-    r
-  }
 
   def create(
       s: String,
       length: Option[Int],
       precision: Option[Int],
       scale: Option[Int]): OraDataType =
-    (s.toUpperCase(Locale.ROOT), length, precision, scale) match {
-      case ("CHAR", Some(l), None, None) => OraChar(l, true)
-      case ("VARCHAR2", Some(l), None, None) => OraVarchar2(l, true)
-      case ("VARCHAR2", None, None, None) =>
-        OraVarchar2(OraSparkConfig.getConf(OraSparkConfig.VARCHAR2_MAX_LENGTH), true)
-      case ("NCHAR", Some(l), None, None) => OraNChar(l)
-      case ("NVARCHAR2", Some(l), None, None) => OraNVarchar2(l)
-      case ("NVARCHAR2", None, None, None) =>
-        OraNVarchar2(OraSparkConfig.getConf(OraSparkConfig.VARCHAR2_MAX_LENGTH))
-      case ("NUMBER", _, p, s) =>
-        OraNumber.checkSupported(p, s)
-        OraNumber(p, s)
-      case ("FLOAT", None, p, None) => OraFloat(p)
-      case ("LONG", None, None, None) => OraLong
-      case ("BINARY_INTEGER", None, None, None) => OraNumber(Some(9), None)
-      case ("BINARY_FLOAT", None, None, None) => OraBinaryFloat
-      case ("BINARY_DOUBLE", None, None, None) => OraBinaryDouble
-      case ("DATE", None, None, None) => OraDate
-      // case ("TIMESTAMP", p, None) => OraTimestamp(p)
-      case ("TIMESTAMP", None, None, s) => OraTimestamp(s)
-      // TODO TIMESTAMP WITH TZ, TIMESTAMP WITh LOCAL TZ
-      case _ => OracleMetadata.unsupportedOraDataType(typeString(s, length, precision, scale))
-    }
+    OracleCatalog.oracleCatalog.getMetadataManager.createOraDataType(s, length, precision, scale)
 
   def toCatalystType(
       sqlType: Int,
@@ -296,5 +276,14 @@ object OraDataType {
     case types.TimestampType => OraTimestamp(None)
     case _ => OraSparkUtils.throwAnalysisException(
       s"Unsupported dataType translation: ${dataType}")
+  }
+
+  def dataTypeName(datatype : String,
+                   udt_owner : Option[String],
+                   udt_typename : Option[String]) : String = {
+    // if (Set("UDT", "NESTED_TABLE", "VARRAY").contains( datatype.toUpperCase())) {
+    if (udt_owner.isDefined && udt_typename.isDefined) {
+      s"${udt_owner.get}.${udt_typename.get}"
+    } else datatype
   }
 }

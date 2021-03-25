@@ -45,11 +45,12 @@ import org.apache.spark.sql.util.CaseInsensitiveStringMap
  * `spark.sql.catalog.oracle.net.tns_admin,spark.sql.catalog.oracle.authMethod`
  */
 class OracleCatalog
-    extends CatalogPlugin
+  extends CatalogPlugin
     with CatalogExtension
     with StagingTableCatalog
     with OraExternalTableDDLSupport
-      with OraCatalogFunctionActions {
+    with OraCatalogFunctionActions
+    with OraCatalogTypesActions {
 
   private var _name: String = _
   private var metadataManager: OracleMetadataManager = _

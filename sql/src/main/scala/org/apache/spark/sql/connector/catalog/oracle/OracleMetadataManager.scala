@@ -36,6 +36,10 @@ import org.apache.spark.util.{ShutdownHookManager, Utils}
  *
  * It can operate in ''cache_only'' mode where it serves request from information in the
  * local cache. This should only be used for testing.
+ * Update on 3/24/21:
+ * - cache_only mode making less sense, now that tests need a Connection.
+ * - tests now load missing table metadata from DB,
+ *   so only namespaces and tablespaces calls strictly served from cache.
  *
  * Caching behavior:
  * - on startup namespace list and table lists are loaded from local disk cache or DB
@@ -49,7 +53,7 @@ import org.apache.spark.util.{ShutdownHookManager, Utils}
  * @param cMap
  */
 private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
-  extends Logging with OraFunctionDefLoader {
+  extends Logging with OraFunctionDefLoader with OraTypes {
 
   val connInfo = ConnectionInfo.connectionInfo(cMap)
   val catalogOptions = OracleCatalogOptions.catalogOptions(cMap)
@@ -170,14 +174,8 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
   }
 
   private def oraTableFromDB(schema: String, table: String): OraTable = {
-    if (!cache_only) {
     val (xml, sxml) = ORAMetadataSQLs.tableMetadata(dsKey, schema, table)
     XMLReader.parseTable(xml, sxml)
-    } else {
-      OracleMetadata.unsupportedAction(
-        "retrieve db info in 'cache_ony' mode",
-        Some("set 'spark.sql.catalog.oracle.use_metadata_cache' to false"))
-    }
   }
 
   private[oracle] def invalidateTable(schema: String, table: String): Unit = {

@@ -61,4 +61,9 @@ case class OraSparkSessionExts(sparkSession : SparkSession) {
     oraCatalog.registerOracleFunctions(packageName, fnSpecs : _*)(sparkSession)
   }
 
+  def registerOraType(schema: String, typName: String) : Unit = {
+    ensureOracleCatalog
+    oraCatalog.registerOraType(schema, typName)
+  }
+
 }

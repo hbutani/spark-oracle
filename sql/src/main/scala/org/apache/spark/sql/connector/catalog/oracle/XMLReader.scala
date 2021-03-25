@@ -30,7 +30,37 @@ import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{
   TableStats
 }
 
+object XMLParsingUtils {
+
+  val NAME_TAG = "NAME"
+  val SCHEMA_TAG = "SCHEMA"
+
+  private[oracle] def textValue(nd: NodeSeq): Option[String] = {
+    if (nd.nonEmpty) Some(nd.text) else None
+  }
+
+  private[oracle] def intValue(nd: NodeSeq): Option[Int] = {
+    textValue(nd).map(_.toInt)
+  }
+
+  private[oracle] def longValue(nd: NodeSeq): Option[Long] = {
+    textValue(nd).map(_.toLong)
+  }
+
+  private[oracle] def doubleValue(nd: NodeSeq): Option[Double] = {
+    textValue(nd).map(_.toDouble)
+  }
+
+  private[oracle] def exists(nd: NodeSeq): Boolean = nd.nonEmpty
+
+  private[oracle] def columnNames(nd: NodeSeq): Array[String] =
+    (nd \ "COL_LIST" \ "COL_LIST_ITEM" \ NAME_TAG).map(_.text).toArray
+
+}
+
 trait PartitionParsing { self: XMLReader.type =>
+
+  import XMLParsingUtils._
 
   private[oracle] case class PartitioningCls(partNode: NodeSeq) {
     val partitionNodeSeq: NodeSeq = partNode \ "PARTITION_LIST" \ "PARTITION_LIST_ITEM"
@@ -81,6 +111,9 @@ trait PartitionParsing { self: XMLReader.type =>
 }
 
 trait TableSXMLParsing { self: XMLReader.type =>
+
+  import XMLParsingUtils._
+
   private[oracle] case class TableProperties(nd: NodeSeq) {
     lazy val partitioning: Option[PartitioningCls] = {
       if (!(nd \ "RANGE_PARTITIONING").isEmpty) {
@@ -103,6 +136,10 @@ trait TableSXMLParsing { self: XMLReader.type =>
     lazy val precision = intValue(nd \ "PRECISION")
     lazy val scale = intValue(nd \ "SCALE")
     lazy val notNULL = exists(nd \ "NOT_NULL")
+    val typProps = exists(nd \ "TYPE_PROPERTIES")
+    val udtOwner = if (typProps) textValue(nd \ "TYPE_PROPERTIES" \ "SCHEMA") else None
+    val udtTypNm = if (typProps) textValue(nd \ "TYPE_PROPERTIES" \ "NAME") else None
+    val oraTypName = OraDataType.dataTypeName(datatype.toUpperCase(), udtOwner, udtTypNm)
   }
 
   private[oracle] def table_sxml(nd: NodeSeq): TableSXML =
@@ -114,7 +151,7 @@ trait TableSXMLParsing { self: XMLReader.type =>
       val tc = TableSchema(nd)
       OraColumn(
         tc.name,
-        OraDataType.create(tc.datatype, tc.length, tc.precision, tc.scale),
+        OraDataType.create(tc.oraTypName, tc.length, tc.precision, tc.scale),
         tc.collateName,
         tc.notNULL)
     }
@@ -204,6 +241,8 @@ trait TableSXMLParsing { self: XMLReader.type =>
 trait TableXMLParsing {
   self: XMLReader.type =>
 
+  import XMLParsingUtils._
+
   private[oracle] def table_xml(nd: NodeSeq): TableXML =
     TableXML(nd \ "ROW" \ "TABLE_T")
 
@@ -221,30 +260,6 @@ trait TableXMLParsing {
 object XMLReader extends PartitionParsing with TableSXMLParsing with TableXMLParsing {
 
   import scala.xml.XML._
-
-  val NAME_TAG = "NAME"
-  val SCHEMA_TAG = "SCHEMA"
-
-  private[oracle] def textValue(nd: NodeSeq): Option[String] = {
-    if (nd.nonEmpty) Some(nd.text) else None
-  }
-
-  private[oracle] def intValue(nd: NodeSeq): Option[Int] = {
-    textValue(nd).map(_.toInt)
-  }
-
-  private[oracle] def longValue(nd: NodeSeq): Option[Long] = {
-    textValue(nd).map(_.toLong)
-  }
-
-  private[oracle] def doubleValue(nd: NodeSeq): Option[Double] = {
-    textValue(nd).map(_.toDouble)
-  }
-
-  private[oracle] def exists(nd: NodeSeq): Boolean = nd.nonEmpty
-
-  private[oracle] def columnNames(nd: NodeSeq): Array[String] =
-    (nd \ "COL_LIST" \ "COL_LIST_ITEM" \ NAME_TAG).map(_.text).toArray
 
   def parseTable(xml: String, sxml: String): OraTable = {
     val tbl_sxml = table_sxml(loadString(sxml))
