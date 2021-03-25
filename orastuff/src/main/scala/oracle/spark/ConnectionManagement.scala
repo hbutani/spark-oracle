@@ -76,7 +76,7 @@ object ConnectionManagement extends DataSources with Logging {
    * has issue, than an alternate is to get a new connection for each oracle statement
    * executed on a Executor slot/thread.
    */
-  private def getConnectionOnExecutor(dsKey: DataSourceKey, pds: PoolDataSource): Connection = {
+  private def getConnectionFromPool(dsKey: DataSourceKey, pds: PoolDataSource): Connection = {
     logDebug(s"Connection request for ${dsKey} on ${Thread.currentThread().getName}")
     val conn: Connection = pds.getConnection()
     conn
@@ -121,21 +121,31 @@ object ConnectionManagement extends DataSources with Logging {
     pdsMap.computeIfAbsent(dsKey, createPDS)
   }
 
+  /**
+   * For calls on the driver.
+   * Now it is possible to have multiple interleaved Oracle calls.
+   * For example: Loading a Function definition that has an Arg of User_Defined_Type.
+   * This might cause a call [[OraTypes#loadType]].
+   * So each call gets a Connection from the Pool.
+   */
   private[oracle] def getConnection(
       dsKey: DataSourceKey,
       connInfo: ConnectionInfo): Connection = {
     val pds = _setupPool(dsKey, connInfo)
-    attachAndGetConnection(dsKey, pds)
+    // attachAndGetConnection(dsKey, pds)
+    getConnectionFromPool(dsKey, pds)
   }
 
-  def getConnection(dsInfo: DataSourceInfo): Connection = {
+  /*
+   * For Executor Tasks.
+   * If the strategy of closing the connection
+   * as part of Task completion/failure( see [[OraPartitionReader.ConnectionCloser]])
+   * has issue, than an alternate is to get a new connection for each oracle statement
+   * executed on a Executor slot/thread.
+   */
+  def getConnectionInExecutor(dsInfo: DataSourceInfo): Connection = {
     val pds = _setupPool(dsInfo.key, dsInfo.connInfo)
     attachAndGetConnection(dsInfo.key, pds)
-  }
-
-  def getConnectionOnExecutor(dsInfo: DataSourceInfo): Connection = {
-    val pds = _setupPool(dsInfo.key, dsInfo.connInfo)
-    getConnectionOnExecutor(dsInfo.key, pds)
   }
 
   def reset(): Unit = synchronized {
@@ -144,10 +154,6 @@ object ConnectionManagement extends DataSources with Logging {
       // TODO
     }
     pdsMap.clear()
-  }
-
-  def getConnectionInExecutor(ds: DataSourceInfo): Connection = {
-    ConnectionManagement.getConnection(ds)
   }
 
   /**

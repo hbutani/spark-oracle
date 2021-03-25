@@ -94,7 +94,7 @@ trait DataSources {
   }
 
   private[oracle] def getConnection(dsKey: DataSourceKey): Connection = {
-    ConnectionManagement.getConnection(info(dsKey))
+    ConnectionManagement.getConnection(dsKey, info(dsKey).connInfo)
   }
 
   private[oracle] def tableIdentifier(name: String): TableIdentifier = {

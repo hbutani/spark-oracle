@@ -109,7 +109,7 @@ object ConnectionInfo {
 
   def connectionInfo(parameters: CaseInsensitiveMap[String]): ConnectionInfo = {
     require(parameters.isDefinedAt(ORACLE_URL), s"Option '$ORACLE_URL' is required.")
-    require(parameters.isDefinedAt(ORACLE_JDBC_USER), s"Option '$ORACLE_URL' is required.")
+    require(parameters.isDefinedAt(ORACLE_JDBC_USER), s"Option '$ORACLE_JDBC_USER' is required.")
 
     ConnectionInfo(
       parameters(ORACLE_URL),
