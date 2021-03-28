@@ -20,9 +20,13 @@ package org.apache.spark.sql.oracle.expressions
 import java.math.BigDecimal
 import java.sql._
 
+import scala.collection.mutable.ArrayBuffer
+
+import oracle.sql.Datum
+
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
-import org.apache.spark.sql.catalyst.util.{DateTimeUtils, LegacyDateFormats, TimestampFormatter}
+import org.apache.spark.sql.catalyst.expressions.{Expression, GenericInternalRow, Literal}
+import org.apache.spark.sql.catalyst.util.{ArrayBasedMapData, ArrayData, DateTimeUtils, GenericArrayData, LegacyDateFormats, MapData, TimestampFormatter}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils.getZoneId
 import org.apache.spark.sql.oracle.{OraSparkUtils, OraSQLLiteralBuilder, SQLSnippet}
 import org.apache.spark.sql.types._
@@ -139,7 +143,7 @@ object OraLiterals {
       })
   }
 
-  trait JDBCGetSet[T] {
+  sealed trait JDBCGetSet[T] {
 
     val sqlType: Int
 
@@ -156,6 +160,12 @@ object OraLiterals {
     protected def readIRow(iRow: InternalRow, pos: Int): T
     protected def readLiteral(lit: Literal): T
     protected def setPrepStat(ps: PreparedStatement, pos: Int, v: T): Unit
+
+    def readDatum(datum : Datum) : T
+    final def setIRow(oRow: InternalRow, pos: Int, datum : Datum) : Unit = {
+      setIRow(oRow: InternalRow, pos: Int, readDatum(datum))
+    }
+    protected def setValue(value : T, pos : Int, jdbcObjArr : scala.Array[AnyRef]) : Unit = ()
 
     /**
      * Read a value from the [[ResultSet]] and set it in the [[InternalRow]]
@@ -208,6 +218,7 @@ object OraLiterals {
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: String) =
       ps.setString(pos, v)
 
+    @inline def readDatum(datum : Datum) : String = datum.stringValue()
     @inline override protected def readLiteral(lit: Literal): String =
       lit.value.asInstanceOf[UTF8String].toString
   }
@@ -222,6 +233,7 @@ object OraLiterals {
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getByte(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Byte) =
       ps.setByte(pos, v)
+    @inline def readDatum(datum : Datum) : Byte = datum.byteValue()
     @inline override protected def readLiteral(lit: Literal): Byte =
       lit.value.asInstanceOf[Byte]
   }
@@ -236,6 +248,7 @@ object OraLiterals {
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getShort(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Short) =
       ps.setShort(pos, v)
+    @inline def readDatum(datum : Datum) : Short = datum.intValue().toShort
     @inline override protected def readLiteral(lit: Literal): Short =
       lit.value.asInstanceOf[Short]
   }
@@ -250,6 +263,7 @@ object OraLiterals {
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getInt(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Int) =
       ps.setInt(pos, v)
+    @inline def readDatum(datum : Datum) : Int = datum.intValue()
     @inline override protected def readLiteral(lit: Literal): Int =
       lit.value.asInstanceOf[Int]
   }
@@ -264,6 +278,7 @@ object OraLiterals {
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getLong(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Long) =
       ps.setLong(pos, v)
+    @inline def readDatum(datum : Datum) : Long = datum.longValue()
     @inline override protected def readLiteral(lit: Literal): Long =
       lit.value.asInstanceOf[Long]
   }
@@ -281,6 +296,7 @@ object OraLiterals {
 
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: BigDecimal) =
       ps.setBigDecimal(pos, v)
+    @inline def readDatum(datum : Datum) : BigDecimal = datum.bigDecimalValue()
     @inline override protected def readLiteral(lit: Literal): BigDecimal =
       lit.value.asInstanceOf[Decimal].toJavaBigDecimal
   }
@@ -295,6 +311,7 @@ object OraLiterals {
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getFloat(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Float) =
       ps.setFloat(pos, v)
+    @inline def readDatum(datum : Datum) : Float = datum.floatValue()
     @inline override protected def readLiteral(lit: Literal): Float =
       lit.value.asInstanceOf[Float]
   }
@@ -309,6 +326,7 @@ object OraLiterals {
     @inline protected def readIRow(iRow: InternalRow, pos: Int) = iRow.getDouble(pos)
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Double) =
       ps.setDouble(pos, v)
+    @inline def readDatum(datum : Datum) : Double = datum.doubleValue()
     @inline override protected def readLiteral(lit: Literal): Double =
       lit.value.asInstanceOf[Double]
   }
@@ -324,6 +342,7 @@ object OraLiterals {
       DateTimeUtils.toJavaDate(iRow.getInt(pos))
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Date) =
       ps.setDate(pos, v)
+    @inline def readDatum(datum : Datum) : Date = datum.dateValue()
     @inline override protected def readLiteral(lit: Literal): Date =
       DateTimeUtils.toJavaDate(lit.value.asInstanceOf[Int])
   }
@@ -339,8 +358,139 @@ object OraLiterals {
       DateTimeUtils.toJavaTimestamp(iRow.getLong(pos))
     @inline protected def setPrepStat(ps: PreparedStatement, pos: Int, v: Timestamp) =
       ps.setTimestamp(pos, v)
+    @inline def readDatum(datum : Datum) : Timestamp = datum.timestampValue()
     @inline override protected def readLiteral(lit: Literal): Timestamp =
       DateTimeUtils.toJavaTimestamp(lit.value.asInstanceOf[Long])
+  }
+
+  private case class StructGetSet(dt : StructType)
+    extends JDBCGetSet[InternalRow] {
+
+    private val fieldGetSets : scala.Array[JDBCGetSet[_]] =
+      for (dtF <- dt.fields) yield {
+        jdbcGetSet(dtF.dataType)
+      }
+
+    override val sqlType: Int = Types.STRUCT
+
+    def readDatum(datum : Datum) : InternalRow = {
+      if (datum == null) {
+        null
+      } else {
+        val oraStruct = datum.asInstanceOf[oracle.sql.STRUCT]
+        val datums = oraStruct.getOracleAttributes
+        val iRow = new GenericInternalRow(scala.Array.fill[Any](dt.size)(null))
+        for (((f, d), i) <- fieldGetSets.zip(datums).zipWithIndex) {
+          if (d != null) {
+            f.setIRow(iRow, i, d)
+          }
+        }
+        iRow
+      }
+    }
+
+    override protected def readResultSet(rs: ResultSet, pos: Int): InternalRow = {
+      readDatum(rs.getObject(pos).asInstanceOf[Datum])
+    }
+
+    override protected def setIRow(oRow: InternalRow, pos: Int, v: InternalRow): Unit = {
+      oRow(pos) = v
+    }
+
+    override protected def readIRow(iRow: InternalRow, pos: Int): InternalRow = {
+      iRow.get(pos, dt).asInstanceOf[InternalRow]
+    }
+
+    override protected def readLiteral(lit: Literal): InternalRow = {
+      lit.value.asInstanceOf[InternalRow]
+    }
+
+    override protected def setPrepStat(ps: PreparedStatement, pos: Int, v: InternalRow): Unit = {
+      // convert to Object[]
+      // does this give me the Ora Obj TypeName ps.getMetaData.getColumnTypeName(pos)
+    }
+  }
+
+  private case class ArrayGetSet(dt : ArrayType) extends JDBCGetSet[ArrayData] {
+    private val componentGetSet : JDBCGetSet[_] = jdbcGetSet(dt.elementType)
+
+    override val sqlType: Int = Types.ARRAY
+
+    def readDatum(datum : Datum) : ArrayData = {
+      if (datum == null) {
+        null
+      } else {
+        val oraArray = datum.asInstanceOf[oracle.jdbc.internal.OracleArray]
+        val elemDatums = oraArray.getOracleArray
+        val arr = scala.Array.fill[Any](elemDatums.size)(null)
+        for ((elem, i) <- elemDatums.zipWithIndex) {
+          if (elem != null) {
+            arr(i) = componentGetSet.readDatum(elem)
+          }
+        }
+        new GenericArrayData(arr)
+      }
+    }
+
+    override protected def readResultSet(rs: ResultSet, pos: Int): ArrayData = {
+      readDatum(rs.getObject(pos).asInstanceOf[Datum])
+    }
+
+    override protected def setIRow(oRow: InternalRow, pos: Int, v: ArrayData): Unit = {
+      oRow(pos) = v
+    }
+
+    override protected def readIRow(iRow: InternalRow, pos: Int): ArrayData = {
+      iRow.get(pos, dt).asInstanceOf[ArrayData]
+    }
+
+    override protected def readLiteral(lit: Literal): ArrayData = {
+      lit.value.asInstanceOf[ArrayData]
+    }
+
+    override protected def setPrepStat(ps: PreparedStatement, pos: Int, v: ArrayData): Unit = ()
+  }
+
+  private case class MapGetSet(dt : MapType) extends JDBCGetSet[MapData] {
+    private val valueGetSet : JDBCGetSet[_] = jdbcGetSet(dt.valueType)
+
+    override val sqlType: Int = Types.ARRAY
+
+    def readDatum(datum : Datum) : MapData = {
+      if (datum == null) {
+        null
+      } else {
+        val oraArray = datum.asInstanceOf[oracle.jdbc.internal.OracleArray]
+        val elemDatums = oraArray.getOracleArray
+        val keys = ArrayBuffer[Int]()
+        val values = ArrayBuffer[Any]()
+        for ((elem, i) <- elemDatums.zipWithIndex) {
+          if ( elem != null) {
+            keys += i
+            values += valueGetSet.readDatum(elem)
+          }
+        }
+        new ArrayBasedMapData(new GenericArrayData(keys.toArray), new GenericArrayData(values))
+      }
+    }
+
+    override protected def readResultSet(rs: ResultSet, pos: Int): MapData = {
+      readDatum(rs.getObject(pos).asInstanceOf[Datum])
+    }
+
+    override protected def setIRow(oRow: InternalRow, pos: Int, v: MapData): Unit = {
+      oRow(pos) = v
+    }
+
+    override protected def readIRow(iRow: InternalRow, pos: Int): MapData = {
+      iRow.get(pos, dt).asInstanceOf[MapData]
+    }
+
+    override protected def readLiteral(lit: Literal): MapData = {
+      lit.value.asInstanceOf[MapData]
+    }
+
+    override protected def setPrepStat(ps: PreparedStatement, pos: Int, v: MapData): Unit = ()
   }
 
   def jdbcGetSet(dt: DataType): JDBCGetSet[_] = dt match {
@@ -354,6 +504,9 @@ object OraLiterals {
     case DoubleType => DoubleGetSet
     case DateType => DateGetSet
     case TimestampType => TimestampGetSet
+    case st : StructType => StructGetSet(st)
+    case at : ArrayType => ArrayGetSet(at)
+    case mt : MapType => MapGetSet(mt)
     case _ =>
       OraSparkUtils.throwAnalysisException(
         s"Currently Unsupported DataType for reading/writing values from oracle: ${dt}")

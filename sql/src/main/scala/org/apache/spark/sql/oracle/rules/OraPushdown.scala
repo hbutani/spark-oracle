@@ -17,7 +17,7 @@
 package org.apache.spark.sql.oracle.rules
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.{AliasHelper, AttributeReference, Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{AliasHelper, AttributeReference, NamedExpression}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.connector.read.oracle.{OraPushdownScan, OraScan}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
@@ -73,6 +73,48 @@ trait OraPushdown {
         scan = newOraScan,
         output = pushdownCatalystOp.output.asInstanceOf[Seq[AttributeReference]]
       )
+    }
+  }
+
+  /*
+   * TODO: provide a partial pushdown translation mode.
+   *  For Project, Filter, Order setup a plan where push as much
+   * of projections, filters and sort order expressions.
+   *
+   * For example in UDTypesTest the query:
+   * select oracle.unit_test_fn_2(col3) from sparktest.unit_test_table_udts
+   * If the test does a `sql(query).show()` then the function invocation is not pushed
+   * because the logical plan has a `cast(oracle.unit_test_fn_2_invoke(...), StringType)`
+   * projection; and we don't pushdown a cast of a Struct to a String.
+   * In this case should setup a plan like this:
+   * Project cast(res_struct as String)
+   *   DataSourceV2ScanRelation
+   *     (OraPlan(orasql=select unit_test_fn_2(col3) from sparktest.unit_test_table_udts))
+   * So partialPushdownSQL should return:
+   *   (
+   *     OraPlan(orasql=select unit_test_fn_2(col3) from sparktest.unit_test_table_udts)
+   *     dsV2 => Project(cast(res_struct as String), dsV2)
+   *   )
+   *
+   * Default behavior is to fallback to all or nothing mode.
+   */
+  private[rules] def partialPushdownSQL :
+  (Option[OraQueryBlock], DataSourceV2ScanRelation => Option[LogicalPlan]) =
+    (pushdownSQL, dsV2 => Some(dsV2))
+
+  /*
+   * Support partial pushdown of the pushdownCatalystOp.
+   */
+  def pushdownPartialMode: LogicalPlan = {
+    partialPushdownSQL match {
+      case (Some(oraPlan), fn) =>
+        val newOraScan = OraPushdownScan(sparkSession, inOraScan.dsKey, oraPlan)
+        val dsScanRel = inDSScan.copy(
+          scan = newOraScan,
+          output = pushdownCatalystOp.output.asInstanceOf[Seq[AttributeReference]]
+        )
+        fn(dsScanRel).getOrElse(pushdownCatalystOp)
+      case (None, _) => pushdownCatalystOp
     }
   }
 }

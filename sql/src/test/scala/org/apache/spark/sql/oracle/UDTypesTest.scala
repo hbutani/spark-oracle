@@ -160,9 +160,15 @@ class UDTypesTest extends AbstractTest with PlanTestHelpers {
     }
   }
 
-  ignore("select") {td =>
-    TestOracleHive.sql("select * from sparktest.hb_table_udts")
-      .show(1000, false)
+  test("select") {td =>
+    TestOracleHive.sql(star_query).show(1000, false)
+    TestOracleHive.sql(fn1_query).show(1000, false)
+
+    // Have to do a collect because don't have pushdown for cast of a struct.
+    // See note in OraPushdown about partial pushdown
+    val r = TestOracleHive.sql(fn2_query).collect()
+    // scalastyle:off println
+    println(r.mkString("\n"))
   }
 
 }
