@@ -28,8 +28,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Unevaluable, UnevaluableAggregate, UserDefinedExpression}
-import org.apache.spark.sql.oracle.expressions.OraLiterals
-import org.apache.spark.sql.oracle.expressions.OraLiterals.JDBCGetSet
+import org.apache.spark.sql.oracle.expressions.{JDBCGetSet, OraLiterals}
 import org.apache.spark.sql.types.{DataType, IntegerType, StringType}
 
 trait OraFunctionDefs { self : OracleMetadata.type =>

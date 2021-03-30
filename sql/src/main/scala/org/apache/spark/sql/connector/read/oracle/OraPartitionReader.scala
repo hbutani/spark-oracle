@@ -28,8 +28,8 @@ import org.apache.spark.sql.catalyst.expressions.{Attribute, Literal, SpecificIn
 import org.apache.spark.sql.connector.read.PartitionReader
 import org.apache.spark.sql.connector.read.oracle.OraPartition.OraQueryAccumulators
 import org.apache.spark.sql.oracle.OracleCatalogOptions
-import org.apache.spark.sql.oracle.expressions.OraLiterals
-import org.apache.spark.sql.oracle.expressions.OraLiterals.{jdbcGetSet, JDBCGetSet}
+import org.apache.spark.sql.oracle.expressions.{JDBCGetSet, OraLiterals}
+import org.apache.spark.sql.oracle.expressions.OraLiterals.jdbcGetSet
 import org.apache.spark.sql.oracle.sqlexec.SparkOraStatement
 import org.apache.spark.util.{DoubleAccumulator, NextIterator, TaskCompletionListener, TaskFailureListener}
 

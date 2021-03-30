@@ -19,7 +19,8 @@ package org.apache.spark.sql.connector.write.oracle
 
 import oracle.spark.{DataSourceKey, ORASQLUtils}
 
-import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraTable
+import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{OraColumn, OraTable}
+import org.apache.spark.sql.connector.catalog.oracle.OraNestedTableType
 import org.apache.spark.sql.connector.write.LogicalWriteInfo
 import org.apache.spark.sql.oracle.{OraSparkConfig, SQLSnippet}
 import org.apache.spark.sql.oracle.expressions.OraExpression
@@ -43,6 +44,8 @@ case class OraWriteSpec(
     isDynamicPartitionMode : Boolean = false,
     deleteCond: Option[OraExpression] = None,
     isTruncate: Boolean = false) {
+
+  def oraTableShape : Array[OraColumn] = oraTable.columns
 
   def setDeleteFilters(_deleteCond: OraExpression): OraWriteSpec = {
     this.copy(deleteCond = Some(_deleteCond))
@@ -83,6 +86,18 @@ trait OraWriteActions extends Serializable {
 
   lazy val dest_tab_name = s"${writeSpec.oraTable.schema}.${writeSpec.oraTable.name}"
 
+  lazy val nested_tempTables : Array[(String, String)] = {
+    writeSpec.oraTable.columns.
+      filter(c => c.dataType.isInstanceOf[OraNestedTableType]).
+      map{c =>
+        val tNm = {
+          val nm = s"${c.name}_${tempTableName.substring(1, tempTableName.length - 1)}"
+          val nm1 = if (nm.length > 30) nm.substring(0, 30) else nm
+          s""""${nm1}""""
+        }
+        ((c.name), tNm)
+      }
+  }
 
   def createTempTableDDL: String
 
@@ -162,8 +177,15 @@ case class BasicWriteActions(writeSpec: OraWriteSpec) extends OraWriteActions {
       s"tablespace ${tableSpace.get}"
     } else ""
 
+    val nestTableClauses = if (nested_tempTables.nonEmpty) {
+      nested_tempTables.map {
+        case (colNm, nestTbl) => s"${colNm} store as ${nestTbl}"
+      }.mkString("NESTED TABLE ", " ", "")
+    } else ""
+
+
     s"""create table ${tempTableName}
-       |${tableSpaceClause} nologging
+       |${tableSpaceClause} nologging ${nestTableClauses}
        |as select * from ${dest_tab_name} where 1=2""".stripMargin
   }
 

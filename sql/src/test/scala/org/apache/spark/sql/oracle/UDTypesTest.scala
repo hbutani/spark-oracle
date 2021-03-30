@@ -112,6 +112,20 @@ class UDTypesTest extends AbstractTest with PlanTestHelpers {
   val fn1_query = s"select oracle.unit_test_fn_1(col1) from sparktest.${test_table}"
   val fn2_query = s"select oracle.unit_test_fn_2(col3) from sparktest.${test_table}"
 
+  val insert =
+    s"""insert into sparktest.${test_table} values
+       |(('b', 'San Jose', 'CA', '11111'),
+       | (('b', 'San Jose', 'CA', '11111'), 'fourth'),
+       | null,
+       | array(
+       |   ('c', 'San Jose', 'CA', '11111'),
+       |    ('c', 'San Jose', 'CA', '11111')
+       | ))""".stripMargin
+
+  val delete =
+    s"""delete from sparktest.${test_table}
+       |where col3 is null""".stripMargin
+
   /*
    * Call to create the types and table in Oracle instance
    * During normal test running we keep the metadata in checked in cache, so tests run faster.
@@ -123,6 +137,17 @@ class UDTypesTest extends AbstractTest with PlanTestHelpers {
       // try but don't throw because Types might already exist.
       scala.util.Try {
         types_ddl.map(ORASQLUtils.performDSDDL(dsKey, _, "Setup for UDTypesTest"))
+        Seq(
+          "unit_test_rec_type_1",
+          "unit_test_rec_type_2",
+          "unit_test_table_type_1",
+          "unit_test_table_type_2"
+        ).foreach(nm =>
+          ORASQLUtils.performDSDDL(
+            dsKey,
+            s"grant all privileges on sparktest.$nm to public",
+            "Setup for UDTypesTest")
+        )
       }
 
       ORASQLUtils.performDSDDL(dsKey, table_ddl, "Setup for UDTypesTest")
@@ -169,6 +194,14 @@ class UDTypesTest extends AbstractTest with PlanTestHelpers {
     val r = TestOracleHive.sql(fn2_query).collect()
     // scalastyle:off println
     println(r.mkString("\n"))
+  }
+
+  test("insert") {td =>
+    try {
+      TestOracleHive.sql(insert).show(1000, false)
+    } finally {
+       TestOracleHive.sql(delete).show(1000, false)
+    }
   }
 
 }

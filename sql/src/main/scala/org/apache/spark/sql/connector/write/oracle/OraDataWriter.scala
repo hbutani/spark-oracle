@@ -21,25 +21,29 @@ import oracle.spark.DataSourceInfo
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.OraColumn
 import org.apache.spark.sql.connector.write.{DataWriter, DataWriterFactory, WriterCommitMessage}
-import org.apache.spark.sql.oracle.expressions.OraLiterals
+import org.apache.spark.sql.oracle.expressions.{JDBCGetSet, OraLiterals}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.util.{DoubleAccumulator, LongAccumulator}
 
 case class OraDataWriterFactory(dsInfo: DataSourceInfo,
                                 dataSchema : StructType,
+                                oraTableShape : Array[OraColumn],
                                 tempTableInsertSQL: String,
                                 accumulators : OraDataWriter.OraInsertAccumulators
                                ) extends DataWriterFactory {
 
   override def createWriter(partitionId: Int, taskId: Long): DataWriter[InternalRow] =
-    OraDataWriter(partitionId, taskId, dsInfo, dataSchema, tempTableInsertSQL, accumulators)
+    OraDataWriter(partitionId, taskId, dsInfo, dataSchema, oraTableShape,
+      tempTableInsertSQL, accumulators)
 }
 
 case class OraDataWriter(partitionId: Int,
                          taskId: Long,
                          dsInfo: DataSourceInfo,
                          dataSchema : StructType,
+                         oraTableShape : Array[OraColumn],
                          tempTableInsertSQL: String,
                          accumulators : OraDataWriter.OraInsertAccumulators)
     extends DataWriter[InternalRow] {
@@ -53,7 +57,7 @@ case class OraDataWriter(partitionId: Int,
 
   override def write(record: InternalRow): Unit = {
     for (i <- (0 until setters.size)) {
-      setters(i).setValue(record, oraInsert.underlying, i)
+      setters(i).setValue(record, oraInsert.underlying, i, oraTableShape)
     }
     oraInsert.addBatch
   }

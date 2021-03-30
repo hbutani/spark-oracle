@@ -34,6 +34,7 @@ case class OraBatchWrite(writeSpec: OraWriteSpec) extends BatchWrite {
     OraDataWriterFactory(
       dsInfo,
       writeSpec.oraTable.catalystSchema,
+      writeSpec.oraTableShape,
       oraWriteActions.insertTempTableDML,
       accumulators
     )
