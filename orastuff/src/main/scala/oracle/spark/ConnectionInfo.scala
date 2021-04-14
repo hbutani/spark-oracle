@@ -76,6 +76,10 @@ case class ConnectionInfo(
     properties
   }
 
+  def convertToShard(shardURL : String) : ConnectionInfo = {
+    this.copy(url = shardURL)
+  }
+
 }
 
 object ConnectionInfo {

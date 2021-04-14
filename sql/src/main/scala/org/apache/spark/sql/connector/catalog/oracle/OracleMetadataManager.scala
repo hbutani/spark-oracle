@@ -61,7 +61,7 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
   val cache_only = catalogOptions.metadata_cache_only
 
   val dsKey: DataSourceKey = {
-    val dsKey = ConnectionManagement.registerDataSource(connInfo, catalogOptions, true)
+    val dsKey = ConnectionManagement.registerDataSource(connInfo, catalogOptions)
     ORAMetadataSQLs.validateConnection(dsKey)
     dsKey
   }

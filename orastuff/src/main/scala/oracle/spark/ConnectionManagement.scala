@@ -115,6 +115,10 @@ object ConnectionManagement extends DataSources with Logging {
         pds.setValidateConnectionOnBorrow(true)
         // pds.setAbandonedConnectionTimeout(10)
         pds.setTimeoutCheckInterval(5)
+
+
+        pds.setShardingMode(false)
+
         pds
       }
     }

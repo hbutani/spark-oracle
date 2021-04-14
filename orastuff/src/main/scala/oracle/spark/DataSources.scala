@@ -20,14 +20,21 @@ package oracle.spark
 import java.sql.Connection
 import java.util.concurrent.{ConcurrentHashMap => CMap}
 
+import scala.language.implicitConversions
+
 import oracle.hcat.db.conn.OracleDBConnectionCacheUtil
 import oracle.spark.ORASQLUtils._
-import scala.language.implicitConversions
+import oracle.spark.sharding.ORAShardSQLs
 
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.oracle.OracleCatalogOptions
 
-case class DataSourceKey(connectionURL: String, userName: String)
+case class DataSourceKey(connectionURL: String, userName: String) {
+  def convertToShard(shardURL : String) : DataSourceKey = {
+    this.copy(connectionURL = shardURL)
+  }
+
+}
 
 object DataSourceKey {
   implicit def dataSourceKey(connInfo: ConnectionInfo): DataSourceKey =
@@ -38,7 +45,17 @@ case class DataSourceInfo(
     key: DataSourceKey,
     connInfo: ConnectionInfo,
     catalogOptions: OracleCatalogOptions,
-    isSharded: Boolean)
+    isSharded: Boolean) {
+
+  def convertToShard(shardURL : String) : DataSourceInfo = {
+    assert(isSharded)
+    this.copy(
+      key = key.convertToShard(shardURL),
+      connInfo = connInfo.convertToShard(shardURL)
+    )
+  }
+
+}
 
 trait DataSources {
 
@@ -47,16 +64,10 @@ trait DataSources {
   private[oracle] def registerDataSource(
       dsKey: DataSourceKey,
       connInfo: ConnectionInfo,
-      catalogOptions: OracleCatalogOptions,
-      setupPool : Boolean): Unit = {
+      catalogOptions: OracleCatalogOptions): Unit = {
     val createDSI = new java.util.function.Function[DataSourceKey, DataSourceInfo] {
       override def apply(t: DataSourceKey): DataSourceInfo = {
-        val isSharded = if (setupPool) {
-          setupConnectionPool(dsKey, connInfo)
-        } else {
-          // TODO some other way to infer whether connection is to a sharded instance.
-          false
-        }
+        val isSharded = setupConnectionPool(dsKey, connInfo)
         DataSourceInfo(dsKey, connInfo, catalogOptions, isSharded)
       }
     }
@@ -75,10 +86,9 @@ trait DataSources {
 
   def registerDataSource(
       connInfo: ConnectionInfo,
-      catalogOptions: OracleCatalogOptions,
-      setupPool : Boolean): DataSourceKey = {
+      catalogOptions: OracleCatalogOptions): DataSourceKey = {
     val dsKey: DataSourceKey = connInfo
-    registerDataSource(dsKey, connInfo, catalogOptions, setupPool)
+    registerDataSource(dsKey, connInfo, catalogOptions)
     dsKey
   }
 
@@ -107,7 +117,7 @@ trait DataSources {
       dsKey,
       ConnectionManagement.getConnection(dsKey, connInfo),
       "setup connection pool") { conn =>
-      OracleDBConnectionCacheUtil.isShardedDB(conn)
+      ORAShardSQLs.isShardedInstance(conn)
     }
     b
   }

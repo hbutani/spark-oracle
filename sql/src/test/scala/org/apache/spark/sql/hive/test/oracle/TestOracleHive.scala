@@ -98,6 +98,8 @@ object OracleTestConf {
         conf = mammoth_medium(conf)
       case "scale1_tpcds" =>
         conf = scale1_tpcds(conf)
+      case "sharding" =>
+        conf = sharding(conf)
       // scalastyle:off
       case _ => ???
       // scalastyle:on
@@ -141,6 +143,13 @@ object OracleTestConf {
         // "jdbc:oracle:thin:@slcaa334:1531/cdb1_pdb7.regress.rdbms.dev.us.oracle.com")
       .set("spark.sql.catalog.oracle.user", "tpcds")
       .set("spark.sql.catalog.oracle.password", "tpcds")
+
+  def sharding(conf: SparkConf): SparkConf =
+    conf.set(
+      "spark.sql.catalog.oracle.url",
+      "jdbc:oracle:thin:@denad189:1521/cat.us.oracle.com")
+      .set("spark.sql.catalog.oracle.user", "tpch")
+      .set("spark.sql.catalog.oracle.password", "tpch")
 
   def testMaster: String = "local[*]"
 
