@@ -17,6 +17,7 @@ project/plugins/project/
 # idea
 .idea/
 *.iml
+.run/**
 
 # Mac
 .DS_Store
