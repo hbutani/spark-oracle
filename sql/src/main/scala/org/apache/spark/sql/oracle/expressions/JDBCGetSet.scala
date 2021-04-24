@@ -22,7 +22,7 @@ import java.sql._
 import scala.collection.mutable.ArrayBuffer
 
 import oracle.jdbc.OracleConnection
-import oracle.sql.Datum
+import oracle.sql.{CHAR, DATE, Datum, NUMBER, TIMESTAMP}
 
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{GenericInternalRow, Literal}
@@ -146,6 +146,11 @@ sealed trait JDBCGetSet[T] {
       setPrepStat(ps, pos + 1, v, null)
     }
   }
+
+  def toDatum(value : T) : Datum
+  final def toDatum(lit : Literal) : Datum = {
+    toDatum(readLiteral(lit))
+  }
 }
 
 private object StringGetSet extends JDBCGetSet[String] {
@@ -164,6 +169,8 @@ private object StringGetSet extends JDBCGetSet[String] {
   @inline def readDatum(datum : Datum) : String = datum.stringValue()
   @inline override protected def readLiteral(lit: Literal): String =
     lit.value.asInstanceOf[UTF8String].toString
+
+  @inline def toDatum(value : String) : Datum = new CHAR(value, null)
 }
 
 private object ByteGetSet extends JDBCGetSet[Byte] {
@@ -182,6 +189,8 @@ private object ByteGetSet extends JDBCGetSet[Byte] {
   @inline def readDatum(datum : Datum) : Byte = datum.byteValue()
   @inline override protected def readLiteral(lit: Literal): Byte =
     lit.value.asInstanceOf[Byte]
+
+  @inline def toDatum(value : Byte) : Datum = new NUMBER(value)
 }
 
 private object ShortGetSet extends JDBCGetSet[Short] {
@@ -200,6 +209,8 @@ private object ShortGetSet extends JDBCGetSet[Short] {
   @inline def readDatum(datum : Datum) : Short = datum.intValue().toShort
   @inline override protected def readLiteral(lit: Literal): Short =
     lit.value.asInstanceOf[Short]
+
+  @inline def toDatum(value : Short) : Datum = new NUMBER(value)
 }
 
 private object IntGetSet extends JDBCGetSet[Int] {
@@ -218,6 +229,8 @@ private object IntGetSet extends JDBCGetSet[Int] {
   @inline def readDatum(datum : Datum) : Int = datum.intValue()
   @inline override protected def readLiteral(lit: Literal): Int =
     lit.value.asInstanceOf[Int]
+
+  @inline def toDatum(value : Int) : Datum = new NUMBER(value)
 }
 
 private object LongGetSet extends JDBCGetSet[Long] {
@@ -236,6 +249,8 @@ private object LongGetSet extends JDBCGetSet[Long] {
   @inline def readDatum(datum : Datum) : Long = datum.longValue()
   @inline override protected def readLiteral(lit: Literal): Long =
     lit.value.asInstanceOf[Long]
+
+  @inline def toDatum(value : Long) : Datum = new NUMBER(value)
 }
 
 private class DecimalGetSet(val dt: DecimalType) extends JDBCGetSet[BigDecimal] {
@@ -257,6 +272,8 @@ private class DecimalGetSet(val dt: DecimalType) extends JDBCGetSet[BigDecimal] 
   @inline def readDatum(datum : Datum) : BigDecimal = datum.bigDecimalValue()
   @inline override protected def readLiteral(lit: Literal): BigDecimal =
     lit.value.asInstanceOf[Decimal].toJavaBigDecimal
+
+  @inline def toDatum(value : BigDecimal) : Datum = new NUMBER(value)
 }
 
 private object FloatGetSet extends JDBCGetSet[Float] {
@@ -275,6 +292,8 @@ private object FloatGetSet extends JDBCGetSet[Float] {
   @inline def readDatum(datum : Datum) : Float = datum.floatValue()
   @inline override protected def readLiteral(lit: Literal): Float =
     lit.value.asInstanceOf[Float]
+
+  @inline def toDatum(value : Float) : Datum = new NUMBER(value)
 }
 
 private object DoubleGetSet extends JDBCGetSet[Double] {
@@ -293,6 +312,8 @@ private object DoubleGetSet extends JDBCGetSet[Double] {
   @inline def readDatum(datum : Datum) : Double = datum.doubleValue()
   @inline override protected def readLiteral(lit: Literal): Double =
     lit.value.asInstanceOf[Double]
+
+  @inline def toDatum(value : Double) : Datum = new NUMBER(value)
 }
 
 private object DateGetSet extends JDBCGetSet[Date] {
@@ -312,6 +333,8 @@ private object DateGetSet extends JDBCGetSet[Date] {
   @inline def readDatum(datum : Datum) : Date = datum.dateValue()
   @inline override protected def readLiteral(lit: Literal): Date =
     DateTimeUtils.toJavaDate(lit.value.asInstanceOf[Int])
+
+  @inline def toDatum(value : Date) : Datum = new DATE(value)
 }
 
 private object TimestampGetSet extends JDBCGetSet[Timestamp] {
@@ -331,6 +354,8 @@ private object TimestampGetSet extends JDBCGetSet[Timestamp] {
   @inline def readDatum(datum : Datum) : Timestamp = datum.timestampValue()
   @inline override protected def readLiteral(lit: Literal): Timestamp =
     DateTimeUtils.toJavaTimestamp(lit.value.asInstanceOf[Long])
+
+  @inline def toDatum(value : Timestamp) : Datum = new TIMESTAMP(value)
 }
 
 trait UDTypeGetSet[T] extends JDBCGetSet[T] {
@@ -338,6 +363,9 @@ trait UDTypeGetSet[T] extends JDBCGetSet[T] {
                           v : AnyRef,
                           oraDT : OraDataType
                          ) : AnyRef
+
+  def toDatum(value : T) : Datum =
+    throw new UnsupportedOperationException("convert Literal to Datum on a UDT")
 }
 
 object UDTypeGetSet {
