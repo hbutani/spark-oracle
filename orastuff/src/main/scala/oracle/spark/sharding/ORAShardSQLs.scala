@@ -51,47 +51,28 @@ object ORAShardSQLs {
 
   val LIST_TABLE_FAMILIES =
     """
-      |select TABFAM_ID, TABLE_NAME, SCHEMA_NAME,
-      |       GROUP_TYPE, GROUP_COL_NUM,
-      |       SHARD_TYPE, SHARD_COL_NUM,
-      |       DEF_VERSION
-      |from local_chunk_types
-      |order by TABFAM_ID
-      |
-      |-- local_chunk_types table
-      |-- list the table family and root table
-      | Name					   Null?    Type
-      | ----------------------------------------- -------- ----------------------------
-      | TABFAM_ID				   NOT NULL NUMBER
-      | TABLE_NAME				   NOT NULL VARCHAR2(128)
-      | SCHEMA_NAME					    VARCHAR2(128)
-      | GROUP_TYPE					    VARCHAR2(5)
-      | GROUP_COL_NUM					    NUMBER
-      | SHARD_TYPE					    VARCHAR2(5)
-      | SHARD_COL_NUM					    NUMBER
-      | DEF_VERSION				   NOT NULL NUMBER
-      | SHARDGROUP_NAME				    VARCHAR2(4000)
-      |
+      |select TABFAM_ID, TABLE_NAME, SCHEMA_NAME, GROUP_TYPE,
+      |       GROUP_COL_NUM, SHARD_TYPE, SHARD_COL_NUM, DEF_VERSION
+      |from LOCAL_CHUNK_TYPES
       |""".stripMargin
 
   val LIST_TABLE_FAMILY_COLUMNS =
   """
-      |select tabfam_id, shard_level, col_name, COL_IDX_IN_KEY
-      |from local_chunk_columns
-      |order by tabfam_id, shard_level, COL_IDX_IN_KEY
-      |
-      |describe local_chunk_columns;
-      | Name					   Null?    Type
-      | ----------------------------------------- -------- ----------------------------
-      | TABFAM_ID					    NUMBER
-      | SHARD_LEVEL				   NOT NULL NUMBER(1)
-      | COL_NAME				   NOT NULL VARCHAR2(128)
-      | COL_IDX_IN_KEY 			   NOT NULL NUMBER
-      | EFF_TYPE				   NOT NULL NUMBER
-      | CHARACTER_SET					    NUMBER
-      | COL_TYPE				   NOT NULL NUMBER
-      | COL_SIZE				   NOT NULL NUMBER
+      |select SHARD_LEVEL, COL_IDX_IN_KEY, COL_NAME
+      |from LOCAL_CHUNK_COLUMNS
+      |where tabFam_id = ?
+      |order by SHARD_LEVEL, COL_IDX_IN_KEY
       |""".stripMargin
+
+  val LIST_CHUNKS =
+    """
+      |select shard_name, shard_key_low, shard_key_high,
+      |       group_key_low, group_key_high,
+      |       chunk_id, grp_id, chunk_unique_id,
+      |       chunk_name, priority, state
+      |from local_chunks c
+      |where tabfam_id = ?
+      |order by grp_id, chunk_id""".stripMargin
 
 
   def isShardedInstance(conn: Connection): Boolean = {
@@ -112,4 +93,25 @@ object ORAShardSQLs {
     performDSQuery(dsKey, LIST_REPLICATED_TABLES, "list replicated tables")(action)
   }
 
+  def listTableFamilies[V](dsKey: DataSourceKey)(action: ResultSet => V) : V = {
+    performDSQuery(dsKey, LIST_TABLE_FAMILIES, "list table families")(action)
+  }
+
+  def listTableFamilyColumns[V](dsKey: DataSourceKey, tFamId : Int)(action: ResultSet => V) : V = {
+    performDSQuery(dsKey, LIST_TABLE_FAMILY_COLUMNS,
+      "list table family columns",
+      ps => {
+        ps.setInt(1, tFamId)
+      }
+    )(action)
+  }
+
+  def listTableFamilyChunks[V](dsKey: DataSourceKey, tFamId : Int)(action: ResultSet => V) : V = {
+    performDSQuery(dsKey, LIST_CHUNKS,
+      "list table family chunks",
+      ps => {
+        ps.setInt(1, tFamId)
+      }
+    )(action)
+  }
 }

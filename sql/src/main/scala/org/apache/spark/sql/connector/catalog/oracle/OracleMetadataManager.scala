@@ -27,6 +27,7 @@ import org.iq80.leveldb.{DB, Options}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{OraIdentifier, OraTable}
+import org.apache.spark.sql.connector.catalog.oracle.sharding.{ShardingMetadata, ShardingMetadataLoader}
 import org.apache.spark.sql.oracle.OracleCatalogOptions
 import org.apache.spark.util.{ShutdownHookManager, Utils}
 
@@ -50,6 +51,29 @@ import org.apache.spark.util.{ShutdownHookManager, Utils}
  * - 'reloadCatalog' reload in-memory and on-disk cache of namespace list and table lists
  *   - This doesn't clear individual table metadata
  *
+ * Caching Update on 4/28, with support for Sharded Instances.
+ *  - There are several cache structures and types.
+ *    - The ''Level DB'' persistent cache stores [[OraTable]] structures and
+ *      can be reused across restarts. a `invalidateTable` can clear entry for
+ *      a table in this cache.
+ *    - The in memory caches spread between [[OracleMetadataManager]] and [[ShardingMetadata]]
+ *      are loaded on Catalog init and can be reloaded via the `loadCatalog(reloadFromDB=true)`
+ *      call.
+ *  - A Table's metadata is cached here in the ''Level DB'' cache of [[OraTable]] and the
+ *    [[org.apache.spark.sql.connector.catalog.oracle.sharding.ShardTable]] in [[ShardingMetadata]]
+ *  - There is very minimal consistency guarantees across caches. [[ShardingMetadata]] has
+ *    a synchronize method, caches in [[OracleMetadataManager]] have no locking.
+ *    The assumption is that cache inconsistencies can be overcome by a `reloadCatalog` and
+ *    `invalidateTable` calls.
+ *  - This means caching behavior is complex and hard to explain to users, with many ways to get
+ *    into bad states.
+ *  - The reasons for providing a persistent cache are less relevant now that we maintain a
+ *    connection to the Oracle instance.
+ *  - TODO
+ *    - remove the persistent cache and move to a single in memory cache.
+ *    - always loadFromDB
+ *    - a `loadCatalog` clears everything in the cache.
+ *
  * @param cMap
  */
 private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
@@ -65,7 +89,6 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
     ORAMetadataSQLs.validateConnection(dsKey)
     dsKey
   }
-
 
   private val cacheLoc: File =
     catalogOptions.metadataCacheLoc.map(new File(_)).getOrElse(Utils.createTempDir())
@@ -87,18 +110,18 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
   @volatile private var _namespacesMap: CaseInsensitiveMap[String] = null
   @volatile private var _namespaces : Array[Array[String]] = null
   @volatile private var _tableMap: CaseInsensitiveMap[Set[String]] = null
+  @volatile private var shardingMetadata : Option[ShardingMetadata] = None
 
   private[oracle] val defaultNamespace: String = dsKey.userName
 
   /*
-   * On start load namespaces and table lists from local cache or DB.
+   * On start load Catalog
    */
-  loadNamespaces(!cache_only)
-  loadTableSpaces(!cache_only)
+  loadCatalog(!cache_only)
 
-  private def loadNamespaces(reload : Boolean = false) : Unit = {
+  private def loadNamespaces(reloadFromDB : Boolean = false) : Unit = {
 
-    val nsBytes : Array[Byte] = if (!reload) {
+    val nsBytes : Array[Byte] = if (!reloadFromDB) {
       cache.get(OracleMetadata.NAMESPACES_CACHE_KEY)
     } else null
 
@@ -163,14 +186,21 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
     val (oraSchema, oraTblNm, tblIdKey) = tableKey(schema, table)
     val tblMetadataBytes = cache.get(tblIdKey)
 
-    if (tblMetadataBytes != null) {
+    val oraTbl = if (tblMetadataBytes != null) {
       Serialization.deserialize[OraTable](tblMetadataBytes)
     } else {
-      val oraTbl = oraTableFromDB(oraSchema, oraTblNm)
-      val tblMetadatBytes = Serialization.serialize(oraTbl)
+      val _oraTbl = oraTableFromDB(oraSchema, oraTblNm)
+      val tblMetadatBytes = Serialization.serialize(_oraTbl)
       cache.put(tblIdKey, tblMetadatBytes)
-      oraTbl
+      _oraTbl
     }
+
+    if (shardingMetadata.isDefined) {
+      shardingMetadata.get.registerTable(oraTbl, this)
+    }
+
+    oraTbl
+
   }
 
   private def oraTableFromDB(schema: String, table: String): OraTable = {
@@ -179,15 +209,48 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
   }
 
   private[oracle] def invalidateTable(schema: String, table: String): Unit = {
+    if (shardingMetadata.isDefined) {
+      shardingMetadata.get.invalidateTable(schema, table)
+    }
+
     if (!cache_only) {
       val (_, _, tblIdKey) = tableKey(schema, table)
       cache.delete(tblIdKey)
     }
   }
 
-  private[oracle] def reloadCatalog : Unit = {
-    loadNamespaces(true)
-    loadTableSpaces(true)
+  private[oracle] def loadCatalog(reloadFromDB : Boolean = true) : Unit = {
+    loadNamespaces(reloadFromDB)
+    loadTableSpaces(reloadFromDB)
+
+    val dsInfo = ConnectionManagement.info(dsKey)
+    /*
+     * For sharded instance
+     * - load table families
+     * - and then load the root tables of the families.
+     */
+    if (dsInfo.isSharded) {
+      val shrdMDLoader = new ShardingMetadataLoader {
+        val coordDSKey : DataSourceKey = dsKey
+      }
+      shardingMetadata = Some(shrdMDLoader.constructShardingMetadata)
+
+      /*
+       * Not loading the root tables on startup
+       * Why?
+       * - loading of OraTable leads to call to `OraDataType.create`
+       *   which looks for `OracleCatalog` on the current Session.
+       *   But we are in a call stack that is trying to setup the
+       *   Oracle Catalog. So this leads to another attempt to create
+       *   and initialize the Oracle Catalog. Which eventually fails
+       *   when trying to load the level-db cache the second time.
+       */
+      if (false) {
+        for (tblFam <- shardingMetadata.get.tableFamilies.values) {
+          oraTable(tblFam.rootTable.database, tblFam.rootTable.name)
+        }
+      }
+    }
   }
 
 }

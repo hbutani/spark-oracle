@@ -189,14 +189,14 @@ trait TableSXMLParsing { self: XMLReader.type =>
         (
           (nd \ SCHEMA_TAG).text,
           (nd \ NAME_TAG).text,
-          columnNames(nd \ "FOREIGN_KEY_CONSTRAINT_LIST_ITEM"))
+          columnNames(nd))
       }
 
       (
         for (fk <- (foreignKeyNode \ "FOREIGN_KEY_CONSTRAINT_LIST_ITEM"))
           yield {
             val cols = columnNames(fk)
-            val (fschema, fname, fcols) = referencedTable(foreignKeyNode)
+            val (fschema, fname, fcols) = referencedTable(fk \ "REFERENCES")
             OraForeignKey(cols, (fschema, fname), fcols)
           }
       ).toArray

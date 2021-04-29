@@ -19,7 +19,7 @@ package org.apache.spark.sql.connector.catalog.oracle.sharding.routing
 
 import scala.language.implicitConversions
 
-import oracle.spark.datastructs.{Interval, QResult, RedBlackIntervalTree}
+import oracle.spark.datastructs.{Interval, IntervalTree, QResult, RedBlackIntervalTree}
 import oracle.spark.sharding.KggHashGenerator
 import oracle.sql.{Datum, NUMBER}
 
@@ -27,111 +27,110 @@ import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata
 import org.apache.spark.sql.connector.catalog.oracle.sharding._
 import org.apache.spark.sql.oracle.expressions.{OraLiteral, OraLiterals}
 
-
-trait RoutingKeyRanges { self : RoutingTable =>
+trait RoutingKeyRanges { self: RoutingTable =>
 
   trait RoutingKeyRange extends Interval[RoutingKey]
 
-  case class ConsistentHashRange(start : SingleLevelKey, end : SingleLevelKey)
-    extends RoutingKeyRange
+  case class ConsistentHashRange(start: SingleLevelKey, end: SingleLevelKey)
+      extends RoutingKeyRange
 
-  case class MultiLevelKeyRange(gRange : RoutingKeyRange,
-                                sRange : RoutingKeyRange)
-    extends RoutingKeyRange {
+  case class MultiLevelKeyRange(gRange: RoutingKeyRange, sRange: RoutingKeyRange)
+      extends RoutingKeyRange {
 
     val start = MultiLevelRKey(gRange.start, sRange.start)
     val end = MultiLevelRKey(gRange.end, sRange.end)
 
-
   }
 
-  def createRoutingKeyRange(cInfo : ChunkInfo) : RoutingKeyRange = {
+  def createRoutingKeyRange(cInfo: ChunkInfo): RoutingKeyRange = {
     val sKeyRange = ConsistentHashRange(
       OraDatumKey(new NUMBER(cInfo.shardKeyLo)),
-      OraDatumKey(new NUMBER(cInfo.shardKeyHi))
-      )
+      OraDatumKey(new NUMBER(cInfo.shardKeyHi)))
 
     tableFamily.superShardType match {
       case NONE_SHARDING => sKeyRange
-      case _ => MultiLevelKeyRange(
-        ConsistentHashRange(
-          OraDatumKey(new NUMBER(cInfo.groupKeyLo)),
-          OraDatumKey(new NUMBER(cInfo.groupKeyHi))
-        ),
-        sKeyRange
-      )
+      case _ =>
+        MultiLevelKeyRange(
+          ConsistentHashRange(
+            OraDatumKey(new NUMBER(cInfo.groupKeyLo)),
+            OraDatumKey(new NUMBER(cInfo.groupKeyHi))),
+          sKeyRange)
     }
   }
 
-  def createRoutingRange(lowKey : RoutingKey, hiKey : RoutingKey) : RoutingKeyRange = {
+  def createRoutingRange(lowKey: RoutingKey, hiKey: RoutingKey): RoutingKeyRange = {
     null
   }
 }
 
-trait RoutingKeys extends RoutingKeyRanges { self : RoutingTable =>
+trait RoutingKeys extends RoutingKeyRanges { self: RoutingTable =>
 
   type ConsistentHash = Long // an unsigned value
 
   sealed trait RoutingKey extends Ordered[RoutingKey]
 
   trait SingleLevelKey extends RoutingKey {
-    def consistentHash : ConsistentHash
+    def consistentHash: ConsistentHash
 
     override def compare(that: RoutingKey): Int = that match {
-      case sKey : SingleLevelKey => this.consistentHash.compareTo(sKey.consistentHash)
+      case sKey: SingleLevelKey => this.consistentHash.compareTo(sKey.consistentHash)
       case _ => -(that.compareTo(this))
     }
   }
 
   trait SingleColumnKey extends SingleLevelKey {
-    def bytes : Array[Byte]
+    def bytes: Array[Byte]
     val consistentHash: ConsistentHash = Integer.toUnsignedLong(KggHashGenerator.hash(bytes))
   }
 
-  case class OraDatumKey(datum : Datum) extends SingleColumnKey {
-    override def bytes : Array[Byte] = datum.getBytes
+  case class OraDatumKey(datum: Datum) extends SingleColumnKey {
+    override def bytes: Array[Byte] = datum.getBytes
   }
 
   case object MinimumSingleKey extends SingleLevelKey {
-    val consistentHash : ConsistentHash = 0L
+    val consistentHash: ConsistentHash = 0L
   }
 
   case object MaximumSingleKey extends SingleLevelKey {
-    val consistentHash : ConsistentHash = 0xffffffffL
+    val consistentHash: ConsistentHash = 0xffffffffL
   }
 
-  case class MultiColumnRKey(colKeys : Seq[SingleLevelKey]) extends SingleLevelKey {
+  case class MultiColumnRKey(colKeys: Seq[SingleLevelKey]) extends SingleLevelKey {
     val consistentHash: ConsistentHash = colKeys.map(_.consistentHash).sum
   }
 
-  case class MultiLevelRKey(gKey : RoutingKey, sKey : RoutingKey) extends RoutingKey {
+  case class MultiLevelRKey(gKey: RoutingKey, sKey: RoutingKey) extends RoutingKey {
     val keys = (gKey, sKey)
     override def compare(that: RoutingKey): Int = {
 
       that match {
-        case mLvlKey : MultiLevelRKey =>
+        case mLvlKey: MultiLevelRKey =>
           Ordering[(RoutingKey, RoutingKey)].compare(keys, mLvlKey.keys)
-        case _ : SingleLevelKey => 1
+        case _: SingleLevelKey => 1
       }
     }
   }
 
-  implicit def rkeyToLong(rKey : SingleLevelKey) : ConsistentHash = rKey.consistentHash
+  implicit def rkeyToLong(rKey: SingleLevelKey): ConsistentHash = rKey.consistentHash
 
-  private def validateOraLiterals(oraLiterals : Seq[OraLiteral]) : Unit = {
+  private def validateOraLiterals(oraLiterals: Seq[OraLiteral]): Unit = {
     if (oraLiterals.size != routingColumnDTs.size) {
-      OracleMetadata.invalidAction(s"Invalid OraLiterals list ${oraLiterals.mkString(", ")}", None)
+      OracleMetadata.invalidAction(
+        s"Invalid OraLiterals list ${oraLiterals.mkString(", ")}",
+        None)
     }
 
-    for((oDT, oLit) <- routingColumnDTs.zip(oraLiterals)) {
+    for ((oDT, oLit) <- routingColumnDTs.zip(oraLiterals)) {
       if (oDT.catalystType != oLit.catalystExpr.dataType) {
-        OracleMetadata.invalidAction(s"Invalid OraLiteral ${oLit};" +
-          s" need literal of type ${oDT.catalystType}", None)
+        OracleMetadata.invalidAction(
+          s"Invalid OraLiteral ${oLit};" +
+            s" need literal of type ${oDT.catalystType}",
+          None)
       }
     }
   }
 
-  private def multiColumnKey(cols : Seq[SingleLevelKey]) : SingleLevelKey = {
+  private def multiColumnKey(cols: Seq[SingleLevelKey]): SingleLevelKey = {
     if (cols.size == 1) {
       cols(0)
     } else {
@@ -139,7 +138,7 @@ trait RoutingKeys extends RoutingKeyRanges { self : RoutingTable =>
     }
   }
 
-  def createRoutingKey(oraLiterals : OraLiteral*) : RoutingKey = {
+  def createRoutingKey(oraLiterals: OraLiteral*): RoutingKey = {
     validateOraLiterals(oraLiterals)
 
     val gRKeys = oraLiterals.zip(gLvlKeyConstructors).map {
@@ -158,7 +157,7 @@ trait RoutingKeys extends RoutingKeyRanges { self : RoutingTable =>
     }
   }
 
-  def minMaxKey(endKey : SingleLevelKey) : RoutingKey = {
+  def minMaxKey(endKey: SingleLevelKey): RoutingKey = {
     val sKey = multiColumnKey(Seq.fill(sColumnDTs.size)(endKey))
     (tableFamily.superShardType) match {
       case NONE_SHARDING => sKey
@@ -168,79 +167,122 @@ trait RoutingKeys extends RoutingKeyRanges { self : RoutingTable =>
 
 }
 
-trait RoutingQueryInterface { self : RoutingTable =>
+trait RoutingQueryInterface { self: RoutingTable =>
 
-  private def resultStreamToShardSet(qRes : Stream[QResult[RoutingKey, Array[Int]]])
-  : Set[ShardInstance] = {
+  private def resultStreamToShardSet(
+      qRes: Stream[QResult[RoutingKey, Array[Int]]]): Set[ShardInstance] = {
     val s = scala.collection.mutable.Set[Int]()
     val itr = qRes.iterator
-    while(itr.hasNext) {
+    while (itr.hasNext) {
       val sInstances = itr.next().value
       sInstances.foreach(s.add(_))
     }
-    Set[Int](s.toSeq : _*).map(shardCluster(_))
+    Set[Int](s.toSeq: _*).map(shardCluster(_))
   }
 
-  def lookupShardsLT(lits : OraLiteral*) : Set[ShardInstance] = {
+  def lookupShardsLT(lits: OraLiteral*): Set[ShardInstance] = {
     val rKey = createRoutingKey(lits: _*)
     resultStreamToShardSet(chunkRoutingIntervalTree.lt(rKey))
   }
 
-  def lookupShardsLTE(lits : OraLiteral*) : Set[ShardInstance]
-  def lookupShardsEQ(lits : OraLiteral*) : Set[ShardInstance]
-  def lookupShardsNEQ(lits : OraLiteral*) : Set[ShardInstance]
-  def lookupShardsGT(lits : OraLiteral*) : Set[ShardInstance]
-  def lookupShardsGTE(lits : OraLiteral*) : Set[ShardInstance]
-  def lookupShardsIN(lits : Array[Array[OraLiteral]]) : Set[ShardInstance]
-  def lookupShardsNOTIN(lits : Array[Array[OraLiteral]]) : Set[ShardInstance]
+  def lookupShardsLTE(lits: OraLiteral*): Set[ShardInstance] = {
+    val rKey = createRoutingKey(lits: _*)
+    resultStreamToShardSet(chunkRoutingIntervalTree.lte(rKey))
+  }
+
+  def lookupShardsEQ(lits: OraLiteral*): Set[ShardInstance] = {
+    val rKey = createRoutingKey(lits: _*)
+    resultStreamToShardSet(chunkRoutingIntervalTree.contains(rKey))
+  }
+
+  def lookupShardsNEQ(lits: OraLiteral*): Set[ShardInstance] = {
+    val rKey = createRoutingKey(lits: _*)
+    resultStreamToShardSet(chunkRoutingIntervalTree.notContains(rKey))
+  }
+
+  def lookupShardsGT(lits: OraLiteral*): Set[ShardInstance] = {
+    val rKey = createRoutingKey(lits: _*)
+    resultStreamToShardSet(chunkRoutingIntervalTree.gt(rKey))
+  }
+  def lookupShardsGTE(lits: OraLiteral*): Set[ShardInstance] = {
+    val rKey = createRoutingKey(lits: _*)
+    resultStreamToShardSet(chunkRoutingIntervalTree.gte(rKey))
+  }
+
+  def lookupShardsIN(lits: Array[Array[OraLiteral]]): Set[ShardInstance] = {
+    val rKeys = lits.map(l => createRoutingKey(l.toSeq: _*))
+    resultStreamToShardSet(chunkRoutingIntervalTree.containsAny(rKeys: _*))
+  }
+
+  def lookupShardsNOTIN(lits: Array[Array[OraLiteral]]): Set[ShardInstance] = {
+    throw new UnsupportedOperationException("Shard Pruning for not in predicate")
+  }
 
 }
 
-trait RoutingTable extends RoutingQueryInterface with RoutingKeys {
+private[sharding] case class RoutingTable private (
+    tableFamily: TableFamily,
+    rootTable: ShardTable,
+    shardCluster: Array[ShardInstance])
+    extends RoutingQueryInterface
+    with RoutingKeys {
 
-  val tableFamily : TableFamily
-  val shardCluster : Array[ShardInstance]
-  val chunks : Array[ChunkInfo]
-
-  val rootTable = tableFamily.rootTable
   val gColumnDTs = rootTable.superKeyColumns.map(_.dataType)
   val sColumnDTs = rootTable.keyColumns.map(_.dataType)
   val routingColumnDTs = gColumnDTs ++ sColumnDTs
 
-  private lazy val shardNameToIdxMap : Map[String, Int] =
+  private lazy val shardNameToIdxMap: Map[String, Int] =
     (for ((s, i) <- shardCluster.zipWithIndex) yield {
       (s.name, i)
     }).toMap
 
-  private[routing] lazy val gLvlKeyConstructors : Array[OraLiteral => SingleLevelKey] = {
+  private[routing] lazy val gLvlKeyConstructors: Array[OraLiteral => SingleLevelKey] = {
     val jdbcGetSets = gColumnDTs.map(oDT => OraLiterals.jdbcGetSet(oDT.catalystType))
-    for (jGS <- jdbcGetSets) yield {
-      (oLit : OraLiteral) => OraDatumKey(jGS.toDatum(oLit.catalystExpr))
+    for (jGS <- jdbcGetSets) yield { (oLit: OraLiteral) =>
+      OraDatumKey(jGS.toDatum(oLit.catalystExpr))
     }
   }
 
-  private[routing] lazy val sLvlKeyConstructors : Array[OraLiteral => SingleLevelKey] = {
+  private[routing] lazy val sLvlKeyConstructors: Array[OraLiteral => SingleLevelKey] = {
     val jdbcGetSets = sColumnDTs.map(oDT => OraLiterals.jdbcGetSet(oDT.catalystType))
-    for (jGS <- jdbcGetSets) yield {
-      (oLit : OraLiteral) => OraDatumKey(jGS.toDatum(oLit.catalystExpr))
+    for (jGS <- jdbcGetSets) yield { (oLit: OraLiteral) =>
+      OraDatumKey(jGS.toDatum(oLit.catalystExpr))
     }
   }
 
-  private[routing] lazy val minimumRoutingKey : RoutingKey = minMaxKey(MinimumSingleKey)
+  private[routing] lazy val minimumRoutingKey: RoutingKey = minMaxKey(MinimumSingleKey)
 
-  private[routing] lazy val maximumRoutingKey : RoutingKey = minMaxKey(MaximumSingleKey)
+  private[routing] lazy val maximumRoutingKey: RoutingKey = minMaxKey(MaximumSingleKey)
 
+  private var _chunkRoutingIntervalTree
+    : IntervalTree[RoutingKey, Interval[RoutingKey], Array[Int]] = null
 
-  lazy val chunkRoutingIntervalTree = {
-    val m : Map[Interval[RoutingKey], Array[Int]] =
-      chunks.map(c => (createRoutingKeyRange(c), c.shardName)).
-        groupBy(t => t._1).
-        map {
-          case (rrng : RoutingKeyRange, shardNames : Array[(RoutingKeyRange, String)]) =>
+  private def initialize(chunks: Array[ChunkInfo]): Unit = {
+    _chunkRoutingIntervalTree = {
+      val m: Map[Interval[RoutingKey], Array[Int]] =
+        chunks.map(c => (createRoutingKeyRange(c), c.shardName)).groupBy(t => t._1).map {
+          case (rrng: RoutingKeyRange, shardNames: Array[(RoutingKeyRange, String)]) =>
             (rrng, shardNames.map(s => shardNameToIdxMap(s._2)))
         }
 
-    RedBlackIntervalTree.create[RoutingKey, Interval[RoutingKey], Array[Int]](m.toIndexedSeq)
+      RedBlackIntervalTree.create[RoutingKey, Interval[RoutingKey], Array[Int]](m.toIndexedSeq)
 
+    }
+  }
+
+  lazy val chunkRoutingIntervalTree: IntervalTree[RoutingKey, Interval[RoutingKey], Array[Int]] =
+    _chunkRoutingIntervalTree
+}
+
+object RoutingTable {
+
+  def apply(
+      tableFamily: TableFamily,
+      rootTable: ShardTable,
+      shardCluster: Array[ShardInstance],
+      chunks: Array[ChunkInfo]): RoutingTable = {
+    val rTab = new RoutingTable(tableFamily, rootTable, shardCluster)
+    rTab.initialize(chunks)
+    rTab
   }
 }
