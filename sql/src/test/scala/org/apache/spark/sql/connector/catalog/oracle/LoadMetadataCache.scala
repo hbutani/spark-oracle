@@ -40,12 +40,14 @@ class LoadMetadataCache
          tbl <- tbls) {
       // scalastyle:off println
       val bldr = new StringBuilder
-      val oTbl = mdMgr.oraTable(ns, tbl)
-      if (mdMgr.cache_only) {
-        validate(oTbl)
+      if (loadTableForTests(tbl)) {
+        val oTbl = mdMgr.oraTable(ns, tbl)
+        if (mdMgr.cache_only) {
+          validate(oTbl)
+        }
+        oTbl.dump(bldr)
+        println(bldr)
       }
-      oTbl.dump(bldr)
-      println(bldr)
     }
   }
 

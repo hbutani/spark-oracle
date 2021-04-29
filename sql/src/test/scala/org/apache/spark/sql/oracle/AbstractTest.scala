@@ -18,6 +18,7 @@
 package org.apache.spark.sql.oracle
 
 import java.io.{File, PrintStream}
+import java.util.Locale
 
 import org.scalatest.{fixture, BeforeAndAfterAll}
 
@@ -86,6 +87,12 @@ abstract class AbstractTest
   protected def loadOraSchemaForTests(ns : String) : Boolean = {
     val lNS = ns.toLowerCase()
     lNS == "tpcds" || lNS == "sparktest"
+  }
+
+  private val TABLES_TO_SKIP = Set("GEO_CUSTOMERS", "GEO_WAREHOUSES")
+
+  protected def loadTableForTests(tabNm : String) : Boolean = {
+    !TABLES_TO_SKIP.contains(tabNm.toUpperCase(Locale.ROOT))
   }
 
   def result(df: DataFrame): Array[Row] = {

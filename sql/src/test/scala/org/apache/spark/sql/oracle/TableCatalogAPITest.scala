@@ -27,7 +27,9 @@ class TableCatalogAPITest extends AbstractTest with OraMetadataMgrInternalTest {
   test("describeTables") { td =>
     for ((ns, tbls) <- catalogTableMap if (loadOraSchemaForTests(ns));
          tbl <- tbls) {
-      TestOracleHive.sql(s"describe extended ${ns}.${tbl}").show(1000, false)
+      if (loadTableForTests(tbl)) {
+        TestOracleHive.sql(s"describe extended ${ns}.${tbl}").show(1000, false)
+      }
     }
   }
 

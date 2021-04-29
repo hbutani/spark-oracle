@@ -117,7 +117,7 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
   /*
    * On start load Catalog
    */
-  loadCatalog(!cache_only)
+  loadCatalog(true)
 
   private def loadNamespaces(reloadFromDB : Boolean = false) : Unit = {
 
