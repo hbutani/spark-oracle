@@ -253,4 +253,7 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
     }
   }
 
+  // for testing
+  private[oracle] def getShardingMetadata : ShardingMetadata = shardingMetadata.get
+
 }

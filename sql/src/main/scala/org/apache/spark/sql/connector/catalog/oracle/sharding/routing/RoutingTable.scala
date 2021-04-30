@@ -20,12 +20,13 @@ package org.apache.spark.sql.connector.catalog.oracle.sharding.routing
 import scala.language.implicitConversions
 
 import oracle.spark.datastructs.{Interval, IntervalTree, QResult, RedBlackIntervalTree}
-import oracle.spark.sharding.KggHashGenerator
 import oracle.sql.{Datum, NUMBER}
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata
 import org.apache.spark.sql.connector.catalog.oracle.sharding._
 import org.apache.spark.sql.oracle.expressions.{OraLiteral, OraLiterals}
+import org.apache.spark.util.Utils
 
 trait RoutingKeyRanges { self: RoutingTable =>
 
@@ -43,17 +44,23 @@ trait RoutingKeyRanges { self: RoutingTable =>
   }
 
   def createRoutingKeyRange(cInfo: ChunkInfo): RoutingKeyRange = {
+
+    def readHashValue(bytes : Array[Byte]) =
+      new NUMBER(java.util.Arrays.copyOfRange(bytes, 1, bytes.length)).longValue()
+
     val sKeyRange = ConsistentHashRange(
-      OraDatumKey(new NUMBER(cInfo.shardKeyLo)),
-      OraDatumKey(new NUMBER(cInfo.shardKeyHi)))
+      ChunKey(readHashValue(cInfo.shardKeyLo)),
+      ChunKey(readHashValue(cInfo.shardKeyHi))
+    )
 
     tableFamily.superShardType match {
       case NONE_SHARDING => sKeyRange
       case _ =>
         MultiLevelKeyRange(
           ConsistentHashRange(
-            OraDatumKey(new NUMBER(cInfo.groupKeyLo)),
-            OraDatumKey(new NUMBER(cInfo.groupKeyHi))),
+            ChunKey(readHashValue(cInfo.groupKeyLo)),
+            ChunKey(readHashValue(cInfo.groupKeyHi))
+          ),
           sKeyRange)
     }
   }
@@ -80,12 +87,14 @@ trait RoutingKeys extends RoutingKeyRanges { self: RoutingTable =>
 
   trait SingleColumnKey extends SingleLevelKey {
     def bytes: Array[Byte]
-    val consistentHash: ConsistentHash = Integer.toUnsignedLong(KggHashGenerator.hash(bytes))
+    val consistentHash: ConsistentHash = RoutingTable.hash(bytes)
   }
 
   case class OraDatumKey(datum: Datum) extends SingleColumnKey {
     override def bytes: Array[Byte] = datum.getBytes
   }
+
+  case class ChunKey(consistentHash: ConsistentHash) extends SingleLevelKey
 
   case object MinimumSingleKey extends SingleLevelKey {
     val consistentHash: ConsistentHash = 0L
@@ -225,7 +234,7 @@ private[sharding] case class RoutingTable private (
     rootTable: ShardTable,
     shardCluster: Array[ShardInstance])
     extends RoutingQueryInterface
-    with RoutingKeys {
+    with RoutingKeys with Logging {
 
   val gColumnDTs = rootTable.superKeyColumns.map(_.dataType)
   val sColumnDTs = rootTable.keyColumns.map(_.dataType)
@@ -258,15 +267,21 @@ private[sharding] case class RoutingTable private (
     : IntervalTree[RoutingKey, Interval[RoutingKey], Array[Int]] = null
 
   private def initialize(chunks: Array[ChunkInfo]): Unit = {
+
+    val chunkIntervals = chunks.map(c => (createRoutingKeyRange(c), c.shardName))
+    logDebug(
+      s"""Setting up Routing Table:
+         |${chunkIntervals.mkString("\n")}""".stripMargin
+    )
+
     _chunkRoutingIntervalTree = {
       val m: Map[Interval[RoutingKey], Array[Int]] =
-        chunks.map(c => (createRoutingKeyRange(c), c.shardName)).groupBy(t => t._1).map {
+        chunkIntervals.groupBy(t => t._1).map {
           case (rrng: RoutingKeyRange, shardNames: Array[(RoutingKeyRange, String)]) =>
             (rrng, shardNames.map(s => shardNameToIdxMap(s._2)))
         }
 
       RedBlackIntervalTree.create[RoutingKey, Interval[RoutingKey], Array[Int]](m.toIndexedSeq)
-
     }
   }
 
@@ -284,5 +299,16 @@ object RoutingTable {
     val rTab = new RoutingTable(tableFamily, rootTable, shardCluster)
     rTab.initialize(chunks)
     rTab
+  }
+
+  private lazy val oracleHashMethod = {
+    val cSymbol = Utils.classForName("oracle.jdbc.pool.KggHashGenerator")
+    val m = cSymbol.getMethod("hash", classOf[Array[Byte]])
+    m.setAccessible(true)
+    m
+  }
+
+  def hash(var0: Array[Byte]) : Long = {
+    Integer.toUnsignedLong(oracleHashMethod.invoke(0, var0).asInstanceOf[Int]) % 4294967296L
   }
 }

@@ -54,6 +54,15 @@ abstract class ShardingAbstractTest extends AbstractTest {
     new ShardResultOfTestInvocation(testName, testTags: _*)
   }
 
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    if (isTestInstanceSharded) {
+      // trigger loading of orders table family
+      // TestOracleHive.sql("use tpch")
+      TestOracleHive.sql("describe tpch.orders").collect()
+    }
+  }
+
   override def afterAll(): Unit = {
     if (isTestInstanceSharded) {
       TestOracleHive.sql("use tpch")

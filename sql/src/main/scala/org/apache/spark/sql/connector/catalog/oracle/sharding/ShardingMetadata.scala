@@ -95,12 +95,12 @@ class ShardingMetadata private[sharding] (
     val tableFamilies: Map[Int, TableFamily],
     val replicatedTables: Set[QualifiedTableName]) extends ShardingMetadataLoader {
 
-  private val rootTblFamilyMap: Map[QualifiedTableName, TableFamily] = tableFamilies.map {
+  private[sharding] val rootTblFamilyMap: Map[QualifiedTableName, TableFamily] = tableFamilies.map {
     case (id, tF) => (tF.rootTable, tF)
   }
 
-  private val shardTables = MMap[QualifiedTableName, ShardTable]()
-  private val routingTables = MMap[Int, RoutingTable]()
+  private[sharding] val shardTables = MMap[QualifiedTableName, ShardTable]()
+  private[sharding] val routingTables = MMap[Int, RoutingTable]()
 
   private def findShardingColumn(cNm : String, oraTable: OraTable) : OraColumn = {
     oraTable.columns.find(c => c.name == cNm).getOrElse {
