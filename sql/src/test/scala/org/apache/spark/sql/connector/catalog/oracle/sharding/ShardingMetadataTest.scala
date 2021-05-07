@@ -78,4 +78,24 @@ class ShardingMetadataTest extends ShardingAbstractTest {
       }
     }
   }
+
+  test("showShardInstances") { td =>
+    TestOracleHive.sql("show shard_instances").show(1000, false)
+  }
+
+  test("showTableFamilies") { td =>
+    TestOracleHive.sql("show table_families").show(1000, false)
+  }
+
+  test("showReplicatedTables") { td =>
+    TestOracleHive.sql("show replicated tables").show(1000, false)
+  }
+
+  test("showShardedTables") { td =>
+    TestOracleHive.sql("show sharded tables").show(1000, false)
+  }
+
+  test("showRoutingTable") { td =>
+    TestOracleHive.sql("show routing_table tpch.orders").show(1000, false)
+  }
 }

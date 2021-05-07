@@ -23,6 +23,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.parser.{ParseException, ParserInterface}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.connector.catalog.oracle.{OracleCatalog, OracleTable}
+import org.apache.spark.sql.connector.catalog.oracle.sharding._
 import org.apache.spark.sql.oracle.OraSparkUtils
 import org.apache.spark.sql.oracle.commands.{ExplainPushdown, OraShowPartitions, SparkOraVersion}
 import org.apache.spark.sql.oracle.rules.OraLogicalRules
@@ -112,6 +113,15 @@ private[parsing] class SparkOraExtensionsParser(val baseParser : ParserInterface
   protected val SHOW = Keyword("SHOW")
   protected val PARTITIONS = Keyword("PARTITIONS")
 
+  protected val SHARD_INSTANCES = Keyword("SHARD_INSTANCES")
+  protected val TABLE_FAMILIES = Keyword("TABLE_FAMILIES")
+  protected val REPLICATED = Keyword("REPLICATED")
+  protected val SHARDED = Keyword("SHARDED")
+  protected val TABLES = Keyword("TABLES")
+  protected val ROUTING_TABLE = Keyword("ROUTING_TABLE")
+  protected val SHARD_EXECUTOR_AFFINITY = Keyword("SHARD_EXECUTOR_AFFINITY")
+  protected val ORACLE_CATALOG = Keyword("ORACLE_CATALOG")
+
   def parseExtensions(input: String): ParseResult[LogicalPlan] = synchronized {
     // Initialize the Keywords.
     initLexical
@@ -119,7 +129,10 @@ private[parsing] class SparkOraExtensionsParser(val baseParser : ParserInterface
   }
 
   override protected def start: Parser[LogicalPlan] =
-    sparkOraVersion | explainPushdown | oracleShowPartitions
+    sparkOraVersion | explainPushdown | oracleShowPartitions |
+      showShardInstances | showTableFamilies |
+      showReplicatedTables | showShardedTables |
+      showRoutingTable
 
 
   private lazy val sparkOraVersion : Parser[LogicalPlan] =
@@ -137,21 +150,32 @@ private[parsing] class SparkOraExtensionsParser(val baseParser : ParserInterface
   private lazy val oracleShowPartitions : Parser[LogicalPlan] =
     (SHOW ~ ORACLE ~ PARTITIONS) ~> multiPartId ^^ {
       case mId =>
-      val tab = UnresolvedTable(mId, "show oracle partitions")
-      val resolvedTab = sparkSession.sessionState.analyzer.execute(tab)
-      if (resolvedTab.isInstanceOf[ResolvedTable]) {
-        val resovTab = resolvedTab.asInstanceOf[ResolvedTable]
-        if (resovTab.catalog.isInstanceOf[OracleCatalog]) {
-          OraShowPartitions(resovTab.table.asInstanceOf[OracleTable])
-        } else {
-          throw new AnalysisException(s"Cannot run show oracle partitions" +
-            s" command on a non-oracle table  ${resovTab.identifier}")
-        }
-      } else {
-        throw new AnalysisException(
-          s"Cannot run show oracle partitions command: failed to resolve table ${mId.mkString(".")}"
-        )
-      }
+        createCommand(mId, "show oracle partitions", oraTab => OraShowPartitions(oraTab))
+    }
+
+  private lazy val showShardInstances : Parser[LogicalPlan] =
+    (SHOW ~ SHARD_INSTANCES) ^^ {
+      case _ => ListShardInstances
+    }
+
+  private lazy val showTableFamilies : Parser[LogicalPlan] =
+    (SHOW ~ TABLE_FAMILIES) ^^ {
+      case _ => ListTableFamilies
+    }
+
+  private lazy val showReplicatedTables : Parser[LogicalPlan] =
+    (SHOW ~ REPLICATED ~ TABLES) ^^ {
+      case _ => ListReplicatedTables
+    }
+
+  private lazy val showShardedTables : Parser[LogicalPlan] =
+    (SHOW ~ SHARDED ~ TABLES) ^^ {
+      case _ => ListShardedTables
+    }
+
+  private lazy val showRoutingTable : Parser[LogicalPlan] =
+    (SHOW ~ ROUTING_TABLE) ~> multiPartId ^^ {
+      case mId => createCommand(mId, "show routing table", oraTab => ListRoutingTable(oraTab))
     }
 
   private lazy val qualifiedId : Parser[Seq[String]] =
@@ -165,4 +189,24 @@ private[parsing] class SparkOraExtensionsParser(val baseParser : ParserInterface
       case ~(n, None) => Seq(n)
       case ~(q, Some(s)) => q +: s
     }
+
+  private def createCommand(mId: Seq[String],
+                           cmdString : String,
+                           createCmd : OracleTable => LogicalPlan) : LogicalPlan = {
+    val tab = UnresolvedTable(mId, cmdString)
+    val resolvedTab = sparkSession.sessionState.analyzer.execute(tab)
+    if (resolvedTab.isInstanceOf[ResolvedTable]) {
+      val resovTab = resolvedTab.asInstanceOf[ResolvedTable]
+      if (resovTab.catalog.isInstanceOf[OracleCatalog]) {
+        createCmd(resovTab.table.asInstanceOf[OracleTable])
+      } else {
+        throw new AnalysisException(s"Cannot run ${cmdString}" +
+          s" command on a non-oracle table  ${resovTab.identifier}")
+      }
+    } else {
+      throw new AnalysisException(
+        s"Cannot run ${cmdString} command: failed to resolve table ${mId.mkString(".")}"
+      )
+    }
+  }
 }
