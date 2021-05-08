@@ -16,7 +16,7 @@
  */
 package org.apache.spark.sql.oracle.expressions
 
-import org.apache.spark.sql.catalyst.expressions.{Concat, Expression, StartsWith, StringTrim, StringTrimLeft, StringTrimRight, Substring, Upper}
+import org.apache.spark.sql.catalyst.expressions.{Concat, Contains, EndsWith, Expression, Like, StartsWith, StringTrim, StringTrimLeft, StringTrimRight, Substring, Upper}
 import org.apache.spark.sql.oracle.SQLSnippet
 import org.apache.spark.sql.oracle.SQLSnippet.{comma, join, literalSnippet}
 
@@ -48,6 +48,36 @@ object Strings {
   private val TRIM_TRAILING : SQLSnippet = literalSnippet(TRAILING)
   private val TRIM_BOTH : SQLSnippet = literalSnippet(BOTH)
 
+  case class OraLike(
+                      catalystExpr: Expression,
+                      char1: OraExpression,
+                      char2: OraExpression,
+                      esc: String,
+                      isNot: Boolean = false)
+    extends OraExpression {
+
+    import SQLSnippet._
+
+    lazy val orasql: SQLSnippet = if (isNot) {
+      osql" (${char1} NOT LIKE ${char2} ESCAPE '${literalSnippet(esc)}') "
+    } else {
+      osql" (${char1} LIKE ${char2} ESCAPE '${literalSnippet(esc)}') "
+    }
+
+    override def children: Seq[OraExpression] = Seq(char1, char2)
+  }
+
+  case class OraContains(catalystExpr: Expression, child: OraExpression, pattern: String)
+    extends OraExpression {
+
+    import SQLSnippet._
+
+    lazy val orasql: SQLSnippet =
+      osql" (${child} LIKE '%${literalSnippet(pattern)}%') "
+
+    override def children: Seq[OraExpression] = Seq(child)
+  }
+
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
       case cE @ Substring(OraExpression(s), OraExpression(pos), OraExpression(len)) =>
@@ -60,6 +90,18 @@ object Strings {
         OraBinaryOpExpression(LIKE, cE, left,
           OraBinaryFnExpression(CONCAT, sE, right, new OraLiteralSql("'%'"))
         )
+      case cE @ EndsWith(OraExpression(left), sE@OraExpression(right)) =>
+        OraBinaryOpExpression(LIKE, cE, left,
+          OraBinaryFnExpression(CONCAT, sE, new OraLiteralSql("'%'"), right)
+        )
+      case cl @ Like(OraExpression(left), OraExpression(right), escChar) =>
+        OraLike(cl, left, right, escChar.toString)
+      // catalyst LikeSimplification rule converts Like expr to a
+      // Contains when pattern is a Literal. When generating ora-sql, generate the like expr
+      case cE @ Contains(OraExpression(left), OraExpression(right))
+        if right.isInstanceOf[OraLiteral] =>
+        val pattern = right.asInstanceOf[OraLiteral].catalystExpr.value.toString
+        OraContains(cE, left, pattern)
       case cE@Upper(OraExpression(oE)) => OraUnaryFnExpression(UPPER, cE, oE)
       case cE@StringTrimLeft(OraExpression(trimSrc), None) =>
         OraStringTrim(cE, TRIM_LEADING, None, trimSrc)

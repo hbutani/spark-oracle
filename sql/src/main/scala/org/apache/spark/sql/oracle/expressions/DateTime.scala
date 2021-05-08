@@ -17,18 +17,34 @@
 
 package org.apache.spark.sql.oracle.expressions
 
-import org.apache.spark.sql.catalyst.expressions.{DateAdd, DateSub, Expression}
+import org.apache.spark.sql.catalyst.expressions.{DateAdd, DateSub, DayOfMonth, Expression, Hour, Month, Year}
+import org.apache.spark.sql.oracle.SQLSnippet
 
 /**
  * Conversions for expressions in ''datetimeExpressions.scala''
  */
 object DateTime {
+
+
+  case class OraExtract(catalystExpr: Expression,
+                        extractComponent : String,
+                        child : OraExpression) extends OraExpression {
+    import SQLSnippet._
+    lazy val orasql: SQLSnippet =
+      osql" extract(${literalSnippet(extractComponent)} from ${child}) "
+
+    override def children: Seq[OraExpression] = Seq(child)
+  }
+
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
       case cE@DateAdd(OraExpression(left), OraExpression(right)) =>
         OraBinaryOpExpression(PLUS, cE, left, right)
       case cE@DateSub(OraExpression(left), OraExpression(right)) =>
         OraBinaryOpExpression(MINUS, cE, left, right)
+      case cE@Year(OraExpression(child)) => OraExtract(cE, "YEAR", child)
+      case cE@Month(OraExpression(child)) => OraExtract(cE, "MONTH", child)
+      case cE@DayOfMonth(OraExpression(child)) => OraExtract(cE, "DAY", child)
       case _ => null
     })
 }

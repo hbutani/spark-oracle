@@ -19,7 +19,7 @@ package org.apache.spark.sql.oracle.expressions
 
 import scala.util.Try
 
-import org.apache.spark.sql.catalyst.expressions.{And, BinaryComparison, EqualNullSafe, Expression, In, InSet, InSubquery, Literal, Not, Or, Predicate}
+import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.oracle.SQLSnippet
 
 /**
@@ -38,17 +38,18 @@ object Predicates {
     val children: Seq[OraExpression] = oExpr +: inList
   }
 
-  case class OraInSubQuery(catalystExpr: InSubquery,
-                           inColumns : Seq[OraExpression],
-                           oraSubQry: OraExpression) extends OraExpression {
+  case class OraInSubQuery(
+      catalystExpr: InSubquery,
+      inColumns: Seq[OraExpression],
+      oraSubQry: OraExpression)
+      extends OraExpression {
     import SQLSnippet._
     lazy val orasql: SQLSnippet =
-      osql" (${csv(inColumns.map(_.orasql) : _*)}) in ( ${oraSubQry.orasql} )"
+      osql" (${csv(inColumns.map(_.orasql): _*)}) in ( ${oraSubQry.orasql} )"
     val children: Seq[OraExpression] = inColumns :+ oraSubQry
   }
 
-  case class RownumLimit(op : SQLSnippet,
-                         limitVal : Long) extends OraExpression {
+  case class RownumLimit(op: SQLSnippet, limitVal: Long) extends OraExpression {
     val catalystExpr: Literal = Literal(limitVal)
     val oraExpr = OraLiteral(catalystExpr).toLiteralSql
     lazy val orasql: SQLSnippet = osql"rownum ${op} ${oraExpr}"
@@ -57,6 +58,8 @@ object Predicates {
 
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
+      case cl @ Not(Like(OraExpression(left), OraExpression(right), escChar)) =>
+        Strings.OraLike(cl, left, right, escChar.toString, true)
       case cE @ Not(OraExpression(oE)) => OraUnaryOpExpression(NOT, cE, oE)
       case cE @ InSubquery(OraExpressions(oEs @ _*), OraExpression(sQ)) =>
         OraInSubQuery(cE, oEs, sQ)
@@ -70,9 +73,12 @@ object Predicates {
         Try {
           val lits: Seq[Expression] =
             hset.map(Literal.fromObject(_, cE.child.dataType): Expression).toSeq
-          OraExpressions.unapplySeq(lits).map { inList =>
+          OraExpressions
+            .unapplySeq(lits)
+            .map { inList =>
               OraIn(cE, value, inList)
-            }.orNull
+            }
+            .orNull
         }.getOrElse(null)
       case cE @ And(OraExpression(left), OraExpression(right)) =>
         OraBinaryOpExpression(AND, cE, left, right)
