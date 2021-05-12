@@ -32,7 +32,7 @@ object Predicates {
 
     import SQLSnippet._
 
-    lazy val orasql: SQLSnippet =
+    def orasql: SQLSnippet =
       oExpr.orasql + IN + LPAREN + csv(inList.map(_.orasql): _*) + RPAREN
 
     val children: Seq[OraExpression] = oExpr +: inList

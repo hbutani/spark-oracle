@@ -41,6 +41,7 @@ case class OraJoinClause(joinType: JoinType, joinSrc: OraPlan, onCondition: Opti
   }
   def getJoinAlias: Option[String] =
     joinSrc.getTagValue(OraQueryBlock.ORA_JOIN_ALIAS_TAG)
+  def clearJoinAlias : Unit = joinSrc.unsetTagValue(OraQueryBlock.ORA_JOIN_ALIAS_TAG)
 
   def joinSrcSQL(implicit srcSnipOverride : OraTableScan => Option[SQLSnippet] = t => None)
   : SQLSnippet = {

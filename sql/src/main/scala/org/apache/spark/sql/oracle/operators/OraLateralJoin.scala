@@ -29,6 +29,7 @@ case class OraLatJoinProjEntry(oraExpr: OraExpression, outAttr: Option[Attribute
   def setOraFixedAlias(alias : String) : Unit = {
     setTagValue(Named.ORA_ALIAS_TAG, alias)
   }
+  def clearOraFixedAlias : Unit = unsetTagValue(Named.ORA_ALIAS_TAG)
 
   private def outNmInOraSQL : Option[String] = Option(
     getOraFixedAlias.getOrElse(outAttr.map(_.name).getOrElse(null))

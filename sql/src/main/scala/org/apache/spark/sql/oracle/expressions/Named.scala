@@ -66,6 +66,9 @@ object Named {
     def setOraFixedAlias(alias : String) : Unit = {
       setTagValue(ORA_ALIAS_TAG, alias)
     }
+    def clearOraFixedAlias : Unit = {
+      unsetTagValue(ORA_ALIAS_TAG)
+    }
 
     def outNmInOraSQL : String
   }
@@ -86,6 +89,9 @@ object Named {
     def getOraFixedNm : Option[OraFixedColNm] = getTagValue(ORA_NM_TAG)
     def setOraFixedNm(nm : OraFixedColNm) : Unit = {
       setTagValue(ORA_NM_TAG, nm)
+    }
+    def clearOraFixedNm : Unit = {
+      unsetTagValue(ORA_NM_TAG)
     }
 
     def orasql: SQLSnippet = {
