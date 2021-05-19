@@ -38,16 +38,16 @@ class ShardingMetadataTest extends ShardingAbstractTest {
   private lazy val tableFamily = shardMD.rootTblFamilyMap(ordersTab)
   private lazy val routingTab = shardMD.routingTables(tableFamily.id)
 
-  private def orderKeysList(shardInstance: ShardInstance): Seq[OraLiteral] = {
-    def orderKeyLiteral(l: Long): OraLiteral = {
+  private def orderKeysList(shardInstance: ShardInstance): Seq[Literal] = {
+    def orderKeyLiteral(l: Long): Literal = {
       val dec = Decimal(new java.math.BigDecimal(l), 38, 18)
-      OraLiteral(Literal(dec))
+      Literal(dec)
     }
 
     val order_keys_query =
       """select o_orderkey from orders sample(1) where rownum < 1000"""
 
-    val oLits = ArrayBuffer[OraLiteral]()
+    val oLits = ArrayBuffer[Literal]()
     val shardDSKey = ConnectionManagement.registerDataSource(
       shardInstance.shardDSInfo.connInfo,
       shardInstance.shardDSInfo.catalogOptions)
@@ -71,10 +71,11 @@ class ShardingMetadataTest extends ShardingAbstractTest {
 
   test("routing") { _ =>
     for (shardInst <- shardInstances) {
-      val oKeys = orderKeysList(shardInst)
-      for (oKey <- oKeys) {
-        val shards = routingTab.lookupShardsEQ(oKey)
-        assert(shards.size == 1 && shards.head.connectString == shardInst.connectString)
+      val keys = orderKeysList(shardInst)
+      for (key <- keys) {
+        val shards = routingTab.lookupShardsEQ(key)
+        val shard = shardMD.shardInstances(shards.head)
+        assert(shards.size == 1 && shard.connectString == shardInst.connectString)
       }
     }
   }

@@ -23,9 +23,10 @@ import oracle.spark.datastructs.{Interval, IntervalTree, QResult, RedBlackInterv
 import oracle.sql.{Datum, NUMBER}
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata
 import org.apache.spark.sql.connector.catalog.oracle.sharding._
-import org.apache.spark.sql.oracle.expressions.{OraLiteral, OraLiterals}
+import org.apache.spark.sql.oracle.expressions.OraLiterals
 import org.apache.spark.util.Utils
 
 trait RoutingKeyRanges { self: RoutingTable =>
@@ -122,17 +123,17 @@ trait RoutingKeys extends RoutingKeyRanges { self: RoutingTable =>
 
   implicit def rkeyToLong(rKey: SingleLevelKey): ConsistentHash = rKey.consistentHash
 
-  private def validateOraLiterals(oraLiterals: Seq[OraLiteral]): Unit = {
-    if (oraLiterals.size != routingColumnDTs.size) {
+  private def validateLiterals(literals: Seq[Literal]): Unit = {
+    if (literals.size != routingColumnDTs.size) {
       OracleMetadata.invalidAction(
-        s"Invalid OraLiterals list ${oraLiterals.mkString(", ")}",
+        s"Invalid Literals list ${literals.mkString(", ")}",
         None)
     }
 
-    for ((oDT, oLit) <- routingColumnDTs.zip(oraLiterals)) {
-      if (oDT.catalystType != oLit.catalystExpr.dataType) {
+    for ((oDT, lit) <- routingColumnDTs.zip(literals)) {
+      if (oDT.catalystType != lit.dataType) {
         OracleMetadata.invalidAction(
-          s"Invalid OraLiteral ${oLit};" +
+          s"Invalid Literal ${lit};" +
             s" need literal of type ${oDT.catalystType}",
           None)
       }
@@ -147,14 +148,14 @@ trait RoutingKeys extends RoutingKeyRanges { self: RoutingTable =>
     }
   }
 
-  def createRoutingKey(oraLiterals: OraLiteral*): RoutingKey = {
-    validateOraLiterals(oraLiterals)
+  def createRoutingKey(literals: Literal*): RoutingKey = {
+    validateLiterals(literals)
 
-    val gRKeys = oraLiterals.zip(gLvlKeyConstructors).map {
+    val gRKeys = literals.zip(gLvlKeyConstructors).map {
       case (oLit, cons) => cons(oLit)
     }
 
-    val sRKeys = oraLiterals.drop(gLvlKeyConstructors.size).zip(sLvlKeyConstructors).map {
+    val sRKeys = literals.drop(gLvlKeyConstructors.size).zip(sLvlKeyConstructors).map {
       case (oLit, cons) => cons(oLit)
     }
 
@@ -179,51 +180,51 @@ trait RoutingKeys extends RoutingKeyRanges { self: RoutingTable =>
 trait RoutingQueryInterface { self: RoutingTable =>
 
   private def resultStreamToShardSet(
-      qRes: Stream[QResult[RoutingKey, Array[Int]]]): Set[ShardInstance] = {
+      qRes: Stream[QResult[RoutingKey, Array[Int]]]): Set[Int] = {
     val s = scala.collection.mutable.Set[Int]()
     val itr = qRes.iterator
     while (itr.hasNext) {
       val sInstances = itr.next().value
       sInstances.foreach(s.add(_))
     }
-    Set[Int](s.toSeq: _*).map(shardCluster(_))
+    Set[Int](s.toSeq: _*)
   }
 
-  def lookupShardsLT(lits: OraLiteral*): Set[ShardInstance] = {
+  def lookupShardsLT(lits: Literal*): Set[Int] = {
     val rKey = createRoutingKey(lits: _*)
     resultStreamToShardSet(chunkRoutingIntervalTree.lt(rKey))
   }
 
-  def lookupShardsLTE(lits: OraLiteral*): Set[ShardInstance] = {
+  def lookupShardsLTE(lits: Literal*): Set[Int] = {
     val rKey = createRoutingKey(lits: _*)
     resultStreamToShardSet(chunkRoutingIntervalTree.lte(rKey))
   }
 
-  def lookupShardsEQ(lits: OraLiteral*): Set[ShardInstance] = {
+  def lookupShardsEQ(lits: Literal*): Set[Int] = {
     val rKey = createRoutingKey(lits: _*)
     resultStreamToShardSet(chunkRoutingIntervalTree.contains(rKey))
   }
 
-  def lookupShardsNEQ(lits: OraLiteral*): Set[ShardInstance] = {
+  def lookupShardsNEQ(lits: Literal*): Set[Int] = {
     val rKey = createRoutingKey(lits: _*)
     resultStreamToShardSet(chunkRoutingIntervalTree.notContains(rKey))
   }
 
-  def lookupShardsGT(lits: OraLiteral*): Set[ShardInstance] = {
+  def lookupShardsGT(lits: Literal*): Set[Int] = {
     val rKey = createRoutingKey(lits: _*)
     resultStreamToShardSet(chunkRoutingIntervalTree.gt(rKey))
   }
-  def lookupShardsGTE(lits: OraLiteral*): Set[ShardInstance] = {
+  def lookupShardsGTE(lits: Literal*): Set[Int] = {
     val rKey = createRoutingKey(lits: _*)
     resultStreamToShardSet(chunkRoutingIntervalTree.gte(rKey))
   }
 
-  def lookupShardsIN(lits: Array[Array[OraLiteral]]): Set[ShardInstance] = {
+  def lookupShardsIN(lits: Array[Array[Literal]]): Set[Int] = {
     val rKeys = lits.map(l => createRoutingKey(l.toSeq: _*))
     resultStreamToShardSet(chunkRoutingIntervalTree.containsAny(rKeys: _*))
   }
 
-  def lookupShardsNOTIN(lits: Array[Array[OraLiteral]]): Set[ShardInstance] = {
+  def lookupShardsNOTIN(lits: Array[Array[Literal]]): Set[Int] = {
     throw new UnsupportedOperationException("Shard Pruning for not in predicate")
   }
 
@@ -245,17 +246,17 @@ private[sharding] case class RoutingTable private (
       (s.name, i)
     }).toMap
 
-  private[routing] lazy val gLvlKeyConstructors: Array[OraLiteral => SingleLevelKey] = {
+  private[routing] lazy val gLvlKeyConstructors: Array[Literal => SingleLevelKey] = {
     val jdbcGetSets = gColumnDTs.map(oDT => OraLiterals.jdbcGetSet(oDT.catalystType))
-    for (jGS <- jdbcGetSets) yield { (oLit: OraLiteral) =>
-      OraDatumKey(jGS.toDatum(oLit.catalystExpr))
+    for (jGS <- jdbcGetSets) yield { (lit: Literal) =>
+      OraDatumKey(jGS.toDatum(lit))
     }
   }
 
-  private[routing] lazy val sLvlKeyConstructors: Array[OraLiteral => SingleLevelKey] = {
+  private[routing] lazy val sLvlKeyConstructors: Array[Literal => SingleLevelKey] = {
     val jdbcGetSets = sColumnDTs.map(oDT => OraLiterals.jdbcGetSet(oDT.catalystType))
-    for (jGS <- jdbcGetSets) yield { (oLit: OraLiteral) =>
-      OraDatumKey(jGS.toDatum(oLit.catalystExpr))
+    for (jGS <- jdbcGetSets) yield { (lit: Literal) =>
+      OraDatumKey(jGS.toDatum(lit))
     }
   }
 

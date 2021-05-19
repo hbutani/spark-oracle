@@ -255,6 +255,6 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
 
   def isSharded : Boolean = ConnectionManagement.info(dsKey).isSharded
 
-  private[oracle] def getShardingMetadata : ShardingMetadata = shardingMetadata.get
+  private[sql] def getShardingMetadata : ShardingMetadata = shardingMetadata.get
 
 }

@@ -225,7 +225,7 @@ class OracleCatalog
       partitions: Array[Transform],
       properties: util.Map[String, String]): StagedTable = ???
 
-  private[oracle] def getMetadataManager: OracleMetadataManager = metadataManager
+  private[sql] def getMetadataManager: OracleMetadataManager = metadataManager
 }
 
 object OracleCatalog {

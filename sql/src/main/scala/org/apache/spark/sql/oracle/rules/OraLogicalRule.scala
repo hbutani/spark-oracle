@@ -20,18 +20,20 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Subquery}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.oracle.OraSparkUtils
+import org.apache.spark.sql.oracle.rules.sharding.AnnotateShardingInfoRule
 
 abstract class OraLogicalRule extends Rule[LogicalPlan] {
 
-  override def apply(plan: LogicalPlan): LogicalPlan = {
-
+  protected def isRewriteEnabled(implicit sparkSession : SparkSession) : Boolean = {
     import org.apache.spark.sql.oracle.OraSparkConfig._
+    getConf(ENABLE_ORA_PUSHDOWN)(sparkSession)
+  }
+
+  override def apply(plan: LogicalPlan): LogicalPlan = {
 
     implicit val sparkSession = OraSparkUtils.currentSparkSession
 
-    val rewrite: Boolean = getConf(ENABLE_ORA_PUSHDOWN)(sparkSession)
-
-    if (rewrite) {
+    if (isRewriteEnabled) {
       _apply(plan)
     } else plan
   }
@@ -42,7 +44,7 @@ abstract class OraLogicalRule extends Rule[LogicalPlan] {
 
 object OraLogicalRules extends OraLogicalRule {
 
-  val RULES = Seq(OraSQLPushdownRule, OraFixColumnNames)
+  val RULES = Seq(OraSQLPushdownRule, OraFixColumnNames, AnnotateShardingInfoRule)
 
   override def _apply(plan: LogicalPlan)(implicit sparkSession: SparkSession): LogicalPlan
   = plan match {

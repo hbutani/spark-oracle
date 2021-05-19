@@ -136,6 +136,32 @@ object OraSparkConfig {
         |""".stripMargin
     ).stringConf.createOptional
 
+  // config entries for sharding
+
+  val ENABLE_SHARD_INSTANCE_PUSHDOWN = buildConf(
+    "spark.sql.oracle.enable.shard_instance_pushdown").
+    doc(
+      """If this is true then we will attempt to rewrite pushdown queries
+        |into plans that directly evaluate sub-plans on shard instances and
+        |do the merge/coordination steps originally done in the Shard coordinator
+        |as Spark Operators.
+        |
+        |We are actually undoing the pushdown of the original Spark logical Plan
+        |to a point where any pushed sub-plan can be executed directly on shard instances.
+        |
+        |For example consider Aggregate(Orders join LineItem, GBy Status, Sum of Price)
+        |on the TPCH schema sharded by Order_Key.
+        |A full pushdown would pushd ths as an Oracle SQL to the Shard coordinator.
+        |But this may require a lot of coordination and work on the Coordinator.
+        |With this flag true we may convert this into the Plan:
+        |Spark_Agg(OraclePlan(Orders join LineItem),GBy Status, Sum of Price)
+        |Now the join can be done independently by Shard Instances and
+        |read into Spark executors. This plan potentially has lower latency and
+        |avoids overloading the Shard coordinator.""".stripMargin).
+    booleanConf.createWithDefault(true)
+
+  // finish config entries for sharding
+
 
   def getConf[T](configEntry : ConfigEntry[T])(
     implicit sparkSession : SparkSession = OraSparkUtils.currentSparkSession

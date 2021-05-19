@@ -23,9 +23,11 @@ import oracle.spark.{DataSourceInfo, DataSourceKey}
 
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.QualifiedTableName
+import org.apache.spark.sql.catalyst.expressions.AttributeReference
+import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog.oracle.{OracleMetadata, OracleMetadataManager}
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata.{OraColumn, OraForeignKey, OraTable}
-import org.apache.spark.sql.connector.catalog.oracle.sharding.routing.RoutingTable
+import org.apache.spark.sql.connector.catalog.oracle.sharding.routing.{RoutingQueryInterface, RoutingTable}
 
 case class ShardInstance(name: String, connectString: String, shardDSInfo: DataSourceInfo)
 
@@ -46,7 +48,20 @@ case class ShardTable(
     qName: QualifiedTableName,
     tableFamilyId: Int,
     superKeyColumns: Array[OraColumn],
-    keyColumns: Array[OraColumn])
+    keyColumns: Array[OraColumn]) {
+
+  def numShardingKeys : Int = superKeyColumns.size + keyColumns.size
+
+  val columnIndexMap = CaseInsensitiveMap(
+    ((superKeyColumns ++ keyColumns).zipWithIndex.map {
+    case (oc, i) => oc.name -> i
+  }).toMap
+  )
+
+  def isShardingKey(ar : AttributeReference) : Option[Int] = {
+    columnIndexMap.get(ar.name)
+  }
+}
 
 case class TableFamily(
     id: Int,
@@ -266,6 +281,31 @@ class ShardingMetadata private[sharding] (
         routingTables.-(tableFamilyId)
       }
     }
+  }
+
+  private val ALL_SHARD_INSTANCES = Range(0, shardInstances.size).toSet
+
+  private[sql] val REPLICATED_TABLE_INFO =
+    ShardQueryInfo(ReplicatedQuery, None, ALL_SHARD_INSTANCES, None)
+  private[sql] val COORD_QUERY_INFO = ShardQueryInfo(CoordinatorQuery, None, Set.empty, None)
+
+  private[sql] def shardQueryInfo(oraTable : OraTable) : ShardQueryInfo = {
+    val qualifiedTableName = QualifiedTableName(oraTable.schema, oraTable.name)
+
+    if (replicatedTables.contains(qualifiedTableName)) {
+      REPLICATED_TABLE_INFO
+    } else {
+      val sTbl = shardTables.get(qualifiedTableName)
+      if (sTbl.isDefined) {
+        ShardQueryInfo(ShardedQuery, sTbl, ALL_SHARD_INSTANCES, None)
+      } else {
+        COORD_QUERY_INFO
+      }
+    }
+  }
+
+  private[sql] def getRoutingTable(shardTbl : ShardTable) : RoutingQueryInterface = {
+    routingTables(shardTbl.tableFamilyId)
   }
 
 }
