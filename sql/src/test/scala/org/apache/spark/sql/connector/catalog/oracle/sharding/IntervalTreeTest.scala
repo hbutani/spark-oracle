@@ -24,7 +24,7 @@ import oracle.spark.datastructs._
 import org.scalacheck.Gen
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.connector.catalog.oracle.ShardingAbstractTest
+import org.apache.spark.sql.oracle.ShardingAbstractTest
 import org.apache.spark.sql.oracle.util.TimeIt
 
 // scalastyle:off println

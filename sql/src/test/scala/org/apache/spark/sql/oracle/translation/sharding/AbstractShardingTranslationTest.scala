@@ -20,8 +20,8 @@ package org.apache.spark.sql.oracle.translation.sharding
 import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.StringUtils.PlanStringConcat
-import org.apache.spark.sql.connector.catalog.oracle.ShardingAbstractTest
 import org.apache.spark.sql.connector.catalog.oracle.sharding.ShardQueryInfo
+import org.apache.spark.sql.oracle.ShardingAbstractTest
 
 class AbstractShardingTranslationTest extends ShardingAbstractTest {
 

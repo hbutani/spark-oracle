@@ -24,9 +24,9 @@ import oracle.spark.ORASQLUtils
 
 import org.apache.spark.sql.catalyst.QualifiedTableName
 import org.apache.spark.sql.catalyst.expressions.Literal
-import org.apache.spark.sql.connector.catalog.oracle.{OracleCatalog, ShardingAbstractTest}
+import org.apache.spark.sql.connector.catalog.oracle.OracleCatalog
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
-import org.apache.spark.sql.oracle.expressions.OraLiteral
+import org.apache.spark.sql.oracle.ShardingAbstractTest
 import org.apache.spark.sql.types.Decimal
 
 

@@ -15,31 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.oracle.tpch
+package org.apache.spark.sql.oracle
 
-import org.apache.spark.sql.hive.test.oracle.TestOracleHive
-import org.apache.spark.sql.oracle.ShardingAbstractTest
+import org.scalatest.{Suite, Suites}
 
-class TPCHQueriesTest extends ShardingAbstractTest {
+import org.apache.spark.sql.connector.catalog.oracle.sharding.{IntervalTreeTest, ShardingMetadataTest}
+import org.apache.spark.sql.oracle.tpch.TPCHQueriesTest
+import org.apache.spark.sql.oracle.translation.sharding.ShardingAnnotationTest
 
-  // scalastyle:off println
-  test("showPlans") { td =>
+class ShardingTestSuite extends Suites(ShardingTestSuite.tests : _*)
 
-    TestOracleHive.sql(s"set spark.sql.oracle.enable.querysplitting=true")
-    TestOracleHive.sql(s"set spark.sql.oracle.querysplit.target=1mb")
-    TestOracleHive.sql(s"set spark.sql.oracle.allow.splitresultset=true")
-
-    /*
-   * Not fully pushed queries:
-   * q21 -> exists and not exists
-   */
-
-    for ((qNm, q) <- TPCHQueries.queries) {
-      println(s"Query ${qNm}:")
-      TestOracleHive.sql(s"explain oracle pushdown $q").show(10000, false)
-    }
-  }
-
-  // scalastyle:on
-
+object ShardingTestSuite {
+  val tests : Seq[Suite] = Seq(
+    new ShardingMetadataTest(),
+    new IntervalTreeTest(),
+    new TPCHQueriesTest(),
+    new ShardingAnnotationTest()
+  )
 }

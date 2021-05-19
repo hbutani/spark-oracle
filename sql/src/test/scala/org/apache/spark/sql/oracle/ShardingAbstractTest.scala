@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.connector.catalog.oracle
+package org.apache.spark.sql.oracle
 
 import oracle.spark.ConnectionManagement
 import org.scalactic.source
 import org.scalatest.Tag
 
+import org.apache.spark.sql.connector.catalog.oracle.OracleCatalog
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
-import org.apache.spark.sql.oracle.AbstractTest
 
 abstract class ShardingAbstractTest extends AbstractTest {
 
