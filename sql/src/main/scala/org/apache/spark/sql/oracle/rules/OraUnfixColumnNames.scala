@@ -36,7 +36,6 @@ object OraUnfixColumnNames {
       case dsv2@DataSourceV2ScanRelation(_, oScan : OraScan, _) =>
         unfix(oScan.oraPlan)
         oScan.oraPlan.unsetTagValue(ORA_FIXED_NAMES_TAG)
-        dsv2
       case _ => ()
     }
     plan
@@ -46,10 +45,8 @@ object OraUnfixColumnNames {
     case oc : OraColumnRef =>
       oc.clearOraFixedAlias
       oc.clearOraFixedNm
-      oc
     case nE : OraNamedExpression =>
       nE.clearOraFixedAlias
-      nE
     case sqE : OraSubqueryExpression =>
       unfix(sqE.oraPlan)
     case _ => ()

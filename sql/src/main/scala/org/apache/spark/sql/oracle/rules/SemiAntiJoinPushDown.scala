@@ -224,11 +224,11 @@ case class SemiAntiJoinPushDown(inDSScan: DataSourceV2ScanRelation,
 
   /**
    * Handle `not in` and `not exists` translation.
-   * - `not exists` case is when there is equiJoin conditions in the NotInJoinPattern
-   *   (notInLKeys, notInRkeys are empty)
-   * - `not in` has 2 cases
-   *   - when there is are correlated conditions, i.e. `leftKeys.nonEmpty`
-   *   - when there is no correlated conditions, i.e. `leftKeys.isEmpty`
+   *  - `not exists` case is when there is equiJoin conditions in the NotInJoinPattern
+   *    (notInLKeys, notInRkeys are empty)
+   *  - `not in` has 2 cases
+   *    - when there is are correlated conditions, i.e. `leftKeys.nonEmpty`
+   *    - when there is no correlated conditions, i.e. `leftKeys.isEmpty`
    *
    * The correlated condition is constructed by [[EqualTo]] check on each
    * `outerCorrOEs` and `innerCorrOEs`. `outerCorrOEs` are wrapped in

@@ -29,16 +29,18 @@ case object CoordinatorQuery extends ShardQueryType
 case object ShardedQuery extends ShardQueryType
 
 case class ShardQueryInfo(queryType : ShardQueryType,
-                          shardTable : Option[ShardTable],
+                          shardTables : Set[ShardTable],
                           shardInstances : Set[Int],
                           planInfo : Option[PlanInfo]
                          ) {
 
+  lazy val tableFamily = shardTables.headOption.map(_.tableFamilyId).getOrElse(-1)
+
   def show(append: String => Unit) : Unit = {
     append(queryType.toString)
     if (queryType == ShardedQuery) {
-      append(s", shardTable = ${shardTable.get.qName.toString()}")
-      append(s", tableFamily = ${shardTable.get.tableFamilyId}")
+      append(s", shardTables = ${shardTables.map(_.qName).mkString("[", ", ", "]")}")
+      append(s", tableFamily = ${tableFamily}")
       append(s", shardInstances = ${shardInstances.mkString("[", ", ", "]")}")
     }
   }

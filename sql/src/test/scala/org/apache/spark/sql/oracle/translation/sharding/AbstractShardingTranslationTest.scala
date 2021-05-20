@@ -20,7 +20,8 @@ package org.apache.spark.sql.oracle.translation.sharding
 import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.StringUtils.PlanStringConcat
-import org.apache.spark.sql.connector.catalog.oracle.sharding.ShardQueryInfo
+import org.apache.spark.sql.connector.catalog.oracle.sharding.{ReplicatedQuery, ShardedQuery, ShardQueryInfo}
+import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.ShardingAbstractTest
 
 class AbstractShardingTranslationTest extends ShardingAbstractTest {
@@ -74,5 +75,31 @@ class AbstractShardingTranslationTest extends ShardingAbstractTest {
     generateTreeString(plan, 0, Nil, concat.append)
     concat.toString()
   }
+
+  // scalastyle:off println
+
+  def showAnnotation(q: String): Unit = {
+    val plan = TestOracleHive.sql(q).queryExecution.optimizedPlan
+    println(showShardingAnnotation(plan))
+  }
+
+  def checkShardingInfo(q: String, shardSet: Set[Int]): Unit = {
+    val plan = TestOracleHive.sql(q).queryExecution.optimizedPlan
+    val sInfo = ShardQueryInfo.getShardingQueryInfo(plan)
+    assert(
+      sInfo.isDefined &&
+        sInfo.get.queryType == ShardedQuery &&
+        sInfo.get.shardInstances == shardSet)
+  }
+
+  def checkReplicatedQuery(q: String): Unit = {
+    val plan = TestOracleHive.sql(q).queryExecution.optimizedPlan
+    val sInfo = ShardQueryInfo.getShardingQueryInfo(plan)
+    assert(
+      sInfo.isDefined &&
+        sInfo.get.queryType == ReplicatedQuery)
+  }
+
+  // scalastyle:on println
 
 }

@@ -21,12 +21,14 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
-import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Filter, LogicalPlan, Project}
+import org.apache.spark.sql.catalyst.plans.{ExistenceJoin, LeftAnti}
+import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Filter, Join, LogicalPlan, Project}
 import org.apache.spark.sql.connector.catalog.oracle.OracleCatalog
 import org.apache.spark.sql.connector.catalog.oracle.sharding._
 import org.apache.spark.sql.connector.catalog.oracle.sharding.ShardQueryInfo._
 import org.apache.spark.sql.connector.read.oracle.{OraFileScan, OraPushdownScan, OraScan}
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
+import org.apache.spark.sql.oracle.operators.OraTableScan
 
 object AnnotateShardingInfoRule
     extends OraShardingLogicalRule
@@ -45,15 +47,17 @@ object AnnotateShardingInfoRule
 
   private def annotate(plan: LogicalPlan)(
       implicit sparkSession: SparkSession,
-      shardedMD: ShardingMetadata): LogicalPlan =
-    plan transformUp {
-      case plan if ShardQueryInfo.hasShardingQueryInfo(plan) => plan
+      shardedMD: ShardingMetadata): LogicalPlan = {
+    plan foreachUp {
+      case plan if ShardQueryInfo.hasShardingQueryInfo(plan) => ()
       case ds @ DataSourceV2ScanRelation(_, oraFScan: OraFileScan, _) =>
-        val oraTab = oraFScan.oraPlan.oraTable
+        val oraTabScan : OraTableScan = oraFScan.oraPlan
+        val oraTab = oraTabScan.oraTable
         val shardQInfo = shardedMD.shardQueryInfo(oraTab)
         logInfo(s"annotate DSV2 for ${oraTab.name} with ShardQueryInfo ${shardQInfo.show}")
         ShardQueryInfo.setShardingQueryInfo(ds, shardQInfo)
-        ds
+        // take into account, filters associated with the OraTableScan
+        filter(oraTabScan, ds)
       case ds @ DataSourceV2ScanRelation(_, oraScan: OraPushdownScan, _) =>
         val oraPlan = oraScan.oraPlan
         val catalystOp = oraPlan.catalystOp
@@ -66,30 +70,37 @@ object AnnotateShardingInfoRule
         } else {
           ShardQueryInfo.setShardingQueryInfo(ds, shardedMD.COORD_QUERY_INFO)
         }
-        ds
       case p @ Project(_, child) =>
         project(child, p)
-        p
       case f @ Filter(_, child) =>
         filter(child, f)
-        f
       case joinOp @ ExtractEquiJoinKeys(
             joinType,
             leftKeys,
             rightKeys,
-            condition,
-            leftChild,
-            rightChild,
-            _) =>
-        equiJoin(leftChild, rightChild, leftKeys, rightKeys, condition, joinOp)
-        joinOp
+            joinCond,
+            _,
+            _,
+            _)  if joinType != ExistenceJoin =>
+        if (joinType == LeftAnti) {
+          nonInJoin(joinOp, leftKeys, rightKeys, joinCond)
+        } else {
+          equiJoin(joinOp, leftKeys, rightKeys)
+        }
+      case joinOp@Join(_, _, joinType, joinCond, _) =>
+        if (joinType == LeftAnti) {
+          nonInJoin(joinOp, Seq.empty, Seq.empty, joinCond)
+        } else {
+          nonEquiJoin(joinOp)
+        }
       case aggOp @ Aggregate(_, _, child) =>
         aggregate(child, aggOp)
-        aggOp
       case op =>
         ShardQueryInfo.setShardingQueryInfo(op, shardedMD.COORD_QUERY_INFO)
-        op
     }
+
+    plan
+  }
 
   override def _apply(plan: LogicalPlan)(implicit sparkSession: SparkSession): LogicalPlan = {
     val oraCatalog =

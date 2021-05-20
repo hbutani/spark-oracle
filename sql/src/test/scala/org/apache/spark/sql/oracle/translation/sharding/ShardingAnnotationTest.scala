@@ -17,28 +17,12 @@
 
 package org.apache.spark.sql.oracle.translation.sharding
 
-import org.apache.spark.sql.connector.catalog.oracle.sharding.{ShardedQuery, ShardQueryInfo}
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.tpch.TPCHQueries
 
 class ShardingAnnotationTest extends AbstractShardingTranslationTest {
 
   // scalastyle:off println
-
-  def showAnnotation(q: String): Unit = {
-    val plan = TestOracleHive.sql(q).queryExecution.optimizedPlan
-    println(showShardingAnnotation(plan))
-  }
-
-  def checkShardingInfo(q: String, shardSet: Set[Int]): Unit = {
-    val plan = TestOracleHive.sql(q).queryExecution.optimizedPlan
-    val sInfo = ShardQueryInfo.getShardingQueryInfo(plan)
-    assert(
-      sInfo.isDefined &&
-        sInfo.get.queryType == ShardedQuery &&
-        sInfo.get.shardInstances == shardSet)
-  }
-
   ignore("showShardingQInfo") { td =>
     TestOracleHive.sql(s"set spark.sql.oracle.enable.querysplitting=true")
     TestOracleHive.sql(s"set spark.sql.oracle.querysplit.target=1mb")
@@ -50,6 +34,7 @@ class ShardingAnnotationTest extends AbstractShardingTranslationTest {
       println(showShardingAnnotation(plan))
     }
   }
+  // scalastyle:on println
 
   test("basicQ") { td =>
     showAnnotation("select l_returnflag from lineitem")
@@ -92,7 +77,4 @@ class ShardingAnnotationTest extends AbstractShardingTranslationTest {
       "select l_returnflag from lineitem where 100 < l_orderkey and  2 * 100 * 1000 >= l_orderkey",
       Set(0, 1))
   }
-
-  // scalastyle:on
-
 }

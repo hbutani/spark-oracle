@@ -20,25 +20,13 @@ package org.apache.spark.sql.oracle.rules.sharding
 import scala.reflect.ClassTag
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.{
-  AttributeReference,
-  BinaryComparison,
-  EqualNullSafe,
-  EqualTo,
-  Expression,
-  GreaterThan,
-  GreaterThanOrEqual,
-  In,
-  InSet,
-  LessThan,
-  LessThanOrEqual,
-  Literal,
-  Not
-}
+import org.apache.spark.sql.catalyst.expressions.{And, AttributeReference, BinaryComparison, EqualNullSafe, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, In, InSet, LessThan, LessThanOrEqual, Literal, Not}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan}
 import org.apache.spark.sql.connector.catalog.oracle.sharding._
 import org.apache.spark.sql.connector.catalog.oracle.sharding.ShardQueryInfo._
 import org.apache.spark.sql.connector.catalog.oracle.sharding.routing.RoutingQueryInterface
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
+import org.apache.spark.sql.oracle.operators.OraTableScan
 
 trait FilterAnnotate { self: AnnotateShardingInfoRule.type =>
 
@@ -55,12 +43,12 @@ trait FilterAnnotate { self: AnnotateShardingInfoRule.type =>
    * @param sparkSession
    * @param shardedMD
    */
-  private[sql] def filter(from: LogicalPlan, filOp: Filter)(
-      implicit sparkSession: SparkSession,
-      shardedMD: ShardingMetadata): Unit = {
+  private[sharding] def filter(from: LogicalPlan, filOp: Filter)(
+    implicit sparkSession: SparkSession,
+    shardedMD: ShardingMetadata): Unit = {
     var sInfo = getShardingQueryInfoOrCoord(from)
 
-    if (sInfo.queryType == ShardedQuery) {
+    if (sInfo.queryType == ShardedQuery && sInfo.shardTables.size == 1) {
       /*
        * Split info conjuncts
        * extract the conds on the ShardingKeys
@@ -69,7 +57,7 @@ trait FilterAnnotate { self: AnnotateShardingInfoRule.type =>
 
       val conds = replaceAlias(filOp.condition, getAliasMap(from.output))
       val splitConds = splitConjunctivePredicates(conds)
-      val shardingFil = ShardingFilters(sInfo.shardTable.get, shardedMD)
+      val shardingFil = ShardingFilters(sInfo.shardTables.head, shardedMD)
       for (c <- splitConds) {
         shardingFil.addCond(c)
       }
@@ -80,6 +68,34 @@ trait FilterAnnotate { self: AnnotateShardingInfoRule.type =>
 
     ShardQueryInfo.setShardingQueryInfo(filOp, sInfo)
 
+  }
+
+  /*
+   * If there are filters associated with a OraTableScan
+   * then update ShardQueryInfo based on condition.
+   */
+  private[sharding] def filter(oraTabScan : OraTableScan, ds: DataSourceV2ScanRelation)(
+    implicit sparkSession: SparkSession,
+    shardedMD: ShardingMetadata): Unit = {
+    if (oraTabScan.filter.isDefined || oraTabScan.partitionFilter.isDefined) {
+      var filCond : Expression = null
+      if (oraTabScan.filter.isDefined) {
+        filCond = oraTabScan.filter.get.catalystExpr
+      }
+      if (oraTabScan.partitionFilter.isDefined) {
+        val pCond = oraTabScan.partitionFilter.get.catalystExpr
+        if (filCond == null) {
+          filCond = pCond
+        } else {
+          filCond = And(filCond, pCond)
+        }
+      }
+      val fil = Filter(filCond, ds)
+      filter(ds, fil)
+      for(filSInfo <- ShardQueryInfo.getShardingQueryInfo(fil)) {
+        ShardQueryInfo.setShardingQueryInfo(ds, filSInfo)
+      }
+    }
   }
 
 }
@@ -123,7 +139,7 @@ object FilterAnnotate {
     trait INComp extends ShardingComparison[Array[Literal]] {
       override lazy val lits: Array[Array[Literal]] = createLitsArr(Array.empty[Literal])
       override def isApplicable: Boolean =
-        shardedTbl.numShardingKeys == 1 && super.isApplicable
+        shardedTbl.numShardingKeys == 1 && lits.forall(_.nonEmpty)
 
       protected def pivotedLiterals: Array[Array[Literal]] = {
         for (lit <- lits(0)) yield {

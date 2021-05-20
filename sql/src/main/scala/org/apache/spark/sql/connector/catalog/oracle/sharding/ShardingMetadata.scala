@@ -286,8 +286,8 @@ class ShardingMetadata private[sharding] (
   private val ALL_SHARD_INSTANCES = Range(0, shardInstances.size).toSet
 
   private[sql] val REPLICATED_TABLE_INFO =
-    ShardQueryInfo(ReplicatedQuery, None, ALL_SHARD_INSTANCES, None)
-  private[sql] val COORD_QUERY_INFO = ShardQueryInfo(CoordinatorQuery, None, Set.empty, None)
+    ShardQueryInfo(ReplicatedQuery, Set.empty, ALL_SHARD_INSTANCES, None)
+  private[sql] val COORD_QUERY_INFO = ShardQueryInfo(CoordinatorQuery, Set.empty, Set.empty, None)
 
   private[sql] def shardQueryInfo(oraTable : OraTable) : ShardQueryInfo = {
     val qualifiedTableName = QualifiedTableName(oraTable.schema, oraTable.name)
@@ -297,7 +297,7 @@ class ShardingMetadata private[sharding] (
     } else {
       val sTbl = shardTables.get(qualifiedTableName)
       if (sTbl.isDefined) {
-        ShardQueryInfo(ShardedQuery, sTbl, ALL_SHARD_INSTANCES, None)
+        ShardQueryInfo(ShardedQuery, sTbl.toSet, ALL_SHARD_INSTANCES, None)
       } else {
         COORD_QUERY_INFO
       }
@@ -307,6 +307,8 @@ class ShardingMetadata private[sharding] (
   private[sql] def getRoutingTable(shardTbl : ShardTable) : RoutingQueryInterface = {
     routingTables(shardTbl.tableFamilyId)
   }
+
+  private[sql] def getShardTable(qNm : QualifiedTableName) : ShardTable = shardTables(qNm)
 
 }
 
