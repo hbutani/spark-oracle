@@ -19,7 +19,6 @@ package org.apache.spark.sql.oracle.rules.sharding
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 import org.apache.spark.sql.catalyst.planning.ExtractEquiJoinKeys
 import org.apache.spark.sql.catalyst.plans.{ExistenceJoin, LeftAnti}
 import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, Filter, Join, LogicalPlan, Project}
@@ -32,7 +31,7 @@ import org.apache.spark.sql.oracle.operators.OraTableScan
 
 object AnnotateShardingInfoRule
     extends OraShardingLogicalRule
-    with PredicateHelper
+    with AnnotatePredicateHelper
     with Logging
     with FilterAnnotate
     with JoinAnnotate
@@ -96,7 +95,13 @@ object AnnotateShardingInfoRule
       case aggOp @ Aggregate(_, _, child) =>
         aggregate(child, aggOp)
       case op =>
-        ShardQueryInfo.setShardingQueryInfo(op, shardedMD.COORD_QUERY_INFO)
+        val childSInfos =
+          op.children.map(plan => ShardQueryInfo.getShardingQueryInfoOrCoord(plan))
+        if (childSInfos.forall(sI => sI.queryType == ReplicatedQuery)) {
+          ShardQueryInfo.setShardingQueryInfo(op, shardedMD.REPLICATED_TABLE_INFO)
+        } else {
+          ShardQueryInfo.setShardingQueryInfo(op, shardedMD.COORD_QUERY_INFO)
+        }
     }
 
     plan

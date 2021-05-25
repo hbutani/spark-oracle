@@ -22,23 +22,40 @@ import org.apache.spark.sql.catalyst.plans.logical.{Aggregate, LogicalPlan}
 import org.apache.spark.sql.connector.catalog.oracle.sharding._
 import org.apache.spark.sql.connector.catalog.oracle.sharding.ShardQueryInfo._
 
+/**
+ *  - child with [[ShardedQuery]]
+ *   - try to convert groupingKey expressions into Sharding Keys
+ *   - If we find an expression which is the 1st component(index == 0) of some
+ *     ShardTable's shardingKey, we can maintain the sharding of the child.
+ *   - Otherwise if grouping expressions are on Replicated Tables
+ *     we can maintain the sharding of the child.
+ *   - Otherwise this is a COORD_QUERY_INFO
+ *  - otherwise, Aggregation takes on Sharding of child Operator.
+ */
 trait AggregateAnnotate { self: AnnotateShardingInfoRule.type =>
 
-  private[sql] def aggregate(from: LogicalPlan, aggOp: Aggregate)(
+  private[sharding] def aggregate(from: LogicalPlan, aggOp: Aggregate)(
       implicit sparkSession: SparkSession,
       shardedMD: ShardingMetadata): Unit = {
     val sInfo = getShardingQueryInfoOrCoord(from)
 
     if (sInfo.queryType == ShardedQuery) {
       val conds = aggOp.groupingExpressions
-      /*
-     * If ShardingKeys in groupingExpressions
-     * then queryType is still ShardedQuery
-     */
+      val shardingKeys: Seq[(OpCode, ShardTable, Int)] =
+        conds.flatMap(c => toShardingKey(c, aggOp).toSeq)
+
+      if (shardingKeys.exists(s => s._3 == 0)) {
+        ShardQueryInfo.setShardingQueryInfo(aggOp, sInfo)
+      } else {
+        if (conds.forall(c => isGroupingOnReplTable(c, aggOp))) {
+          ShardQueryInfo.setShardingQueryInfo(aggOp, sInfo)
+        } else {
+          ShardQueryInfo.setShardingQueryInfo(aggOp, shardedMD.COORD_QUERY_INFO)
+        }
+      }
+    } else {
+      ShardQueryInfo.setShardingQueryInfo(aggOp, sInfo)
     }
-
-    ShardQueryInfo.setShardingQueryInfo(aggOp, shardedMD.COORD_QUERY_INFO)
-
   }
 
 }

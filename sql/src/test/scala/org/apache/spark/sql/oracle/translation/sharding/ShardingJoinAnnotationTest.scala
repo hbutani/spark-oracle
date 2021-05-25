@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.oracle.translation.sharding
 
-class ShardingJoinAnnotationTest  extends AbstractShardingTranslationTest {
+class ShardingJoinAnnotationTest extends AbstractShardingTranslationTest {
 
   test("basicJ") { td =>
 

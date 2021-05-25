@@ -20,7 +20,7 @@ package org.apache.spark.sql.oracle.translation.sharding
 import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.StringUtils.PlanStringConcat
-import org.apache.spark.sql.connector.catalog.oracle.sharding.{ReplicatedQuery, ShardedQuery, ShardQueryInfo}
+import org.apache.spark.sql.connector.catalog.oracle.sharding._
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.ShardingAbstractTest
 
@@ -98,6 +98,14 @@ class AbstractShardingTranslationTest extends ShardingAbstractTest {
     assert(
       sInfo.isDefined &&
         sInfo.get.queryType == ReplicatedQuery)
+  }
+
+  def checkCoordinatorQuery(q: String): Unit = {
+    val plan = TestOracleHive.sql(q).queryExecution.optimizedPlan
+    val sInfo = ShardQueryInfo.getShardingQueryInfo(plan)
+    assert(
+      sInfo.isDefined &&
+        sInfo.get.queryType == CoordinatorQuery)
   }
 
   // scalastyle:on println

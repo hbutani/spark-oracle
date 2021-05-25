@@ -31,7 +31,7 @@ class TPCHQueriesTest extends ShardingAbstractTest {
 
     /*
    * Not fully pushed queries:
-   * q21 -> exists and not exists
+   * q21 -> we don't support pushdown of non-equality correlated predicate
    */
 
     for ((qNm, q) <- TPCHQueries.queries) {

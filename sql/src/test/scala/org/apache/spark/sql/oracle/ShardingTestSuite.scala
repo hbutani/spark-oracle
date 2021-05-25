@@ -21,7 +21,7 @@ import org.scalatest.{Suite, Suites}
 
 import org.apache.spark.sql.connector.catalog.oracle.sharding.{IntervalTreeTest, ShardingMetadataTest}
 import org.apache.spark.sql.oracle.tpch.TPCHQueriesTest
-import org.apache.spark.sql.oracle.translation.sharding.{ShardingAnnotationTest, ShardingJoinAnnotationTest}
+import org.apache.spark.sql.oracle.translation.sharding.{ShardingAnnotationAggregateTest, ShardingAnnotationTest, ShardingJoinAnnotationTest}
 
 class ShardingTestSuite extends Suites(ShardingTestSuite.tests : _*)
 
@@ -31,6 +31,7 @@ object ShardingTestSuite {
     new IntervalTreeTest(),
     new TPCHQueriesTest(),
     new ShardingAnnotationTest(),
-    new ShardingJoinAnnotationTest()
+    new ShardingJoinAnnotationTest(),
+    new ShardingAnnotationAggregateTest()
   )
 }
