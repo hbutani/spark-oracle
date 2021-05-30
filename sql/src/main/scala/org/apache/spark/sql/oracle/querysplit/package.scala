@@ -56,10 +56,28 @@ package object querysplit {
 
   }
 
+  case class ShardWorkersInfo(shardWorkersCost : Long,
+                              shardWorkersTime : Long,
+                              numShardWorkersQueries : Int,
+                              totalCost : Long,
+                              totalTime : Long,
+                              hasJoins : Boolean,
+                              hasTableAccess : Boolean) {
+    def explain(append : String => Unit) : Unit = {
+      // scalastyle:off line.size.limit
+      append(s"Sharding details:\n")
+      append(s"  shard instances cost=${shardWorkersCost}, total query cost=${totalCost}\n")
+      append(s"  shard instances time(secs)=${shardWorkersTime}, total query time(secs)=${totalTime}\n")
+      append(s"  num of shard queries in plan=${numShardWorkersQueries}, joins in coordinator=${hasJoins}, table scans in coordinator=${hasTableAccess}\n")
+      // scalastyle:on
+    }
+  }
+
   case class PlanInfo(
                        rowCount : Long,
                        bytes : Long,
-                       tabAccesses : Seq[TableAccessOperation]
+                       tabAccesses : Seq[TableAccessOperation],
+                       shardingInfo : Option[ShardWorkersInfo]
                      ) {
     def explain(append : String => Unit) : Unit = {
       append(s"rowCount = ${rowCount}, bytes=${bytes}\n")
@@ -69,6 +87,9 @@ package object querysplit {
           t.explain(append)
           append("\n")
         }
+      }
+      if (shardingInfo.isDefined) {
+        shardingInfo.get.explain(append)
       }
     }
   }

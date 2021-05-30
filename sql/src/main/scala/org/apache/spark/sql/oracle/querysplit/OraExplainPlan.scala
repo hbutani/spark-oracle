@@ -16,15 +16,16 @@
  */
 package org.apache.spark.sql.oracle.querysplit
 
+import scala.collection.mutable.{ArrayBuffer, Map => MMap, Stack}
 import scala.util.Try
 
 import oracle.spark.{DataSourceKey, ORAMetadataSQLs}
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.oracle.OraSparkUtils
 import org.apache.spark.sql.oracle.OraSparkUtils.sequence
 import org.apache.spark.sql.oracle.expressions.OraLiterals
 import org.apache.spark.sql.oracle.operators.OraPlan
-
 
 /**
  * Invoke [[ORAMetadataSQLs#queryPlan]] to get the oracle plan in xml form.
@@ -37,7 +38,7 @@ object OraExplainPlan extends Logging {
   import scala.xml.{Node, NodeSeq}
   import scala.xml.XML._
 
-  private def oraExplainPlanXML(dsKey: DataSourceKey, oraPlan: OraPlan): String = {
+  private[oracle] def oraExplainPlanXML(dsKey: DataSourceKey, oraPlan: OraPlan): String = {
     val oSQL = oraPlan.orasql
     ORAMetadataSQLs.queryPlan(dsKey, oSQL.sql, ps => {
       OraLiterals.bindValues(ps, oSQL.params)
@@ -46,10 +47,12 @@ object OraExplainPlan extends Logging {
 
   def constructPlanInfo(dsKey: DataSourceKey,
                         oraPlan: OraPlan,
-                        extractTabAccess: Boolean): Option[PlanInfo] = {
+                        extractTabAccess: Boolean,
+                        extractShardCosts : Boolean = false): Option[PlanInfo] = {
     val pO = PlanXMLReader.parsePlan(
       oraExplainPlanXML(dsKey, oraPlan),
-      extractTabAccess
+      extractTabAccess,
+      extractShardCosts
     )
 
     if (!pO.isDefined) {
@@ -80,9 +83,44 @@ object OraExplainPlan extends Logging {
       textValue(nd).flatMap(v => Try { v.toDouble }.toOption)
     }
 
+    private def attrVal[T](nd: Node,
+                attrNm: String,
+                parseVal : NodeSeq => Option[T]): Option[T] = {
+      for (aNd <- nd.attribute(attrNm) if aNd.size == 1;
+           tV <- parseVal(aNd.head)
+           ) yield tV
+    }
+
+    private val TIME_ATTR_REGEX = raw"(?:(\d{2}):)?(\d{2}):(\d{2})".r
+    private def timeVal(s : Option[String]) : Option[Long] = {
+
+      if (s.isDefined) {
+
+        val MIN_SECS = 60
+        val HOUR_SECS = MIN_SECS * 60
+
+        s.get.trim match {
+          case TIME_ATTR_REGEX(null, min, sec) => Some(min.toLong * MIN_SECS + sec.toLong)
+          case TIME_ATTR_REGEX(hr, min, sec) =>
+            Some(hr.toLong * HOUR_SECS + min.toLong * MIN_SECS + sec.toLong)
+          case _ => None
+        }
+      } else None
+    }
+
     case class OpCost(row_count: Long, bytes : Long)
 
     def operations(root: NodeSeq): NodeSeq = root \ "plan" \ "operation"
+
+    private def nodeIdDepth(nd: Node): Option[(Int, Int, String)] = {
+      for (
+        id <- attrVal[Int](nd, "id", intValue _);
+        depth <- attrVal[Int](nd, "depth", intValue _);
+        nm <- attrVal[String](nd, "name", textValue _)
+      ) yield {
+        (id, depth, nm)
+      }
+    }
 
     def opCost(nd: Node): Option[OpCost] = {
 
@@ -125,7 +163,83 @@ object OraExplainPlan extends Logging {
       )
     }
 
-    def parsePlan(xml: String, extractTabAccess: Boolean): Option[PlanInfo] = {
+    def shardWorkersInfo(root : Node) : Option[ShardWorkersInfo] = {
+
+      val idPrntIdMap = MMap[Int, Int]()
+      val idNodeMap = MMap[Int, Node]()
+      val remoteNodes = ArrayBuffer[Int]()
+      var hasJoins : Boolean = false
+      var hasTableAccess : Boolean = false
+
+      def buildOpRelMap(ops : NodeSeq) : Unit = {
+        val stack = Stack[(Int, Int)]()
+
+        for(nd <- ops) {
+          val ndIdDepthPos : Option[(Int, Int, String)] = nodeIdDepth(nd)
+          if (ndIdDepthPos.isDefined) {
+            val Some((id : Int, depth : Int, nm : String)) = ndIdDepthPos
+            while (stack.nonEmpty && stack.top._2 >= depth) stack.pop()
+            if (stack.nonEmpty) {
+              idPrntIdMap(id) = stack.top._1
+            }
+            idNodeMap(id) = nd
+            stack.push((id, depth))
+
+            nm match {
+              case "REMOTE" => remoteNodes += id
+              case "TABLE ACCESS" => hasTableAccess = true
+              case "INDEX" => hasTableAccess = true
+              case n if n.contains("JOIN") => hasJoins = true
+              case _ => ()
+            }
+          }
+        }
+      }
+
+      def _coordCostTime(ndId : Int) : (Option[Long], Option[Long]) = {
+        def coordNd(nd : Node) : (Boolean, Option[Long], Option[Long]) = {
+          val shardCordNode : Boolean =
+            (for (obj <- textValue(nd \ "object")) yield {
+              obj.startsWith("VW_SHARD_")
+            }).getOrElse(false)
+
+          if (shardCordNode) {
+            (true, longValue(nd \ "cost"), timeVal(textValue(nd \ "time")))
+          } else {
+            (false, None, None)
+          }
+        }
+
+        val (isCordNd, cordCost, cordTime) = coordNd(idNodeMap(ndId))
+        if (isCordNd) {
+          (cordCost, cordTime)
+        } else {
+          idPrntIdMap.get(ndId).map(_coordCostTime).getOrElse((None, None))
+        }
+      }
+
+      val ops = operations(root)
+      buildOpRelMap(ops)
+
+      val (shardCosts, shardTimes) = remoteNodes.map(id => _coordCostTime(id)).unzip
+
+      for(
+      costs <- OraSparkUtils.sequence(shardCosts) if costs.nonEmpty;
+      times <- OraSparkUtils.sequence(shardTimes) if times.nonEmpty;
+      rootOpCost <- longValue(ops.head \ "cost");
+      rootOpTime <- timeVal(textValue(ops.head \ "time"))
+      ) yield {
+        ShardWorkersInfo(
+          costs.sum, times.sum, costs.size,
+          rootOpCost, rootOpTime, hasJoins, hasTableAccess
+        )
+      }
+
+    }
+
+    def parsePlan(xml: String,
+                  extractTabAccess: Boolean,
+                  extractShardCosts : Boolean): Option[PlanInfo] = {
 
       val root = loadString(xml)
       val ops = operations(root)
@@ -137,7 +251,8 @@ object OraExplainPlan extends Logging {
         PlanInfo(
           rootOpCost.row_count,
           rootOpCost.bytes,
-          tblOps
+          tblOps,
+          if (extractShardCosts) shardWorkersInfo(root) else None
         )
       }
     }
