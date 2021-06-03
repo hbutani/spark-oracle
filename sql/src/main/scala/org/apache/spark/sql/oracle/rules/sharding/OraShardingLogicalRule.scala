@@ -24,8 +24,7 @@ import org.apache.spark.sql.oracle.rules.OraLogicalRule
 abstract class OraShardingLogicalRule extends OraLogicalRule {
 
   override protected def isRewriteEnabled(implicit sparkSession: SparkSession): Boolean = {
-    val oraCatalog =
-      sparkSession.sessionState.catalogManager.catalog("oracle").asInstanceOf[OracleCatalog]
+    val oraCatalog = OracleCatalog.oracleCatalog(sparkSession)
 
     if (oraCatalog.getMetadataManager.isSharded) {
       import org.apache.spark.sql.oracle.OraSparkConfig._

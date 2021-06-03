@@ -18,8 +18,7 @@
 package org.apache.spark.sql.connector.catalog.oracle.sharding
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.catalyst.trees.TreeNodeTag
+import org.apache.spark.sql.catalyst.trees.{TreeNode, TreeNodeTag}
 import org.apache.spark.sql.oracle.querysplit.PlanInfo
 
 sealed trait ShardQueryType
@@ -55,18 +54,18 @@ case class ShardQueryInfo(queryType : ShardQueryType,
 object ShardQueryInfo {
   val ORA_SHARDING_QUERY_TAG = TreeNodeTag[ShardQueryInfo]("_ShardingQueryInfo")
 
-  private[sql] def hasShardingQueryInfo(plan : LogicalPlan) : Boolean =
+  private[sql] def hasShardingQueryInfo(plan : TreeNode[_]) : Boolean =
     getShardingQueryInfo(plan).isDefined
 
-  private[sql] def getShardingQueryInfo(plan : LogicalPlan) : Option[ShardQueryInfo] =
+  private[sql] def getShardingQueryInfo(plan : TreeNode[_]) : Option[ShardQueryInfo] =
     plan.getTagValue(ORA_SHARDING_QUERY_TAG)
 
-  private[sql] def getShardingQueryInfoOrCoord(plan : LogicalPlan)
+  private[sql] def getShardingQueryInfoOrCoord(plan : TreeNode[_])
                                               (implicit sparkSession: SparkSession,
                                                shardedMD : ShardingMetadata
                                               ): ShardQueryInfo =
     plan.getTagValue(ORA_SHARDING_QUERY_TAG).getOrElse(shardedMD.COORD_QUERY_INFO)
 
-  private[sql] def setShardingQueryInfo(plan : LogicalPlan, sInfo : ShardQueryInfo) : Unit =
+  private[sql] def setShardingQueryInfo(plan : TreeNode[_], sInfo : ShardQueryInfo) : Unit =
     plan.setTagValue(ORA_SHARDING_QUERY_TAG, sInfo)
 }

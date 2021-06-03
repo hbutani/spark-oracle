@@ -51,6 +51,10 @@ trait ShardingMetadataLoader {
         val connectString: String = rs.getString(2)
         val shardURL = ShardingMetadata.shardURL(connectString)
         val shardInst = ShardInstance(name, connectString, coordDSInfo.convertToShard(shardURL))
+        ConnectionManagement.registerDataSource(
+          shardInst.shardDSInfo.connInfo,
+          shardInst.shardDSInfo.catalogOptions
+        )
         buf += shardInst
       }
       buf.toArray

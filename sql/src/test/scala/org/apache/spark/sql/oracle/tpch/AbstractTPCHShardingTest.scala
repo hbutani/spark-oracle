@@ -18,24 +18,30 @@
 package org.apache.spark.sql.oracle.tpch
 
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
+import org.apache.spark.sql.oracle.translation.sharding.AbstractShardingTranslationTest
 
-class TPCHQueriesTest extends AbstractTPCHShardingTest {
+abstract class AbstractTPCHShardingTest extends AbstractShardingTranslationTest {
 
-  // scalastyle:off println
-  test("showPlans") { td =>
+  val split_1k = "1kb"
+  val split_10k = "10kb"
+  val split_100k = "100kb"
+  val split_1m = "1Mb"
 
-    /*
-   * Not fully pushed queries:
-   * q21 -> we don't support pushdown of non-equality correlated predicate
-   */
-
-    for ((qNm, q) <- TPCHQueries.queries) {
-      println(s"Query ${qNm}:")
-      TestOracleHive.sql(s"explain oracle pushdown $q").show(10000, false)
-      println("-------------------------------------------------------------")
-    }
+  def setupSplitting(implicit qSplit : Boolean, splitTarget : String) : Unit = {
+    TestOracleHive.sql(s"set spark.sql.oracle.enable.querysplitting=${qSplit}")
+    TestOracleHive.sql(s"set spark.sql.oracle.querysplit.target=${splitTarget}")
   }
 
-  // scalastyle:on
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    setupSplitting(true, split_100k)
+    TestOracleHive.sql("set spark.sql.oracle.allow.splitresultset=true")
+  }
+
+  override def afterAll(): Unit = {
+    TestOracleHive.sql("set spark.sql.oracle.allow.splitresultset=false")
+    setupSplitting(false, split_100k)
+    super.afterAll()
+  }
 
 }

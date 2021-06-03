@@ -27,14 +27,6 @@ import org.apache.spark.sql.oracle.tpch.TPCHQueries
 class ShardingExplainPlanTest extends AbstractShardingTranslationTest {
 
   // scalastyle:off println
-  test("explain") {_ =>
-    for ((qNm, q) <- TPCHQueries.queries) {
-      println(s"Query ${qNm}:")
-      TestOracleHive.sql(s"explain oracle pushdown $q").show(10000, false)
-      println("-------------------------------------------------------------")
-    }
-  }
-
   ignore("annotateCoordCost") {_ =>
     for ((qNm, q) <- TPCHQueries.queries) {
       val plan = TestOracleHive.sql(s"$q").queryExecution.optimizedPlan

@@ -67,8 +67,7 @@ case class ExplainPushdown(sparkPlan: SparkPlan) extends RunnableCommand {
 
       )
 
-    val (splitStrategy : OraSplitStrategy, planInfo : Option[PlanInfo]) =
-      OraSplitStrategy.generateSplits(oraScan.dsKey, oraScan.oraPlan)
+    val (splitStrategy : OraSplitStrategy, planInfo : Option[PlanInfo]) = oraScan.explainPushdown
 
     if (planInfo.isDefined) {
       append("Pushdown Oracle SQL, oracle plan stats estimates:\n")

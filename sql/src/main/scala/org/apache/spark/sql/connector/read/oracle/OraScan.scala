@@ -25,13 +25,16 @@ import oracle.spark.DataSourceKey
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.connector.catalog.oracle.OracleCatalog
+import org.apache.spark.sql.connector.catalog.oracle.sharding.ShardQueryInfo
 import org.apache.spark.sql.connector.read.{Batch, InputPartition, PartitionReaderFactory, Scan, Statistics, SupportsReportPartitioning, SupportsReportStatistics}
 import org.apache.spark.sql.connector.read.partitioning.Partitioning
 import org.apache.spark.sql.execution.datasources.{FilePartition, InMemoryFileIndex, PartitioningAwareFileIndex}
 import org.apache.spark.sql.execution.datasources.v2.FileScan
 import org.apache.spark.sql.internal.connector.SupportsMetadata
 import org.apache.spark.sql.oracle.operators.{OraPlan, OraTableScan}
-import org.apache.spark.sql.oracle.querysplit.OraSplitStrategy
+import org.apache.spark.sql.oracle.querysplit.{OraSplitStrategy, PlanInfo}
+import org.apache.spark.sql.oracle.querysplit.sharding.OraShardingSplitStrategy
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 
@@ -48,8 +51,20 @@ trait OraScan {
   def dsKey: DataSourceKey
   def oraPlan: OraPlan
 
-  @transient protected lazy val (splitStrategy : OraSplitStrategy, _) =
-    OraSplitStrategy.generateSplits(dsKey, oraPlan)(sparkSession)
+  def explainPushdown : (OraSplitStrategy, Option[PlanInfo]) = {
+    val oraCatalog = OracleCatalog.oracleCatalog(sparkSession)
+    val isSharded = oraCatalog.getMetadataManager.isSharded
+
+    if (isSharded) {
+      val shardMD = oraCatalog.getMetadataManager.getShardingMetadata
+      val shardQInfo = ShardQueryInfo.getShardingQueryInfoOrCoord(oraPlan)(sparkSession, shardMD)
+      OraShardingSplitStrategy.generateSplits(dsKey, oraPlan, shardQInfo, shardMD)(sparkSession)
+    } else {
+      OraSplitStrategy.generateSplits(dsKey, oraPlan)(sparkSession)
+    }
+  }
+
+  @transient protected lazy val (splitStrategy : OraSplitStrategy, _) = explainPushdown
 
   /*
    * Called twice:
@@ -61,7 +76,7 @@ trait OraScan {
     (for (i <- splitStrategy.splitIds) yield {
       val orasql = oraPlan.splitOraSQL(i, splitStrategy)
       val prefLocs = splitStrategy.preferredLocs(i)
-      OraPartition(dsKey, i, orasql, prefLocs)
+      OraPartition(splitStrategy.dskey(dsKey, i), i, orasql, prefLocs)
     }).toArray
   }
 

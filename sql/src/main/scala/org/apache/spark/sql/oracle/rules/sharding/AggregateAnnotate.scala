@@ -47,7 +47,7 @@ trait AggregateAnnotate { self: AnnotateShardingInfoRule.type =>
       if (shardingKeys.exists(s => s._3 == 0)) {
         ShardQueryInfo.setShardingQueryInfo(aggOp, sInfo)
       } else {
-        if (conds.forall(c => isGroupingOnReplTable(c, aggOp))) {
+        if (conds.nonEmpty && conds.forall(c => isGroupingOnReplTable(c, aggOp))) {
           ShardQueryInfo.setShardingQueryInfo(aggOp, sInfo)
         } else {
           ShardQueryInfo.setShardingQueryInfo(aggOp, shardedMD.COORD_QUERY_INFO)

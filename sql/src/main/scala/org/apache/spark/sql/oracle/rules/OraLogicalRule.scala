@@ -21,7 +21,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Subquery}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.oracle.OraSparkUtils
-import org.apache.spark.sql.oracle.rules.sharding.{AnnotateCoordinatorCost, AnnotateShardingInfoRule, RewriteAsShardPlan}
+import org.apache.spark.sql.oracle.rules.sharding.{AnnotateCoordinatorCost, AnnotateOraPlan, AnnotateShardingInfoRule, RewriteAsShardPlan}
 
 abstract class OraLogicalRule extends Rule[LogicalPlan] {
 
@@ -48,7 +48,8 @@ object OraLogicalRules extends OraLogicalRule {
   val RULES = Seq(
     OraSQLPushdownRule, OraFixColumnNames,
     AnnotateShardingInfoRule, AnnotateCoordinatorCost,
-    RewriteAsShardPlan
+    RewriteAsShardPlan,
+    AnnotateOraPlan
   )
 
   private val ORA_PUSHDOWN_TAG = TreeNodeTag[Boolean]("_OraPushdownApplied")

@@ -35,7 +35,7 @@ import org.apache.spark.sql.oracle.util.TimeIt
  *    split by `rowId` ranges using the predicate
  *    ` rowid BETWEEN ? AND ?`
  */
-sealed trait OraDBSplit {
+trait OraDBSplit {
   def explain(append : String => Unit) : Unit
 }
 

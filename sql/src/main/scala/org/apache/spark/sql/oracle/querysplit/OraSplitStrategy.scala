@@ -66,6 +66,20 @@ trait OraSplitStrategy {
    */
   def splitOraSQL(oraTblScan : OraTableScan, splitId : Int) : Option[SQLSnippet]
 
+  /**
+   * Instance where this {{{splitId}}} should be executed.
+   * For non-shard instances this is the same as the {{{planningDSKey}}}.
+   * For shard instances for [[ShardQuery ShardQueries]] this would be a particular
+   * shard instance.
+   *
+   * @param planningDSKey
+   * @param splitId
+   * @return
+   */
+  def dskey(planningDSKey : DataSourceKey,
+            splitId : Int
+           ) : DataSourceKey = planningDSKey
+
   protected def tableSelectList(oraTableScan: OraTableScan) : Seq[SQLSnippet] = {
     OraExpressions.unapplySeq(oraTableScan.catalystAttributes).get
       .map(_.reifyLiterals.orasql)

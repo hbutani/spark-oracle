@@ -22,6 +22,7 @@ import java.util
 import scala.jdk.CollectionConverters.mapAsJavaMapConverter
 import scala.util.Try
 
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{NoSuchNamespaceException, NoSuchTableException}
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 import org.apache.spark.sql.connector.catalog._
@@ -232,5 +233,9 @@ object OracleCatalog {
   def oracleCatalog : OracleCatalog = {
     OraSparkUtils.currentSparkSession.sessionState.
       catalogManager.catalog("oracle").asInstanceOf[OracleCatalog]
+  }
+
+  def oracleCatalog(sparkSession: SparkSession) : OracleCatalog = {
+      sparkSession.sessionState.catalogManager.catalog("oracle").asInstanceOf[OracleCatalog]
   }
 }
