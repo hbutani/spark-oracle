@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.oracle.translation.sharding
 
+import org.apache.spark.sql.connector.catalog.oracle.sharding.{CoordinatorQuery, ShardQueryInfo}
 import org.apache.spark.sql.connector.read.oracle.OraPushdownScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
@@ -27,6 +28,34 @@ class ShardingExplainPlanTest extends AbstractShardingTranslationTest {
 
   // scalastyle:off println
   test("explain") {_ =>
+    for ((qNm, q) <- TPCHQueries.queries) {
+      println(s"Query ${qNm}:")
+      TestOracleHive.sql(s"explain oracle pushdown $q").show(10000, false)
+      println("-------------------------------------------------------------")
+    }
+  }
+
+  ignore("annotateCoordCost") {_ =>
+    for ((qNm, q) <- TPCHQueries.queries) {
+      val plan = TestOracleHive.sql(s"$q").queryExecution.optimizedPlan
+
+      val dsvO = plan.collectFirst {
+        case dsv2 @ DataSourceV2ScanRelation(_, oScan: OraPushdownScan, _) => dsv2
+      }
+
+      for (dsv2 <- dsvO;
+           sInfo <- ShardQueryInfo.getShardingQueryInfo(dsv2) if sInfo.queryType == CoordinatorQuery
+      ) {
+        assert(sInfo.planInfo.isDefined)
+        println(s"Query ${qNm}:")
+        sInfo.planInfo.get.explain(s => System.out.print(s))
+      }
+
+      println("-------------------------------------------------------------")
+    }
+  }
+
+  ignore("annotateShardingInfo") {_ =>
     for ((qNm, q) <- TPCHQueries.queries) {
       println(s"Query ${qNm}:")
       val plan = TestOracleHive.sql(s"$q").queryExecution.optimizedPlan

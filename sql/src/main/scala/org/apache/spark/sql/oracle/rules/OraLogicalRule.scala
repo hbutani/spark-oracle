@@ -19,8 +19,9 @@ package org.apache.spark.sql.oracle.rules
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Subquery}
 import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.catalyst.trees.TreeNodeTag
 import org.apache.spark.sql.oracle.OraSparkUtils
-import org.apache.spark.sql.oracle.rules.sharding.AnnotateShardingInfoRule
+import org.apache.spark.sql.oracle.rules.sharding.{AnnotateCoordinatorCost, AnnotateShardingInfoRule, RewriteAsShardPlan}
 
 abstract class OraLogicalRule extends Rule[LogicalPlan] {
 
@@ -44,7 +45,19 @@ abstract class OraLogicalRule extends Rule[LogicalPlan] {
 
 object OraLogicalRules extends OraLogicalRule {
 
-  val RULES = Seq(OraSQLPushdownRule, OraFixColumnNames, AnnotateShardingInfoRule)
+  val RULES = Seq(
+    OraSQLPushdownRule, OraFixColumnNames,
+    AnnotateShardingInfoRule, AnnotateCoordinatorCost,
+    RewriteAsShardPlan
+  )
+
+  private val ORA_PUSHDOWN_TAG = TreeNodeTag[Boolean]("_OraPushdownApplied")
+
+  private def pushdownApplied(plan : LogicalPlan) : Boolean =
+    plan.getTagValue(ORA_PUSHDOWN_TAG).getOrElse(false)
+
+  private def setPushDownApplied(plan : LogicalPlan) : Unit =
+    plan.setTagValue(ORA_PUSHDOWN_TAG, true)
 
   override def _apply(plan: LogicalPlan)(implicit sparkSession: SparkSession): LogicalPlan
   = plan match {
@@ -55,19 +68,12 @@ object OraLogicalRules extends OraLogicalRule {
       pushdown after all subquery rewrites are applied.
     */
     case sq : Subquery => sq
-    case p => RULES.foldLeft(p) {
-      case (plan, r) => r(plan)
-    }
+    case p if !pushdownApplied(p) =>
+      val r = RULES.foldLeft(p) {
+        case (plan, r) => r(plan)
+      }
+      setPushDownApplied(r)
+      r
+    case p => p
   }
 }
-
-/*
- * Translation Notes:
- * Plan Matching Pattern is
- *  - DataSourceV2ScanRelation(OracleTable, OraScan, output: Seq[AttributeReference])
- *  - OraScan can be OraFileScan or OraPushdownScan
- *
- * OraScan has a oraPlan: OraPlan
- *
- * Walk through 2-3 tpcds query translations.
- */

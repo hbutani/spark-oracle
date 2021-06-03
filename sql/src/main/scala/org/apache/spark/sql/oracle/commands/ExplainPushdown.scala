@@ -88,14 +88,14 @@ case class ExplainPushdown(sparkPlan: SparkPlan) extends RunnableCommand {
   ) : Int = {
     var opId = startOpId
 
-    def tagPlan(p : SparkPlan) : Unit = {
-      plan foreach {
-        case p : SparkPlan =>
+    def tagPlan(tp : QueryPlan[_]) : Unit = {
+      tp foreach {
+        case p : QueryPlan[_] =>
           if (p.getTagValue(QueryPlan.OP_ID_TAG).isEmpty) {
             opId += 1
             p.setTagValue(QueryPlan.OP_ID_TAG, opId)
           }
-          p.subqueries.foreach(p => tagPlan(p))
+          p.innerChildren.foreach(p => tagPlan(p))
       }
     }
 

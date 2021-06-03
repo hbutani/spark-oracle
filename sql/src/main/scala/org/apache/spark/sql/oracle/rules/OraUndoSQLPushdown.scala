@@ -58,11 +58,6 @@ object OraUndoSQLPushdown {
     }
   }
 
-  private def undoNextCoordinatorQuery(plan : LogicalPlan) : Option[LogicalPlan] = {
-    // TODO
-    None
-  }
-
   def refixNames(plan: LogicalPlan) : LogicalPlan =
     OraFixColumnNames(OraUnfixColumnNames.unfix(plan))
 
@@ -80,8 +75,10 @@ object OraUndoSQLPushdown {
    * @param plan
    * @return
    */
-  def undoCoordinatorQueries(plan : LogicalPlan) : LogicalPlan = {
-    val undoPlans = planTransformStream(plan)(undoNextCoordinatorQuery _)
+  def undoCoordinatorQueries(plan : LogicalPlan)
+                            (replaceCoordPlan : LogicalPlan => Option[LogicalPlan]
+                            ) : LogicalPlan = {
+    val undoPlans = planTransformStream(plan)(replaceCoordPlan)
     val newPlan = undoPlans.last
     refixNames(newPlan)
   }

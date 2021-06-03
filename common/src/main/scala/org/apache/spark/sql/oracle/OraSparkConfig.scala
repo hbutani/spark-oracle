@@ -16,6 +16,9 @@
  */
 package org.apache.spark.sql.oracle
 
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+
 import org.apache.spark.internal.config.ConfigEntry
 import org.apache.spark.network.util.{ByteUnit, JavaUtils}
 import org.apache.spark.sql.SparkSession
@@ -138,13 +141,13 @@ object OraSparkConfig {
 
   // config entries for sharding
 
-  val ENABLE_SHARD_INSTANCE_PUSHDOWN = buildConf(
-    "spark.sql.oracle.enable.shard_instance_pushdown").
+  val ENABLE_SHARDING_PUSHDOWN = buildConf(
+    "spark.sql.oracle.enable.sharding_pushdown").
     doc(
       """If this is true then we will attempt to rewrite pushdown queries
-        |into plans that directly evaluate sub-plans on shard instances and
-        |do the merge/coordination steps originally done in the Shard coordinator
-        |as Spark Operators.
+        |targetted for the Shard Coordinator, into plans that directly evaluate sub-plans
+        |on shard instances and do the merge/coordination steps originally done in the Shard
+        | coordinator as Spark Operators.
         |
         |We are actually undoing the pushdown of the original Spark logical Plan
         |to a point where any pushed sub-plan can be executed directly on shard instances.
@@ -159,6 +162,39 @@ object OraSparkConfig {
         |read into Spark executors. This plan potentially has lower latency and
         |avoids overloading the Shard coordinator.""".stripMargin).
     booleanConf.createWithDefault(true)
+
+  val SHARDING_PUSHDOWN_MODE = buildConf("spark.sql.oracle.sharding_pushdown.mode")
+    .doc(
+      """The rewrite decision of a query targetted to the Coordinator is
+        |heuristic based. Either it is based on the estimated cost of execution
+        |in the Coordinator or on the existence of certain operators in the Coordinator plan.
+        |This value can be 'cost' or 'operator'
+        |
+        |Cost based pushdown will trigger a sharding pushdown if the estimate for executing
+        | in the coordinator exceeds the threshold value
+        | 'spark.sql.oracle.sharding_pushdown.cost.threshold'
+        |
+        |Operator based pushdown will trigger if the coordinator plan contains table accesses
+        |or joins. The plan will be rewritten in their presence even if the cost estimate is
+        |below the 'spark.sql.oracle.sharding_pushdown.cost.threshold' value.
+        | """.stripMargin)
+    .stringConf
+    .transform(_.toUpperCase(Locale.ROOT))
+    .checkValue(mode => Set("COST", "OPERATOR").contains(mode),
+      "Invalid value for 'spark.sql.oracle.sharding_pushdown.mode'." +
+        " Valid values are 'cost' and 'operator'")
+    .createWithDefault("cost")
+
+  val SHARDING_PUSHDOWN_COST_THRESHOLD = buildConf(
+    "spark.sql.oracle.sharding_pushdown.cost.threshold")
+    .doc(
+      """In cost sharding_pushdown mode any coordinator plan that is estimated to
+        |take more than this value is considered a candidate for rewrite.
+        | """.stripMargin)
+    .timeConf(TimeUnit.SECONDS)
+    .createWithDefault(1L)
+
+
 
   // finish config entries for sharding
 

@@ -29,7 +29,7 @@ abstract class OraShardingLogicalRule extends OraLogicalRule {
 
     if (oraCatalog.getMetadataManager.isSharded) {
       import org.apache.spark.sql.oracle.OraSparkConfig._
-      super.isRewriteEnabled && getConf(ENABLE_SHARD_INSTANCE_PUSHDOWN)(sparkSession)
+      super.isRewriteEnabled && getConf(ENABLE_SHARDING_PUSHDOWN)(sparkSession)
     } else {
       false
     }

@@ -163,7 +163,7 @@ object OraExplainPlan extends Logging {
       )
     }
 
-    def shardWorkersInfo(root : Node) : Option[ShardWorkersInfo] = {
+    def shardWorkersInfo(root : Node) : Option[ShardingPlanInfo] = {
 
       val idPrntIdMap = MMap[Int, Int]()
       val idNodeMap = MMap[Int, Node]()
@@ -229,7 +229,7 @@ object OraExplainPlan extends Logging {
       rootOpCost <- longValue(ops.head \ "cost");
       rootOpTime <- timeVal(textValue(ops.head \ "time"))
       ) yield {
-        ShardWorkersInfo(
+        ShardingPlanInfo(
           costs.sum, times.sum, costs.size,
           rootOpCost, rootOpTime, hasJoins, hasTableAccess
         )

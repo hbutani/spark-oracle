@@ -41,7 +41,7 @@ object AnnotateShardingInfoRule
       implicit sparkSession: SparkSession,
       shardedMD: ShardingMetadata): Unit = {
     val sInfo = getShardingQueryInfoOrCoord(from)
-    proj.setTagValue(ORA_SHARDING_QUERY_TAG, sInfo)
+    setShardingQueryInfo(proj, sInfo)
   }
 
   private def annotate(plan: LogicalPlan)(

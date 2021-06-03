@@ -56,7 +56,7 @@ package object querysplit {
 
   }
 
-  case class ShardWorkersInfo(shardWorkersCost : Long,
+  case class ShardingPlanInfo(shardWorkersCost : Long,
                               shardWorkersTime : Long,
                               numShardWorkersQueries : Int,
                               totalCost : Long,
@@ -77,7 +77,7 @@ package object querysplit {
                        rowCount : Long,
                        bytes : Long,
                        tabAccesses : Seq[TableAccessOperation],
-                       shardingInfo : Option[ShardWorkersInfo]
+                       shardingPlanInfo : Option[ShardingPlanInfo]
                      ) {
     def explain(append : String => Unit) : Unit = {
       append(s"rowCount = ${rowCount}, bytes=${bytes}\n")
@@ -88,8 +88,8 @@ package object querysplit {
           append("\n")
         }
       }
-      if (shardingInfo.isDefined) {
-        shardingInfo.get.explain(append)
+      if (shardingPlanInfo.isDefined) {
+        shardingPlanInfo.get.explain(append)
       }
     }
   }
