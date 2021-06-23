@@ -48,7 +48,8 @@ trait AggregateAnnotate { self: AnnotateShardingInfoRule.type =>
         ShardQueryInfo.setShardingQueryInfo(aggOp, sInfo)
       } else {
         if (conds.nonEmpty && conds.forall(c => isGroupingOnReplTable(c, aggOp))) {
-          ShardQueryInfo.setShardingQueryInfo(aggOp, sInfo)
+          // TODO: can introduce eager aggregation here.
+          ShardQueryInfo.setShardingQueryInfo(aggOp, shardedMD.COORD_QUERY_INFO)
         } else {
           ShardQueryInfo.setShardingQueryInfo(aggOp, shardedMD.COORD_QUERY_INFO)
         }

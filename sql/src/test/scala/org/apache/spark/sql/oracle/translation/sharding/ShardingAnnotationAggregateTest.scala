@@ -188,7 +188,7 @@ class ShardingAnnotationAggregateTest extends AbstractShardingTranslationTest {
 
     // q10
     // up to aggregate
-    checkShardingInfo(
+    checkCoordinatorQuery(
       """select
                         |	c_custkey,
                         |	c_name,
@@ -217,12 +217,12 @@ class ShardingAnnotationAggregateTest extends AbstractShardingTranslationTest {
                         |	c_phone,
                         |	n_name,
                         |	c_address,
-                        |	c_comment""".stripMargin,
-      Set(0, 1, 2))
+                        |	c_comment""".stripMargin
+    )
 
     // q13
     // agg sub-query is sharded query
-    checkShardingInfo(
+    checkCoordinatorQuery(
       """select
                         |			c_custkey,
                         |			count(o_orderkey) as c_count
@@ -231,8 +231,7 @@ class ShardingAnnotationAggregateTest extends AbstractShardingTranslationTest {
                         |				c_custkey = o_custkey
                         |				and o_comment not like '%special%requests%'
                         |		group by
-                        |			c_custkey""".stripMargin,
-      Set(0, 1, 2))
+                        |			c_custkey""".stripMargin)
 
     // q4
     // up to join is sharded query

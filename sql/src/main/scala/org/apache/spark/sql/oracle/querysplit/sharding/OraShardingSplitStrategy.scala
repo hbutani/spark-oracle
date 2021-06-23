@@ -60,7 +60,7 @@ case class ReplicatedQuerySplitStrategy(shardInstanceDSKey : DataSourceKey,
 
   override def explain(append: String => Unit): Unit = {
     append(s"Replicated Query is run on instance: ${shardInstanceDSKey}")
-    append("\nShard Instance Split Strategy:\n")
+    append(s"\nShard Instance ${shardInstanceDSKey} Split Strategy:\n")
     shardSplitStrategy.explain(append)
   }
 }
