@@ -38,6 +38,6 @@ spark.sql.extensions=org.apache.spark.sql.oracle.SparkSessionExtensions
 
 #Example config for a single instance Oracle DB
 #spark.sql.catalog.oracle=org.apache.spark.sql.connector.catalog.oracle.OracleCatalog
-#spark.sql.catalog.oracle.url=jdbc:oracle:thin:@hbutani-Mac:1521/orclpdb1
+#spark.sql.catalog.oracle.url=jdbc:oracle:thin:@localhost:1521/orclpdb1
 #spark.sql.catalog.oracle.user=sh
 #spark.sql.catalog.oracle.password=welcome123

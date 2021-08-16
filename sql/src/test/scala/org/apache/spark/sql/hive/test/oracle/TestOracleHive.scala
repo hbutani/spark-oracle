@@ -24,6 +24,11 @@
 
 package org.apache.spark.sql.hive.test.oracle
 
+import java.util.Properties
+
+import scala.collection.mutable.{Map => MMap}
+import scala.io.Source
+
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.internal.config
 import org.apache.spark.internal.config.UI.UI_ENABLED
@@ -114,49 +119,45 @@ object OracleTestConf {
     conf
   }
 
-  def local_hb(conf: SparkConf): SparkConf =
-    conf
-      .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@hbutani-Mac:1521/orclpdb1")
-      .set("spark.sql.catalog.oracle.user", "sh")
-      .set("spark.sql.catalog.oracle.password", "welcome123")
+  /*
+   * Ensure you have spark-ora-test.properties in your classpath
+   * Its entries should be of the form
+   * <instance_alias>.<spark-property>=value
+   *
+   * for example:
+   * local_hb.spark.sql.catalog.oracle.user=sh
+   */
 
-  def local_sc(conf: SparkConf): SparkConf =
-    conf
-      .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@//localhost:1521/ORCLCDB")
-      .set("spark.sql.catalog.oracle.user", "sparktest")
-      .set("spark.sql.catalog.oracle.password", "sparktest")
+  lazy val sparkOraTestProperties : MMap[String, String] = {
+    val url = getClass.getResource("/spark-ora-test.properties")
+    val source = Source.fromURL(url)
 
-  def local_tpcds(conf: SparkConf): SparkConf =
-    conf
-      .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@192.168.1.49:1521/orclpdb1")
-      .set("spark.sql.catalog.oracle.user", "tpcds")
-      .set("spark.sql.catalog.oracle.password", "Performance_1234")
+    val properties = new Properties()
+    properties.load(source.bufferedReader())
+    import scala.collection.JavaConverters._
+    properties.asScala
+  }
 
-  def mammoth_medium(conf: SparkConf): SparkConf =
+  private def setOraInstanceProps(prefix : String,
+                                  conf: SparkConf) : SparkConf = {
+    for ((k, v) <- sparkOraTestProperties if k.startsWith(prefix) ) {
+      val key = k.substring(prefix.size + 1)
+      conf.set(key, v)
+    }
     conf
-      .set("spark.sql.catalog.oracle.authMethod", "ORACLE_WALLET")
-      .set("spark.sql.catalog.oracle.url", "jdbc:oracle:thin:@mammoth_medium")
-      .set("spark.sql.catalog.oracle.user", "tpcds")
-      .set("spark.sql.catalog.oracle.password", "Performance_1234")
-      .set(
-        "spark.sql.catalog.oracle.net.tns_admin",
-        System.getProperty(SPARK_ORACLE_DB_WALLET_LOC))
-      .set("spark.sql.catalog.oracle.oci_credential_name", "OS_EXT_OCI")
+  }
 
-  def scale1_tpcds(conf: SparkConf): SparkConf =
-    conf
-      .set("spark.sql.catalog.oracle.url",
-        "jdbc:oracle:thin:@den02ads:1531/cdb1_pdb7.regress.rdbms.dev.us.oracle.com")
-        // "jdbc:oracle:thin:@slcaa334:1531/cdb1_pdb7.regress.rdbms.dev.us.oracle.com")
-      .set("spark.sql.catalog.oracle.user", "tpcds")
-      .set("spark.sql.catalog.oracle.password", "tpcds")
+  def local_hb(conf: SparkConf): SparkConf = setOraInstanceProps("local_hb", conf)
 
-  def sharding(conf: SparkConf): SparkConf =
-    conf.set(
-      "spark.sql.catalog.oracle.url",
-      "jdbc:oracle:thin:@denad189:1521/cat.us.oracle.com")
-      .set("spark.sql.catalog.oracle.user", "tpch")
-      .set("spark.sql.catalog.oracle.password", "tpch")
+  def local_sc(conf: SparkConf): SparkConf = setOraInstanceProps("local_sc", conf)
+
+  def local_tpcds(conf: SparkConf): SparkConf = setOraInstanceProps("local_tpcds", conf)
+
+  def mammoth_medium(conf: SparkConf): SparkConf = setOraInstanceProps("mammoth_medium", conf)
+
+  def scale1_tpcds(conf: SparkConf): SparkConf = setOraInstanceProps("scale1_tpcds", conf)
+
+  def sharding(conf: SparkConf): SparkConf = setOraInstanceProps("sharding", conf)
 
   def testMaster: String = "local[*]"
 

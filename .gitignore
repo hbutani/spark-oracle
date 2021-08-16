@@ -47,6 +47,7 @@ jdbc-examples
 
 # tests
 sql/src/test/scala/org/apache/spark/sql/oracle/experiments
+**/spark-ora-test.properties
 
 # macros/tests
 macros/src/test/scala/experiments

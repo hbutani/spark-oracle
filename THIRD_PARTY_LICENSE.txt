@@ -4051,6 +4051,506 @@ This product contains the Maven wrapper scripts from 'Maven Wrapper', that provi
   * HOMEPAGE:
     * https://github.com/takari/maven-wrapper
 
+Netty 3rd party license texts:
+
+LICENSE.aalto-xml
+------------------
+This copy of Aalto XML processor is licensed under the
+Apache (Software) License, version 2.0 ("the License").
+See the License for details about distribution rights, and the
+specific rights regarding derivate works.
+
+You may obtain a copy of the License at:
+
+https://www.apache.org/licenses/
+
+A copy is also included with both the the downloadable source code package
+and jar that contains class bytecodes, as file "ASL 2.0". In both cases,
+that file should be located next to this file: in source distribution
+the location should be "release-notes/asl"; and in jar "META-INF/"
+LICENSE.base64
+------------------
+The person or persons who have associated work with this document (the
+"Dedicator" or "Certifier") hereby either (a) certifies that, to the best of
+his knowledge, the work of authorship identified is in the public domain of
+the country from which the work is published, or (b) hereby dedicates whatever
+copyright the dedicators holds in the work of authorship identified below (the
+"Work") to the public domain. A certifier, moreover, dedicates any copyright
+interest he may have in the associated work, and for these purposes, is
+described as a "dedicator" below.
+
+A certifier has taken reasonable steps to verify the copyright status of this
+work. Certifier recognizes that his good faith efforts may not shield him from
+liability if in fact the work certified is not in the public domain.
+
+Dedicator makes this dedication for the benefit of the public at large and to
+the detriment of the Dedicator's heirs and successors. Dedicator intends this
+dedication to be an overt act of relinquishment in perpetuate of all present
+and future rights under copyright law, whether vested or contingent, in the
+Work. Dedicator understands that such relinquishment of all rights includes
+the relinquishment of all rights to enforce (by lawsuit or otherwise) those
+copyrights in the Work.
+
+Dedicator recognizes that, once placed in the public domain, the Work may be
+freely reproduced, distributed, transmitted, used, modified, built upon, or
+otherwise exploited by anyone for any purpose, commercial or non-commercial,
+and in any way, including by methods that have not yet been invented or
+conceived.
+
+LICENSE.bouncycastle
+------------------
+The MIT License (MIT)
+
+Copyright (c) 2000 - 2013 The Legion of the Bouncy Castle Inc.
+                          (https://www.bouncycastle.org)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+
+LICENSE.brotli4j
+------------------
+XXXXXXXXXXXX
+
+LICENSE.caliper
+------------------
+
+Apache License 2.0 as listed earlier in this doc
+
+LICENSE.commons-lang
+------------------
+Apache License 2.0 as listed earlier in this doc
+
+
+LICENSE.commons-logging
+------------------
+Apache License 2.0 as listed earlier in this doc
+
+
+LICENSE.compress-lzf
+------------------
+Copyright 2009-2010 Ning, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this file except in compliance with the License. You may obtain a copy of
+the License at https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations under
+the License.
+
+LICENSE.dnsinfo
+------------------
+/*
+ * Copyright (c) 2004-2006, 2008, 2009, 2011 Apple Inc. All rights reserved.
+ *
+ * @APPLE_LICENSE_HEADER_START@
+ *
+ * This file contains Original Code and/or Modifications of Original Code
+ * as defined in and that are subject to the Apple Public Source License
+ * Version 2.0 (the 'License'). You may not use this file except in
+ * compliance with the License. Please obtain a copy of the License at
+ * https://www.opensource.apple.com/apsl/ and read it before using this
+ * file.
+ *
+ * The Original Code and all software distributed under the License are
+ * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
+ * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
+ * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
+ * Please see the License for the specific language governing rights and
+ * limitations under the License.
+ *
+ * @APPLE_LICENSE_HEADER_END@
+ */
+
+LICENSE.harmony
+------------------
+Apache License 2.0 as listed earlier in this doc
+
+
+LICENSE.hpack
+------------------
+Apache License 2.0 as listed earlier in this doc
+
+LICENSE.hyper-hpack
+------------------
+The MIT License (MIT)
+
+Copyright (c) 2014 Cory Benfield
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+LICENSE.jboss-marshalling
+------------------
+Apache License 2.0 as listed earlier in this doc
+
+
+LICENSE.jbzip2
+------------------
+Copyright (c) 2010-2011 Matthew J. Francis and Contributors of the jbzip2 Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+LICENSE.jctools
+------------------
+Apache License 2.0 as listed earlier in this doc
+
+
+LICENSE.jfastlz
+------------------
+The MIT License
+
+Copyright (c) 2009 William Kinney
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+LICENSE.jsr166y
+------------------
+The person or persons who have associated work with this document (the
+"Dedicator" or "Certifier") hereby either (a) certifies that, to the best of
+his knowledge, the work of authorship identified is in the public domain of
+the country from which the work is published, or (b) hereby dedicates whatever
+copyright the dedicators holds in the work of authorship identified below (the
+"Work") to the public domain. A certifier, moreover, dedicates any copyright
+interest he may have in the associated work, and for these purposes, is
+described as a "dedicator" below.
+
+A certifier has taken reasonable steps to verify the copyright status of this
+work. Certifier recognizes that his good faith efforts may not shield him from
+liability if in fact the work certified is not in the public domain.
+
+Dedicator makes this dedication for the benefit of the public at large and to
+the detriment of the Dedicator's heirs and successors. Dedicator intends this
+dedication to be an overt act of relinquishment in perpetuity of all present
+and future rights under copyright law, whether vested or contingent, in the
+Work. Dedicator understands that such relinquishment of all rights includes
+the relinquishment of all rights to enforce (by lawsuit or otherwise) those
+copyrights in the Work.
+
+Dedicator recognizes that, once placed in the public domain, the Work may be
+freely reproduced, distributed, transmitted, used, modified, built upon, or
+otherwise exploited by anyone for any purpose, commercial or non-commercial,
+and in any way, including by methods that have not yet been invented or
+conceived.
+
+LICENSE.jzlib
+------------------
+Copyright (c) 2000,2001,2002,2003,2004 ymnk, JCraft,Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  1. Redistributions of source code must retain the above copyright notice,
+     this list of conditions and the following disclaimer.
+
+  2. Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in
+     the documentation and/or other materials provided with the distribution.
+
+  3. The names of the authors may not be used to endorse or promote products
+     derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL JCRAFT,
+INC. OR ANY CONTRIBUTORS TO THIS SOFTWARE BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+LICENSE.libdivsufsort
+------------------
+Copyright (c) 2003-2008 Yuta Mori All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+LICENSE.log4j
+------------------
+Apache License 2.0 as listed earlier in this doc
+
+
+LICENSE.lz4
+------------------
+
+Apache License 2.0 as listed earlier in this doc
+
+LICENSE.lzma-java
+------------------
+
+Apache License 2.0 as listed earlier in this doc
+
+LICENSE.mvn-wrapper
+------------------
+
+Apache License 2.0 as listed earlier in this doc
+
+LICENSE.nghttp2-hpack
+------------------
+The MIT License
+
+Copyright (c) 2012, 2014, 2015, 2016 Tatsuhiro Tsujikawa
+Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+LICENSE.protobuf
+------------------
+Protocol Buffers - Google's data interchange format
+Copyright 2013 Google Inc.  All rights reserved.
+https://developers.google.com/protocol-buffers/
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+    * Neither the name of Google Inc. nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Code generated by the Protocol Buffer compiler is owned by the owner
+of the input file used when generating it.  This code is not
+standalone and requires a support library to be linked with it.  This
+support library is itself covered by the above license.
+
+LICENSE.slf4j
+------------------
+/*
+ * Copyright (c) 2004-2007 QOS.ch
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free  of charge, to any person obtaining
+ * a  copy  of this  software  and  associated  documentation files  (the
+ * "Software"), to  deal in  the Software without  restriction, including
+ * without limitation  the rights to  use, copy, modify,  merge, publish,
+ * distribute,  sublicense, and/or sell  copies of  the Software,  and to
+ * permit persons to whom the Software  is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The  above  copyright  notice  and  this permission  notice  shall  be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE  SOFTWARE IS  PROVIDED  "AS  IS", WITHOUT  WARRANTY  OF ANY  KIND,
+ * EXPRESS OR  IMPLIED, INCLUDING  BUT NOT LIMITED  TO THE  WARRANTIES OF
+ * MERCHANTABILITY,    FITNESS    FOR    A   PARTICULAR    PURPOSE    AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE,  ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+LICENSE.snappy
+------------------
+Copyright 2011, Google Inc.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+* Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+* Neither the name of Google Inc. nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+LICENSE.webbit
+------------------
+(BSD License: https://www.opensource.org/licenses/bsd-license)
+
+Copyright (c) 2011, Joe Walnes, Aslak Hellesøy and contributors
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or
+without modification, are permitted provided that the
+following conditions are met:
+
+* Redistributions of source code must retain the above
+  copyright notice, this list of conditions and the
+  following disclaimer.
+
+* Redistributions in binary form must reproduce the above
+  copyright notice, this list of conditions and the
+  following disclaimer in the documentation and/or other
+  materials provided with the distribution.
+
+* Neither the name of the Webbit nor the names of
+  its contributors may be used to endorse or promote products
+  derived from this software without specific prior written
+  permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+LICENSE.zstd-jni
+------------------
+
+Apache License 2.0 as listed earlier in this doc
+
+NOTICE.harmony
+------------------
+Apache Harmony
+
+Copyright 2006, 2010 The Apache Software Foundation.
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+End Netty 3rd party license texts
 
 This product includes software developed by Google
  Snappy: http://code.google.com/p/snappy/ (New BSD License)
