@@ -1,28 +1,26 @@
-/* $Header: hadoop/jsrc/oracle/hcat/db/conn/OracleDBConnectionCache.java ratiwary_bug-27617356/3 2018/03/14 14:10:45 ratiwary Exp $ */
-
-/* Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.*/
-
 /*
-   DESCRIPTION
-    <short description of component this file declares/defines>
+  Copyright (c) 2021, Oracle and/or its affiliates.
 
-   PRIVATE CLASSES
-    <list of private classes defined - with one-line descriptions>
+  This software is dual-licensed to you under the Universal Permissive License
+  (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl and Apache License
+  2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose
+  either license.
 
-   NOTES
-    <other useful comments, qualifications, etc.>
+  If you elect to accept the software under the Apache License, Version 2.0,
+  the following applies:
 
-   MODIFIED    (MM/DD/YY)
-    ratiwary    02/12/18 - Create Connection Util for Database using methods in
-                           OracleStorageHandlerUtil
-    ratiwary    02/12/18 - Creation
- */
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
 
-/**
- * @version $Header: hadoop/jsrc/oracle/hcat/db/conn/OracleDBConnectionCache.java ratiwary_bug-27617356/3 2018/03/14 14:10:45 ratiwary Exp $
- * @author ratiwary
- * @since release specific (what release of product did this appear in)
- */
+     https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
 
 package oracle.hcat.db.conn;
 
@@ -49,7 +47,7 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
- *
+ * based on code shared by Rajesh Tiwary.
  * @author ratiwary
  */
 public class OracleDBConnectionCache {

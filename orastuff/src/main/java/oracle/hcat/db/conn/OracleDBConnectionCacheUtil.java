@@ -1,25 +1,27 @@
-/* $Header: hadoop/jsrc/oracle/hcat/db/conn/OracleDBConnectionCacheUtil.java /main/1 2018/03/05 08:59:31 ratiwary Exp $ */
+/*
+  Copyright (c) 2021, Oracle and/or its affiliates.
 
-/* Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.*/
+  This software is dual-licensed to you under the Universal Permissive License
+  (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl and Apache License
+  2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose
+  either license.
 
- /*
-   DESCRIPTION
-    <short description of component this file declares/defines>
+  If you elect to accept the software under the Apache License, Version 2.0,
+  the following applies:
 
-   PRIVATE CLASSES
-    <list of private classes defined - with one-line descriptions>
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
 
-   NOTES
-    <other useful comments, qualifications, etc.>
+     https://www.apache.org/licenses/LICENSE-2.0
 
-   MODIFIED    (MM/DD/YY)
-    ratiwary    02/28/18 - Creation
- */
-/**
- * @version $Header: hadoop/jsrc/oracle/hcat/db/conn/OracleDBConnectionCacheUtil.java /main/1 2018/03/05 08:59:31 ratiwary Exp $
- * @author ratiwary
- * @since release specific (what release of product did this appear in)
- */
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
+
 package oracle.hcat.db.conn;
 
 import org.slf4j.Logger;
@@ -34,6 +36,10 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * based on code shared by Rajesh Tiwary.
+ * @author ratiwary
+ */
 public class OracleDBConnectionCacheUtil {
 
     private static final Logger LOG
