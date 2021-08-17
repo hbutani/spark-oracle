@@ -27,7 +27,6 @@ package oracle.spark
 import java.sql.Connection
 import java.util.concurrent.{ConcurrentHashMap => CMap}
 
-import oracle.hcat.db.conn.OracleDBConnectionCache
 import oracle.ucp.jdbc.PoolDataSource
 
 import org.apache.spark.internal.Logging
@@ -42,7 +41,7 @@ import org.apache.spark.internal.Logging
  * currrent connection(if open) back to its pool before associating a Connection of the
  * requested DataSourceKey with the calling Thread and returning it.
  *
- * Pool is setup using ''getNewPDS'' function from [[OracleDBConnectionCache]] class
+ * Pool is setup using ''getNewPDS'' function from [[OracleDBConnectionUtils]] class
  * provided in ''oracle.hcat.db.conn'' code drop.
  * Pool set with `maxPoolSize = Runtime.availableProcessors()` and
  * `connectionWaitTime = 1 sec`.
@@ -93,7 +92,7 @@ object ConnectionManagement extends DataSources with Logging {
 
     val createPDS = new java.util.function.Function[DataSourceKey, PoolDataSource] {
       override def apply(t: DataSourceKey): PoolDataSource = {
-        val pds = OracleDBConnectionCache.getNewPDS(
+        val pds = OracleDBConnectionUtils.getNewPDS(
           connInfo.authMethod.getOrElse(null),
           connInfo.asConnectionProperties,
           connInfo.url)

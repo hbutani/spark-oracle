@@ -29,11 +29,9 @@ import java.util.concurrent.{ConcurrentHashMap => CMap}
 
 import scala.language.implicitConversions
 
-import oracle.hcat.db.conn.OracleDBConnectionCacheUtil
 import oracle.spark.ORASQLUtils._
 import oracle.spark.sharding.ORAShardSQLs
 
-import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.oracle.OracleCatalogOptions
 
 case class DataSourceKey(connectionURL: String, userName: String) {
@@ -112,11 +110,6 @@ trait DataSources {
 
   private[oracle] def getConnection(dsKey: DataSourceKey): Connection = {
     ConnectionManagement.getConnection(dsKey, info(dsKey).connInfo)
-  }
-
-  private[oracle] def tableIdentifier(name: String): TableIdentifier = {
-    val arr = OracleDBConnectionCacheUtil.splitTableName(name)
-    new TableIdentifier(arr(1), Option(arr(0)))
   }
 
   private def setupConnectionPool(dsKey: DataSourceKey, connInfo: ConnectionInfo): Boolean = {
