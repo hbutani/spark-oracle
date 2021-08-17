@@ -4125,7 +4125,7 @@ THE SOFTWARE.
 
 LICENSE.brotli4j
 ------------------
-XXXXXXXXXXXX
+Apache License 2.0 as listed earlier in this doc
 
 LICENSE.caliper
 ------------------
