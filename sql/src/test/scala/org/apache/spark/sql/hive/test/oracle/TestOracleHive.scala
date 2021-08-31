@@ -113,7 +113,7 @@ object OracleTestConf {
       case "sharding" =>
         conf = sharding(conf)
       // scalastyle:off
-      case _ => ???
+      case i => setOraInstanceProps(i, conf)
       // scalastyle:on
     }
     conf

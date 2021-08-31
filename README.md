@@ -1,23 +1,5 @@
-# spark-oracle
-  
-## Current Status
-- Catalog integration(see [this page](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Oracle-Catalog) for details)
-- Good support for SQL pushdown(see [Operator](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Operator-Translation)
-  and [Expression](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Expression-Translation) translation pages)
-  to the extent that more than 95(of 99) [TPCDS queries](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/TPCDS-Queries)
-  are completely pushed to Oracle instance.
-- Available as a spark extension(https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/releases)
-  for Spark 3 environments.  
-- [Language integration beyond SQL](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Language-Integration)
-  and [DML](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/-/wikis/Write-Path-Flow) are in active development.
-- See [Project Wiki](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/home) for details.
-- See [Quick Start](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Quick-Start-Guide)
-  or [Developer Env.](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Developer-Env)
-  to get started.
-- See [Demo](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Demo) for a step-by-step
-  guide of many of the features.
+# Spark_On_Oracle
 
-## Background and Motivation
 - Currently Data Lakes comprising of Oracle Data Warehouse and Apache Spark
   - Have **separate Data Catalogs**. Even if they access the same data on Object Store.
   - Applications build entirely on Spark, have to **compensate for gaps in Data Management.**
@@ -27,8 +9,8 @@
     and gaps in data management. **So price-performance advantages of Spark are overstated.**
 
 ![current deployments](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/uploads/currentDeploymentDrawbacks.png)
-    
-## Spark on Oracle
+
+This project fixes these issues:
 - A single Catalog = Oracle Data Dictionary
 - Oracle responsible for Data Management: Consistency, Isolation, Security, storage layout,
   data lifecycle…
@@ -41,5 +23,64 @@
   - Co-processor on Oracle instances to run certain kinds of  scala code.
     - Co-processors are isolated and limited. So easy to manage
 - Enable simpler, smaller Spark clusters
-  
+
 ![spark on oracle](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/uploads/spark-on-oracle.png)
+
+**Feature summary:**
+- Catalog integration(see [this page](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Oracle-Catalog) for details)
+- Significant support for SQL pushdown(see [Operator](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Operator-Translation)
+  and [Expression](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Expression-Translation) translation pages)
+  to the extent that more than 95(of 99) [TPCDS queries](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/TPCDS-Queries)
+  are completely pushed to Oracle instance.
+- Deployable as a spark extension jar for Spark 3 environments.
+- [Language integration beyond SQL](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Language-Integration)
+  and [DML](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/-/wikis/Write-Path-Flow) support.
+
+See [Project Wiki](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/home) for complete documenation.
+
+
+## Installation
+
+Spark_on_Oracle can be deployed on any Spark 3.1 or above environment.
+See the [Quick Start Guide](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Quick-Start-Guide)
+
+## Documentation
+
+See the [wiki](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/home)
+
+
+## Examples
+
+The [Demo script](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Demo) walks you
+through the features of the library.
+
+## Help
+
+Please file Github issues.
+
+## Contributing
+
+<!-- If your project has specific contribution requirements, update the
+    CONTRIBUTING.md file to ensure those requirements are clearly explained. -->
+
+This project welcomes contributions from the community. Before submitting a pull
+request, please [review our contribution guide](./CONTRIBUTING.md).
+
+## Security
+
+Please consult the [security guide](./SECURITY.md) for our responsible security
+vulnerability disclosure process.
+
+## License
+
+<!-- The correct copyright notice format for both documentation and software
+    is "Copyright (c) [year,] year Oracle and/or its affiliates."
+    You must include the year the content was first released (on any platform) and
+    the most recent year in which it was revised. -->
+
+Copyright (c) 2021 Oracle and/or its affiliates.
+
+<!-- Replace this statement if your project is not licensed under the UPL -->
+
+Released under the Universal Permissive License v1.0 as shown at
+<https://oss.oracle.com/licenses/upl/>.
