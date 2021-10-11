@@ -70,6 +70,12 @@ case class ReplicatedQuerySplitStrategy(shardInstanceDSKey : DataSourceKey,
     append(s"\nShard Instance ${shardInstanceDSKey} Split Strategy:\n")
     shardSplitStrategy.explain(append)
   }
+
+  override def associateFetchClause(sqlSnip: SQLSnippet,
+                           addOrderBy : Boolean,
+                           orderByCnt : Int,
+                           splitId : Int) : SQLSnippet =
+    shardSplitStrategy.associateFetchClause(sqlSnip, addOrderBy, orderByCnt, splitId)
 }
 
 case class ShardQuerySplitStrategy(shardSplitStrategies :
@@ -103,6 +109,15 @@ case class ShardQuerySplitStrategy(shardSplitStrategies :
       }
       shardStrat.explain(append)
     }
+  }
+
+  override def associateFetchClause(sqlSnip: SQLSnippet,
+                                    addOrderBy : Boolean,
+                                    orderByCnt : Int,
+                                    splitId : Int) : SQLSnippet = {
+    val shardSplit = splitList(splitId)
+    shardSplitStrategies(shardSplit.shardIdx)._1.
+      associateFetchClause(sqlSnip, addOrderBy, orderByCnt, shardSplit.shardSplitId)
   }
 }
 
