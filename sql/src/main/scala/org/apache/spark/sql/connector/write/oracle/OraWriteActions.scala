@@ -80,6 +80,8 @@ case class OraWriteSpec(
  */
 trait OraWriteActions extends Serializable {
 
+  import org.apache.spark.sql.oracle.OraSQLImplicits._
+
   val writeSpec: OraWriteSpec
 
   lazy val tempTableName = {
@@ -88,21 +90,23 @@ trait OraWriteActions extends Serializable {
       s.substring(0, 30)
     } else s
 
-    s""""${s1}""""
+    s1
   }
 
-  lazy val dest_tab_name = s"${writeSpec.oraTable.schema}.${writeSpec.oraTable.name}"
+  val tempTableSQLRef = SQLSnippet.objRef(tempTableName)
 
-  lazy val nested_tempTables : Array[(String, String)] = {
+  lazy val dest_tab_ref = SQLSnippet.tableQualId(writeSpec.oraTable)
+  lazy val dest_tab_name = dest_tab_ref.sql
+
+  lazy val nested_tempTables : Array[(SQLSnippet, SQLSnippet)] = {
     writeSpec.oraTable.columns.
       filter(c => c.dataType.isInstanceOf[OraNestedTableType]).
       map{c =>
         val tNm = {
-          val nm = s"${c.name}_${tempTableName.substring(1, tempTableName.length - 1)}"
-          val nm1 = if (nm.length > 30) nm.substring(0, 30) else nm
-          s""""${nm1}""""
+          val nm = s"${c}_${tempTableName}"
+          if (nm.length > 30) nm.substring(0, 30) else nm
         }
-        ((c.name), tNm)
+        (SQLSnippet.colRef(c.name), SQLSnippet.objRef(tNm))
       }
   }
 
@@ -119,7 +123,7 @@ trait OraWriteActions extends Serializable {
    * @return
    */
   def dropTempTableDDL: String =
-    s"drop table ${tempTableName} PURGE"
+    osql"drop table ${tempTableSQLRef} PURGE".sql
 
   /**
    * Called when [[org.apache.spark.sql.connector.write.BatchWrite.createBatchWriterFactory]]
@@ -128,7 +132,7 @@ trait OraWriteActions extends Serializable {
   def createTempTable: Unit = {
     ORASQLUtils.performDSDDL(writeSpec.dsKey,
       createTempTableDDL,
-      s"Creating Temp Table ${tempTableName} for insert into ${dest_tab_name}")
+      s"create Temp Table ${tempTableName} for insert into ${dest_tab_name}")
   }
 
   /**
@@ -177,32 +181,42 @@ object OraWriteActions {
  * @param writeSpec
  */
 case class BasicWriteActions(writeSpec: OraWriteSpec) extends OraWriteActions {
+  import org.apache.spark.sql.oracle.OraSQLImplicits._
+
   def createTempTableDDL: String = {
     val tableSpace = OraSparkConfig.getConf(OraSparkConfig.TABLESPACE_FOR_TEMP_TABLES)
 
     val tableSpaceClause = if (tableSpace.isDefined) {
-      s"tablespace ${tableSpace.get}"
-    } else ""
+      osql"tablespace ${SQLSnippet.objRef(tableSpace.get)}"
+    } else osql""
 
-    val nestTableClauses = if (nested_tempTables.nonEmpty) {
-      nested_tempTables.map {
-        case (colNm, nestTbl) => s"${colNm} store as ${nestTbl}"
-      }.mkString("NESTED TABLE ", " ", "")
-    } else ""
+    val nestTableClauses = {
 
+      if (nested_tempTables.nonEmpty) {
+        var nestedTblClause = osql"NESTED TABLE "
+        for ((col, nestedTbl) <- nested_tempTables) {
+          nestedTblClause += osql"${col} store as ${nestedTbl} "
+        }
+        nestedTblClause
+      } else osql""
+    }
 
-    s"""create table ${tempTableName}
-       |${tableSpaceClause} nologging ${nestTableClauses}
-       |as select * from ${dest_tab_name} where 1=2""".stripMargin
+    osql"""
+          create table ${tempTableSQLRef}
+          ${tableSpaceClause} nologging ${nestTableClauses}
+          as select * from ${dest_tab_ref} where 1=2""".sql.stripMargin
   }
 
   def insertTempTableDML: String = {
-    val colList = writeSpec.oraTable.columns.map(_.name).mkString(", ")
-    val bindList = Seq.fill(writeSpec.oraTable.columns.size)("?").mkString(", ")
+    val colList =
+      SQLSnippet.csv(writeSpec.oraTable.columns.map(c => SQLSnippet.colRef(c.name)) : _*)
 
-    s"""insert /*+ APPEND */ into ${tempTableName}
-       |( ${colList})
-       |values (${bindList})""".stripMargin
+    val bindList =
+      SQLSnippet.literalSnippet(Seq.fill(writeSpec.oraTable.columns.size)("?").mkString(", "))
+
+    osql"""insert /*+ APPEND */ into ${tempTableSQLRef}
+       ( ${colList})
+       values (${bindList})""".sql.stripMargin
   }
 
   /**
@@ -211,18 +225,15 @@ case class BasicWriteActions(writeSpec: OraWriteSpec) extends OraWriteActions {
    * @return
    */
   def deleteOraTableDML : Option[String] = {
-    import org.apache.spark.sql.oracle.OraSQLImplicits._
 
     val destTab = SQLSnippet.tableQualId(writeSpec.oraTable)
     val delClause = osql"delete from ${destTab}"
 
     if (writeSpec.isDynamicPartitionMode) {
-      val partCols = writeSpec.oraTable.partitionSchema.fields.map(_.name)
-      val partColList = partCols.mkString(", ")
-      val dynamicPartListClause = SQLSnippet.literalSnippet(
-        s"(${partColList}) in (select distinct ${partColList} from ${tempTableName})"
-      )
-
+      val partCols = writeSpec.oraTable.partitionSchema.fields.map(c => SQLSnippet.colRef(c.name))
+      val partColList = SQLSnippet.csv(partCols : _*)
+      val dynamicPartListClause =
+        osql"(${partColList}) in (select distinct ${partColList} from ${tempTableSQLRef})"
       Some(osql"${delClause} where ${dynamicPartListClause}".sql)
     } else if (writeSpec.deleteCond.isDefined) {
       val delCond = osql"${writeSpec.deleteCond.get.reifyLiterals}"
@@ -235,18 +246,18 @@ case class BasicWriteActions(writeSpec: OraWriteSpec) extends OraWriteActions {
   def insertOraTableDML: String = {
     val insertHints = OraSparkConfig.getConf(OraSparkConfig.INSERT_INTO_DEST_TABLE_STAT_HINTS)
     val insertHintsClause = if (insertHints.isDefined) {
-      s"/*+ ${insertHints.get} */"
-    } else ""
+      SQLSnippet.literalSnippet(s"/*+ ${insertHints.get} */")
+    } else osql""
 
-    s"""insert ${insertHintsClause}
-       |into ${dest_tab_name}
-       |select /*+ PARALLEL(${tempTableName}) */ * from ${tempTableName}""".stripMargin
+    osql"""
+          insert ${insertHintsClause}
+          into ${dest_tab_ref}
+          select /*+ PARALLEL(${tempTableSQLRef}) */ * from ${tempTableSQLRef}""".sql.stripMargin
   }
 
   def prepareForUpdate: Unit = ()
 
   def updateDestTable : Unit = {
-
     ORASQLUtils.performDSSQLsInTransaction(writeSpec.dsKey,
       deleteOraTableDML.toSeq :+ insertOraTableDML,
       s"Update Destination Table ${dest_tab_name} based on rows in ${tempTableName}")
@@ -264,3 +275,4 @@ case class BasicWriteActions(writeSpec: OraWriteSpec) extends OraWriteActions {
  * @param writeSpec
  */
 abstract class ListPartitionedWriteAction(val writeSpec: OraWriteSpec) extends OraWriteActions
+

@@ -45,6 +45,7 @@ trait SparkOraStatement extends Logging { self =>
   def datasourceInfo : DataSourceInfo
   def underlying: PreparedStatement
   def sqlTemplate: String
+  protected def isQuery : Boolean
   def bindValues: Seq[Literal]
   def catalogOptions: OracleCatalogOptions
   def timeToExecute: DoubleAccumulator
@@ -66,9 +67,20 @@ trait SparkOraStatement extends Logging { self =>
 
   def executeUpdate(): Int = statementExecute(() => underlying.executeUpdate())
 
+  protected def executeBatch : Unit = {
+    val sTime = System.currentTimeMillis()
+    statementExecute(() => underlying.executeBatch())
+    val eTime = System.currentTimeMillis()
+    timeToExecute.add(eTime - sTime)
+  }
+
   private[this] lazy val sqlString: String = {
     try {
-      SQLTemplate.buildPrintableSQL(sqlTemplate, bindValues)
+      if (isQuery) {
+        SQLTemplate.buildPrintableSQL(sqlTemplate, bindValues)
+      } else {
+        sqlTemplate
+      }
     } catch {
       case e: Exception =>
         log.debug("Caught an exception when formatting SQL because of " + e.getMessage)

@@ -35,7 +35,7 @@ class JoinTranslationTests extends AbstractTranslationTest {
       |     sparktest.unit_test_partitioned d
       |where a.c_int = b.c_int and b.c_int = c.c_int and c.c_int = d.c_int""".stripMargin,
     """select "sparkora_0"."C_INT" AS "C_INT_1_sparkora", "sparkora_1"."C_INT" AS "C_INT_2_sparkora", "sparkora_2"."C_INT" AS "C_INT_3_sparkora", "sparkora_3"."C_INT" AS "C_INT_4_sparkora"
-      |from SPARKTEST.UNIT_TEST "sparkora_0" join SPARKTEST.UNIT_TEST_PARTITIONED "sparkora_1" on ("sparkora_0"."C_INT" = "sparkora_1"."C_INT") join SPARKTEST.UNIT_TEST "sparkora_2" on ("sparkora_1"."C_INT" = "sparkora_2"."C_INT") join SPARKTEST.UNIT_TEST_PARTITIONED "sparkora_3" on ("sparkora_2"."C_INT" = "sparkora_3"."C_INT")
+      |from "SPARKTEST"."UNIT_TEST" "sparkora_0" join "SPARKTEST"."UNIT_TEST_PARTITIONED" "sparkora_1" on ("sparkora_0"."C_INT" = "sparkora_1"."C_INT") join "SPARKTEST"."UNIT_TEST" "sparkora_2" on ("sparkora_1"."C_INT" = "sparkora_2"."C_INT") join "SPARKTEST"."UNIT_TEST_PARTITIONED" "sparkora_3" on ("sparkora_2"."C_INT" = "sparkora_3"."C_INT")
       |where ((("sparkora_0"."C_INT" IS NOT NULL AND "sparkora_1"."C_INT" IS NOT NULL) AND "sparkora_2"."C_INT" IS NOT NULL) AND "sparkora_3"."C_INT" IS NOT NULL)""".stripMargin,
     true, true
   )
@@ -50,13 +50,13 @@ class JoinTranslationTests extends AbstractTranslationTest {
       |where a.c_int = b.c_int and b.c_int = c.c_int and c.c_int = d.c_int""".stripMargin,
     """select "sparkora_0"."c_int" AS "c_int_1_sparkora", "sparkora_1"."c_int" AS "c_int_2_sparkora", "sparkora_2"."c_int" AS "c_int_3_sparkora", "sparkora_3"."c_int" AS "c_int_4_sparkora"
       |from ( select ("C_INT" + 1) AS "c_int"
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where ("C_INT" + ?) IS NOT NULL ) "sparkora_0" join ( select ("C_INT" + 1) AS "c_int"
-      |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST_PARTITIONED" """.stripMargin + """
       |where ("C_INT" + ?) IS NOT NULL ) "sparkora_1" on ("sparkora_0"."c_int" = "sparkora_1"."c_int") join ( select ("C_INT" + 1) AS "c_int"
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where ("C_INT" + ?) IS NOT NULL ) "sparkora_2" on ("sparkora_1"."c_int" = "sparkora_2"."c_int") join ( select ("C_INT" + 1) AS "c_int"
-      |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST_PARTITIONED" """.stripMargin + """
       |where ("C_INT" + ?) IS NOT NULL ) "sparkora_3" on ("sparkora_2"."c_int" = "sparkora_3"."c_int")""".stripMargin,
     true, true
   )
@@ -74,8 +74,8 @@ class JoinTranslationTests extends AbstractTranslationTest {
       |           and wr_order_number = ws_order_number)
       |           """.stripMargin,
     """select "WS_WEB_SITE_SK" AS "wsr_web_site_sk", "WR_RETURNED_DATE_SK" AS "date_sk", "WS_SALES_PRICE" AS "sales_price", "WS_NET_PROFIT" AS "profit", "WR_RETURN_AMT" AS "return_amt", "WR_NET_LOSS" AS "net_loss"
-      |from TPCDS.WEB_RETURNS  left outer join ( select "WS_ITEM_SK", "WS_WEB_SITE_SK", "WS_ORDER_NUMBER", "WS_SALES_PRICE", "WS_NET_PROFIT"
-      |from TPCDS.WEB_SALES  )  on (("WR_ITEM_SK" = "WS_ITEM_SK") AND ("WR_ORDER_NUMBER" = "WS_ORDER_NUMBER"))""".stripMargin
+      |from "TPCDS"."WEB_RETURNS"  left outer join ( select "WS_ITEM_SK", "WS_WEB_SITE_SK", "WS_ORDER_NUMBER", "WS_SALES_PRICE", "WS_NET_PROFIT"
+      |from "TPCDS"."WEB_SALES"  )  on (("WR_ITEM_SK" = "WS_ITEM_SK") AND ("WR_ORDER_NUMBER" = "WS_ORDER_NUMBER"))""".stripMargin
   )
 
   testPushdown("full_outer_51",
@@ -86,8 +86,8 @@ class JoinTranslationTests extends AbstractTranslationTest {
     |           from web_sales web full outer join store_sales store on (web.ws_item_sk = store.ss_item_sk
     |                                                          and web.ws_sold_date_sk = store.ss_sold_date_sk)""".stripMargin,
   """select CASE WHEN "WS_ITEM_SK" IS NOT NULL THEN "WS_ITEM_SK" ELSE "SS_ITEM_SK" END AS "item_sk", CASE WHEN "WS_SOLD_DATE_SK" IS NOT NULL THEN "WS_SOLD_DATE_SK" ELSE "SS_SOLD_DATE_SK" END AS "d_date", "WS_SALES_PRICE" AS "web_sales", "SS_SALES_PRICE" AS "store_sales"
-    |from TPCDS.WEB_SALES  full outer join ( select "SS_SOLD_DATE_SK", "SS_ITEM_SK", "SS_SALES_PRICE"
-    |from TPCDS.STORE_SALES  )  on (("WS_ITEM_SK" = "SS_ITEM_SK") AND ("WS_SOLD_DATE_SK" = "SS_SOLD_DATE_SK"))""".stripMargin)
+    |from "TPCDS"."WEB_SALES"  full outer join ( select "SS_SOLD_DATE_SK", "SS_ITEM_SK", "SS_SALES_PRICE"
+    |from "TPCDS"."STORE_SALES"  )  on (("WS_ITEM_SK" = "SS_ITEM_SK") AND ("WS_SOLD_DATE_SK" = "SS_SOLD_DATE_SK"))""".stripMargin)
 
   testPushdown("x-join",
     """

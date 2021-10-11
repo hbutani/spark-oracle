@@ -190,9 +190,9 @@ case class OraPartitionSplitStrategy(splitList : IndexedSeq[OraDBSplit],
 
       def partClause(pNm : String) : SQLSnippet = {
         if (!subPart) {
-          osql"PARTITION(${literalsql(pNm)})"
+          osql"PARTITION(${SQLSnippet.objRef(pNm)})"
         } else {
-          osql"SUBPARTITION(${literalsql(pNm)})"
+          osql"SUBPARTITION(${SQLSnippet.objRef(pNm)})"
         }
       }
 

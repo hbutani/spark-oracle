@@ -28,6 +28,7 @@ import java.util
 
 import oracle.spark.{DataSourceKey, ORASQLUtils}
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
@@ -90,16 +91,25 @@ case class OracleTable(
   override def deleteWhere(filters: Array[Filter]): Unit = {
     import org.apache.spark.sql.oracle.OraSQLImplicits._
 
-    val oraExpr = DataSourceFilterTranslate(filters, oraTable).oraExpression
     val destTab = SQLSnippet.tableQualId(oraTable)
-    val delCond = osql"${oraExpr.reifyLiterals}"
+    var delStat = osql"delete from ${destTab}"
 
-    val delStat = osql"delete from ${destTab} where ${delCond}"
+    if (filters.nonEmpty) {
+      val oraExpr = DataSourceFilterTranslate(filters, oraTable).oraExpression
+      val delCond = osql"${oraExpr.reifyLiterals}"
+      delStat += osql" where ${delCond}"
+    }
 
     ORASQLUtils.performDSDML(dsKey,
       delStat.sql,
       s"Delete on table ${oraTable.schema}.${oraTable.name}"
     )
+  }
+
+  override def canDeleteWhere(filters : Array[Filter]) : Boolean = {
+    if (filters.nonEmpty) {
+      Try(DataSourceFilterTranslate(filters, oraTable).oraExpression).isSuccess
+    } else true
   }
 
   override def partitionSchema(): StructType = oraTable.partitionSchema

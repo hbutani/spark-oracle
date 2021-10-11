@@ -39,9 +39,9 @@ class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
     //   if you remove the """.stripMargin + """ the trailing space
     //   disappears after a compile.
     """select "C_LONG"
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where  "C_INT" IN ( select "C_INT"
-      |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST_PARTITIONED" """.stripMargin + """
       |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) )""".stripMargin,
     true, true
   )
@@ -56,9 +56,9 @@ class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |                )
       |""".stripMargin,
     """select "C_LONG"
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where  "C_INT" NOT IN ( select "C_INT"
-      |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST_PARTITIONED" """.stripMargin + """
       |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) )""".stripMargin,
     true, true
   )
@@ -83,9 +83,9 @@ class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |               )
       |""".stripMargin,
     """select "SS_ITEM_SK"
-      |from TPCDS.STORE_SALES """.stripMargin + """
+      |from "TPCDS"."STORE_SALES" """.stripMargin + """
       |where (("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) AND exists  ( select 1 AS "col"
-      |from TPCDS.STORE_SALES """.stripMargin + """
+      |from "TPCDS"."STORE_SALES" """.stripMargin + """
       |where (("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) AND rownum <= 1) ))""".
       stripMargin
   )
@@ -109,9 +109,9 @@ class UncorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |               )
       |""".stripMargin,
     """select "SS_ITEM_SK"
-      |from TPCDS.STORE_SALES """.stripMargin + """
+      |from "TPCDS"."STORE_SALES" """.stripMargin + """
       |where (("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) AND not exists  ( select 1 AS "col"
-      |from TPCDS.STORE_SALES """.stripMargin + """
+      |from "TPCDS"."STORE_SALES" """.stripMargin + """
       |where (("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) AND rownum <= 1) ))""".stripMargin
   )
 }

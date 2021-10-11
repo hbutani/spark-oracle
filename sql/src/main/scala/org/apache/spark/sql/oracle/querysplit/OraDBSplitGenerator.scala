@@ -285,26 +285,26 @@ class OraDBSplitGenerator(dsKey : DataSourceKey,
 object OraDBSplitGenerator {
 
   private[querysplit] val CHUNK_TASK_NAME_SQL =
-    "select DBMS_PARALLEL_EXECUTE.GENERATE_TASK_NAME('ORASPARK') from dual"
+    """select "SYS"."DBMS_PARALLEL_EXECUTE"."GENERATE_TASK_NAME"('ORASPARK') from dual"""
 
   private[querysplit] val CHUNK_TASK_CREATE_TASK_SQL =
-    "call DBMS_PARALLEL_EXECUTE.CREATE_TASK(?,'Dummy task for ORASPARK splitter')"
+    """call "SYS"."DBMS_PARALLEL_EXECUTE"."CREATE_TASK"(?,'Dummy task for ORASPARK splitter')"""
 
   private[querysplit] val CHUNK_TASK_DROP_CHUNKS =
-    "call " + "DBMS_PARALLEL_EXECUTE.DROP_CHUNKS(?)"
+    """call "SYS"."DBMS_PARALLEL_EXECUTE"."DROP_CHUNKS"(?)"""
 
   private[querysplit] val CHUNK_TASK_DROP_TASK =
-    "call " + "DBMS_PARALLEL_EXECUTE.DROP_TASK(?)"
+    """call "SYS"."DBMS_PARALLEL_EXECUTE"."DROP_TASK"(?)"""
 
   private[querysplit] val CHUNK_TASK_CREATE_CHUNKS =
   """begin
-      |  DBMS_PARALLEL_EXECUTE.CREATE_CHUNKS_BY_ROWID(?,?,?,TRUE,?);
+      |  "SYS"."DBMS_PARALLEL_EXECUTE"."CREATE_CHUNKS_BY_ROWID"(?,?,?,TRUE,?);
       |end;""".stripMargin
 
   private[querysplit] val ROWID_CHUNKS_QUERY =
   """
-      |select START_ROWID, END_ROWID
-      |from user_parallel_execute_chunks
-      |where task_name=?
-      |order by START_ROWID""".stripMargin
+      |select "START_ROWID", "END_ROWID"
+      |from "SYS"."USER_PARALLEL_EXECUTE_CHUNKS"
+      |where "TASK_NAME"=?
+      |order by "START_ROWID"""".stripMargin
 }

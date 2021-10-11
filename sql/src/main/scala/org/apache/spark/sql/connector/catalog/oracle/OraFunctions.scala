@@ -35,6 +35,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Unevaluable, UnevaluableAggregate, UserDefinedExpression}
+import org.apache.spark.sql.oracle.SQLSnippet
 import org.apache.spark.sql.oracle.expressions.{JDBCGetSet, OraLiterals}
 import org.apache.spark.sql.types.{DataType, IntegerType, StringType}
 
@@ -58,11 +59,16 @@ trait OraFunctionDefs { self : OracleMetadata.type =>
         s" args={${args.mkString(",")}}"
   }
 
-  private def fixOraFnNames(nm : String) : String = {
-    if (nm.toUpperCase(Locale.ROOT) == "SYS.STANDARD.USER") {
-      "USER"
-    } else {
-      nm
+  private def fixOraFnNames(owner : String,
+                            packageName : Option[String],
+                            name : String) : Seq[String] = {
+    (owner, packageName, name) match {
+      case (ow, Some(p), n)
+        if ow.toUpperCase(Locale.ROOT) == "SYS" &&
+          p.toUpperCase(Locale.ROOT) == "STANDARD" &&
+          n.toUpperCase(Locale.ROOT) == "USER" =>
+        Seq("USER")
+      case _ => Option(owner).toSeq ++ packageName.toSeq ++ Seq(name)
     }
   }
 
@@ -74,7 +80,10 @@ trait OraFunctionDefs { self : OracleMetadata.type =>
 
     val qualNm = s"${packageName.map(_ + ".").getOrElse("")}${name}"
 
-    lazy val orasql_fnname = fixOraFnNames(s"${owner}.${qualNm}")
+    lazy val orasql_fnname : String = {
+      val qualifiedNm = fixOraFnNames(owner, packageName, name)
+      SQLSnippet.quotedQualifiedName(qualifiedNm).sql
+    }
 
     override def toString: String =
       s"""name=${qualNm},isAggregate=${isAggregate}
@@ -116,19 +125,19 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
     performDSQuery(
       dsKey,
       """
-        |select coalesce(p.overload, 'None'), p.subprogram_id,
-        |       argument_name, position,
-        |       data_type, data_length, data_precision, data_scale,
-        |       in_out, aggregate, p.owner,
-        |       type_owner, type_name
-        |from ALL_PROCEDURES p join ALL_ARGUMENTS a on
-        |      p.object_id = a.object_id and
-        |      p.subprogram_id = a.subprogram_id and
-        |      coalesce(p.overload, 'null')  = coalesce(a.overload, 'null')
-        |where p.object_name =  ? and
-        |      coalesce(p.PROCEDURE_NAME, 'null') = coalesce(?, 'null') and
-        |      p.object_type in ('FUNCTION', 'PROCEDURE', 'PACKAGE')
-        |order by coalesce(p.overload, 'None'), p.subprogram_id, position
+        |select coalesce(p."OVERLOAD", 'None'), p."SUBPROGRAM_ID",
+        |       "ARGUMENT_NAME", "POSITION",
+        |       "DATA_TYPE", "DATA_LENGTH", "DATA_PRECISION", "DATA_SCALE",
+        |       "IN_OUT", "AGGREGATE", p."OWNER",
+        |       "TYPE_OWNER", "TYPE_NAME"
+        |from "SYS"."ALL_PROCEDURES" p join "SYS"."ALL_ARGUMENTS" a on
+        |      p."OBJECT_ID" = a."OBJECT_ID" and
+        |      p."SUBPROGRAM_ID" = a."SUBPROGRAM_ID" and
+        |      coalesce(p."OVERLOAD", 'null')  = coalesce(a."OVERLOAD", 'null')
+        |where p."OBJECT_NAME" =  ? and
+        |      coalesce(p."PROCEDURE_NAME", 'null') = coalesce(?, 'null') and
+        |      p."OBJECT_TYPE" in ('FUNCTION', 'PROCEDURE', 'PACKAGE')
+        |order by coalesce(p."OVERLOAD", 'None'), p."SUBPROGRAM_ID", "POSITION"
         |""".stripMargin,
       "retrieve function definition details",
       {ps =>

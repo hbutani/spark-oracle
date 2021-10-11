@@ -38,8 +38,8 @@ object ORAMetadataSQLs {
            r_xml clob;
            r_sxml clob;
          begin
-           SELECT DBMS_METADATA.get_xml ('TABLE', ?, ?) into r_xml from dual;
-           SELECT DBMS_METADATA.get_sxml ('TABLE', ?, ?) into r_sxml from dual;
+           SELECT "SYS"."DBMS_METADATA"."GET_XML" ('TABLE', ?, ?) into r_xml from dual;
+           SELECT "SYS"."DBMS_METADATA"."GET_SXML" ('TABLE', ?, ?) into r_sxml from dual;
            ? := r_xml;
            ? := r_sxml;
          end;""".stripMargin
@@ -48,7 +48,7 @@ object ORAMetadataSQLs {
          declare
            r_sxml clob;
          begin
-           SELECT DBMS_METADATA.get_sxml ('TYPE', ?, ?) into r_sxml from dual;
+           SELECT "SYS"."DBMS_METADATA"."GET_SXML" ('TYPE', ?, ?) into r_sxml from dual;
            ? := r_sxml;
          end;""".stripMargin
 
@@ -114,9 +114,9 @@ object ORAMetadataSQLs {
     performDSQuery(
       dsKey,
       """
-        |select username, all_shard
-        |from all_users
-        |where ORACLE_MAINTAINED = 'N'
+        |select "USERNAME", "ALL_SHARD"
+        |from "SYS"."ALL_USERS"
+        |where "ORACLE_MAINTAINED" = 'N'
         |""".stripMargin,
       "list non oracle maintained users") { rs =>
       val buf = ArrayBuffer[String]()
@@ -131,10 +131,10 @@ object ORAMetadataSQLs {
     performDSQuery(
       dsKey,
       """
-        |select owner, table_name
-        |from ALL_TABLES
-        |where owner in (select username from all_users where ORACLE_MAINTAINED = 'N')
-        |order by OWNER, TABLE_NAME
+        |select "OWNER", "TABLE_NAME"
+        |from "SYS"."ALL_TABLES"
+        |where "OWNER" in (select "USERNAME" from "SYS"."ALL_USERS" where "ORACLE_MAINTAINED" = 'N')
+        |order by "OWNER", "TABLE_NAME"
         |""".stripMargin,
       "list non oracle maintained users",
     ) { rs =>
@@ -184,7 +184,7 @@ object ORAMetadataSQLs {
     }
 
     val retrievePlanSQL =
-    s"""select DBMS_XPLAN.DISPLAY_PLAN(
+    s"""select "SYS"."DBMS_XPLAN"."DISPLAY_PLAN"(
        |            statement_id => '${stat_id}', type => 'XML'
        |          ) from dual""".stripMargin
 

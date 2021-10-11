@@ -28,6 +28,7 @@ import java.io.File
 import java.util.Locale
 
 import oracle.spark.{ConnectionInfo, ConnectionManagement, DataSourceKey, ORAMetadataSQLs}
+import oracle.spark.datastructs.SQLIdentifierMap
 import org.fusesource.leveldbjni.JniDBFactory
 import org.iq80.leveldb.{DB, Options}
 
@@ -114,9 +115,9 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
     db
   }
 
-  @volatile private var _namespacesMap: CaseInsensitiveMap[String] = null
+  @volatile private var _namespacesMap: SQLIdentifierMap[String] = null
   @volatile private var _namespaces : Array[Array[String]] = null
-  @volatile private var _tableMap: CaseInsensitiveMap[Set[String]] = null
+  @volatile private var _tableMap: SQLIdentifierMap[Set[String]] = null
   @volatile private var shardingMetadata : Option[ShardingMetadata] = None
 
   private[oracle] val defaultNamespace: String = dsKey.userName
@@ -142,7 +143,7 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
         Serialization.serialize[Set[String]](accessibleUsers))
       accessibleUsers
     }
-    _namespacesMap = CaseInsensitiveMap(nsSet.map(n => n -> n).toMap)
+    _namespacesMap = SQLIdentifierMap(nsSet.map(n => n -> n).toMap)
     _namespaces = _namespacesMap.values.map(ns => Array(ns)).toArray
   }
 
@@ -162,7 +163,7 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
         Serialization.serialize[Map[String, Array[String]]](tblMap))
       tblMap
     }
-    _tableMap = CaseInsensitiveMap(tablMap.mapValues(_.toSet))
+    _tableMap = SQLIdentifierMap(tablMap.mapValues(_.toSet))
   }
 
 
@@ -174,7 +175,7 @@ private[oracle] class OracleMetadataManager(cMap: CaseInsensitiveMap[String])
     _namespacesMap.contains(ns)
   }
 
-  private[oracle] def tableMap : CaseInsensitiveMap[Set[String]] = {
+  private[oracle] def tableMap : SQLIdentifierMap[Set[String]] = {
     _tableMap
   }
 

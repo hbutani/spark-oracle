@@ -79,7 +79,7 @@ object ORASQLUtils extends Logging {
    * @return value returned by the action callback.
    */
   def perform[V](dsKey: DataSourceKey, actionDetails: => String)(action: Connection => V): V = {
-    withConnection(dsKey, getConnection(dsKey), s"Failed ${actionDetails} on ${dsKey}")(action)
+    withConnection(dsKey, getConnection(dsKey), s"${actionDetails} on ${dsKey}")(action)
   }
 
   private def performOrLogFailure[T](action: => T, logMsg: => String): T = {
@@ -268,7 +268,7 @@ object ORASQLUtils extends Logging {
       stmt: => String,
       actionDetails: => String,
       setStmtParams: PreparedStatement => Unit = ps => ())(action: ResultSet => V): V = {
-    perform[V](dsKey, s"Performing ${actionDetails} by running Query: '${stmt}") { conn =>
+    perform[V](dsKey, s"Performing ${actionDetails} by running Query:\n ${stmt}") { conn =>
       performQuery(conn, stmt, setStmtParams)(action)
     }
   }
@@ -278,7 +278,7 @@ object ORASQLUtils extends Logging {
       stmt: => String,
       actionDetails: => String,
       setStmtParams: PreparedStatement => Unit = ps => ()): Array[Int] = {
-    perform[Array[Int]](dsKey, s"Performing ${actionDetails} by executing DML: '${stmt}") {
+    perform[Array[Int]](dsKey, s"Performing ${actionDetails} by executing DML:\n ${stmt}") {
       conn =>
         performDML(conn, stmt, setStmtParams)
     }
@@ -291,7 +291,7 @@ object ORASQLUtils extends Logging {
                     initPStmt : PreparedStatement => Unit,
                     batchItr: Iterator[PreparedStatement => Unit],
                     batchSize : Int): Array[Int] = {
-    perform[Array[Int]](dsKey, s"Performing ${actionDetails} by executing Batch DML: '${stmt}") {
+    perform[Array[Int]](dsKey, s"Performing ${actionDetails} by executing Batch DML:\n '${stmt}") {
       conn =>
         performBatchDML(conn, stmt, initPStmt, batchItr, batchSize)
     }
@@ -303,7 +303,7 @@ object ORASQLUtils extends Logging {
       actionDetails: => String,
       setInParams: CallableStatement => Unit = cs => (),
       getOutParams: CallableStatement => Unit = cs => ()): Boolean = {
-    perform[Boolean](dsKey, s"Performing ${actionDetails} by executing DML: '${stmt}") { conn =>
+    perform[Boolean](dsKey, s"Performing ${actionDetails} by executing DML:\n '${stmt}") { conn =>
       performCall(conn, stmt, setInParams, getOutParams)
     }
   }
@@ -312,13 +312,13 @@ object ORASQLUtils extends Logging {
                     dsKey: DataSourceKey,
                     stmt: => String,
                     actionDetails: => String): Int = {
-    perform[Int](dsKey, s"Performing ${actionDetails} by executing DDL: '${stmt}") {
+    perform[Int](dsKey, s"Performing ${actionDetails} by executing DDL:\n '${stmt}") {
       conn => performDDL(conn, stmt)
     }
   }
 
   def performDSSQL(dsKey: DataSourceKey, stmt: => String, actionDetails: => String): Boolean = {
-    perform[Boolean](dsKey, s"Performing ${actionDetails}SQL by running Statement: '${stmt}") {
+    perform[Boolean](dsKey, s"Performing ${actionDetails}SQL by running Statement:\n '${stmt}") {
       conn =>
         performSQL(conn, stmt)
     }
@@ -329,7 +329,7 @@ object ORASQLUtils extends Logging {
                                  actionDetails: => String
                                 ): Unit = {
     perform[Unit](dsKey,
-      s"Performing ${actionDetails}, by running Statements: '${stmts.mkString("\n")}"
+      s"Performing ${actionDetails}, by running Statements:\n${stmts.mkString("\n")}"
       ) { conn =>
       conn.setAutoCommit(false)
       try {

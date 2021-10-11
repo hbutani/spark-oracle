@@ -315,7 +315,16 @@ object SQLSnippet {
     (nms.init.map(nm => osql"${nm}${dot}") :+ nms.last).foldLeft(empty)((r, o) => osql"${r}${o}")
   }
 
+  def quotedQualifiedName(parts: Seq[String]): SQLSnippet = {
+    val refs = parts.map(objRef(_))
+    refs.init.foldRight(refs.last)((o, r) => osql"${o}.${r}")
+  }
+
   def colRef(nm: String): SQLSnippet = {
+    apply(s""""${nm}"""", Seq.empty)
+  }
+
+  def objRef(nm: String): SQLSnippet = {
     apply(s""""${nm}"""", Seq.empty)
   }
 
@@ -324,7 +333,7 @@ object SQLSnippet {
   }
 
   def tableQualId(oraTbl: OraTable) : SQLSnippet =
-    literalSnippet(oraTbl.schema + "." + oraTbl.name)
+    literalSnippet(s""""${oraTbl.schema}"."${oraTbl.name}"""")
 
   def subQuery(sql : SQLSnippet) : SQLSnippet = osql"( ${sql} )"
 

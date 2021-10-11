@@ -31,55 +31,56 @@ import oracle.spark.ORASQLUtils.{performDSQuery, performQuery}
 
 object ORAShardSQLs {
 
-  private val IS_SHARDED_INSTANCE_QUERY = "select name from gsmadmin_internal.database"
+  private val IS_SHARDED_INSTANCE_QUERY =
+    """SELECT "NAME" from "GSMADMIN_INTERNAL"."DATABASE" """
 
   private val LIST_SHARD_INSTANCES =
     """
-      |select name, connect_string
-      |from gsmadmin_internal.database""".stripMargin
+      |SELECT "NAME", "CONNECT_STRING"
+      |from "GSMADMIN_INTERNAL"."DATABASE" """.stripMargin
 
   // MLOG$_<tNm>, RUPD$_<tNm>
   private val LIST_REPLICATED_TABLES =
   """with tlist as
-    |(select owner,
+    |(SELECT "OWNER",
     |       case
-    |           when table_name like 'RUPD$_%' then substr(table_name, 7)
-    |           when table_name like 'MLOG$_%' then substr(table_name, 7)
-    |           else table_name
+    |           when "TABLE_NAME" like 'RUPD$_%' then substr("TABLE_NAME", 7)
+    |           when "TABLE_NAME" like 'MLOG$_%' then substr("TABLE_NAME", 7)
+    |           else "TABLE_NAME"
     |           end tname
-    |from ALL_TABLES
-    |where owner in (select username from all_users where ORACLE_MAINTAINED = 'N')
+    |from "ALL_TABLES"
+    |where "OWNER" in (select "USERNAME" from "ALL_USERS" where "ORACLE_MAINTAINED" = 'N')
     |)
-    |select owner, tname, count(*)
+    |select "OWNER", tname, count(*)
     |from tlist
-    |group by owner, tname
+    |group by "OWNER", tname
     |having count(*) = 3
     |order by 1, 2""".stripMargin
 
   val LIST_TABLE_FAMILIES =
     """
-      |select TABFAM_ID, TABLE_NAME, SCHEMA_NAME, GROUP_TYPE,
-      |       GROUP_COL_NUM, SHARD_TYPE, SHARD_COL_NUM, DEF_VERSION
-      |from LOCAL_CHUNK_TYPES
+      |select "TABFAM_ID", "TABLE_NAME", "SCHEMA_NAME", "GROUP_TYPE",
+      |       "GROUP_COL_NUM", "SHARD_TYPE", "SHARD_COL_NUM", "DEF_VERSION"
+      |from "LOCAL_CHUNK_TYPES"
       |""".stripMargin
 
   val LIST_TABLE_FAMILY_COLUMNS =
   """
-      |select SHARD_LEVEL, COL_IDX_IN_KEY, COL_NAME
-      |from LOCAL_CHUNK_COLUMNS
-      |where tabFam_id = ?
-      |order by SHARD_LEVEL, COL_IDX_IN_KEY
+      |select "SHARD_LEVEL", "COL_IDX_IN_KEY", "COL_NAME"
+      |from "LOCAL_CHUNK_COLUMNS"
+      |where "TABFAM_ID" = ?
+      |order by "SHARD_LEVEL", "COL_IDX_IN_KEY"
       |""".stripMargin
 
   val LIST_CHUNKS =
     """
-      |select shard_name, shard_key_low, shard_key_high,
-      |       group_key_low, group_key_high,
-      |       chunk_id, grp_id, chunk_unique_id,
-      |       chunk_name, priority, state
-      |from local_chunks c
-      |where tabfam_id = ?
-      |order by grp_id, chunk_id""".stripMargin
+      |select "SHARD_NAME", "SHARD_KEY_LOW", "SHARD_KEY_HIGH",
+      |       "GROUP_KEY_LOW", "GROUP_KEY_HIGH",
+      |       "CHUNK_ID", "GRP_ID", "CHUNK_UNIQUE_ID",
+      |       "CHUNK_NAME", "PRIORITY", "STATE"
+      |from "LOCAL_CHUNKS" c
+      |where "TABFAM_ID" = ?
+      |order by "GRP_ID", "CHUNK_ID"""".stripMargin
 
 
   def isShardedInstance(conn: Connection): Boolean = {

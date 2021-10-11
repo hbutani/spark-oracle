@@ -37,9 +37,9 @@ class SetOpTranslationTest extends AbstractTranslationTest {
       |where c_int <= 5
       |""".stripMargin,
     """select "C_INT" AS "val"
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where ("C_INT" IS NOT NULL AND ("C_INT" > ?)) UNION ALL select ("C_INT" + "C_LONG") AS "1_sparkora"
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where ("C_INT" IS NOT NULL AND ("C_INT" <= ?))""".stripMargin
   )
 
@@ -55,9 +55,9 @@ class SetOpTranslationTest extends AbstractTranslationTest {
       |""".stripMargin,
     """select "val"
       |from ( select "C_INT" AS "val"
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where (("C_INT" IS NOT NULL AND ("C_INT" > ?)) AND  (COALESCE("C_INT" , ?), CASE WHEN "C_INT" IS NULL THEN 1 ELSE 0 END) IN ( select COALESCE("C_INT" , 0), CASE WHEN "C_INT" IS NULL THEN 1 ELSE 0 END
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where ("C_INT" IS NOT NULL AND ("C_INT" < ?)) )) ) """.stripMargin + """
       |group by "val"""".stripMargin
       )
@@ -75,9 +75,9 @@ class SetOpTranslationTest extends AbstractTranslationTest {
       |""".stripMargin,
     """select "val"
       |from ( select "sparkora_0"."C_INT" AS "val"
-      |from SPARKTEST.UNIT_TEST "sparkora_0"
+      |from "SPARKTEST"."UNIT_TEST" "sparkora_0"
       |where (("sparkora_0"."C_INT" IS NOT NULL AND ("sparkora_0"."C_INT" > ?)) AND not exists ( select 1
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where (("C_INT" IS NOT NULL AND ("C_INT" > ?)) AND ((COALESCE("sparkora_0"."C_INT" , ?) = COALESCE("C_INT" , ?)) AND (CASE WHEN "sparkora_0"."C_INT" IS NULL THEN 1 ELSE 0 END = CASE WHEN "C_INT" IS NULL THEN 1 ELSE 0 END))) )) ) """.stripMargin + """
       |group by "val"""".stripMargin
   )

@@ -35,9 +35,9 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
   |                )
   |""".stripMargin,
   """select "C_LONG"
-    |from SPARKTEST.UNIT_TEST """.stripMargin + """
+    |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
     |where  ("C_INT", "C_LONG") IN ( select "C_INT", "C_LONG"
-    |from SPARKTEST.UNIT_TEST_PARTITIONED  )""".stripMargin,
+    |from "SPARKTEST"."UNIT_TEST_PARTITIONED"  )""".stripMargin,
     true, true)
 
   testPushdown(
@@ -60,9 +60,9 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |               where ssales_other.ss_item_sk = ssales.ss_item_sk
       |               )""".stripMargin,
   """select "SS_ITEM_SK"
-    |from TPCDS.STORE_SALES """.stripMargin + """
+    |from "TPCDS"."STORE_SALES" """.stripMargin + """
     |where (("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) AND  "SS_ITEM_SK" IN ( select "SS_ITEM_SK"
-    |from TPCDS.STORE_SALES """.stripMargin + """
+    |from "TPCDS"."STORE_SALES" """.stripMargin + """
     |where ("SS_CUSTOMER_SK" IS NOT NULL AND ("SS_CUSTOMER_SK" = ?)) ))""".stripMargin)
 
   testPushdown(
@@ -75,9 +75,9 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |                where c_long = sparktest.unit_test.c_long
       |                )""".stripMargin,
   """select "sparkora_0"."C_LONG"
-    |from SPARKTEST.UNIT_TEST "sparkora_0"
+    |from "SPARKTEST"."UNIT_TEST" "sparkora_0"
     |where  "C_INT" NOT IN ( select "C_INT"
-    |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
+    |from "SPARKTEST"."UNIT_TEST_PARTITIONED" """.stripMargin + """
     |where ("sparkora_0"."C_LONG" = "C_LONG") )""".stripMargin,
     true, true)
 
@@ -94,9 +94,9 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |                       c_int = sparktest.unit_test.c_int
       |                 )""".stripMargin,
   """select "sparkora_0"."C_LONG"
-    |from SPARKTEST.UNIT_TEST "sparkora_0"
+    |from "SPARKTEST"."UNIT_TEST" "sparkora_0"
     |where not exists ( select 1
-    |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
+    |from "SPARKTEST"."UNIT_TEST_PARTITIONED" """.stripMargin + """
     |where (("sparkora_0"."C_LONG" = "C_LONG") AND ("sparkora_0"."C_INT" = "C_INT")) )""".
     stripMargin,
     true, true)
@@ -121,12 +121,12 @@ class CorrelatedSubQueryTranslationTests extends AbstractTranslationTest {
       |""".stripMargin,
     """select "sparkora_0"."very_long__long_nam_2_sparkora"
       |from ( select "C_INT" AS "very_long_int_name__1_sparkora", "C_LONG" AS "very_long__long_nam_2_sparkora"
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where "C_INT" IS NOT NULL ) "sparkora_0" join ( select "C_INT" AS "very_long_int_name__1_sparkora", "C_LONG" AS "very_long__long_nam_2_sparkora"
-      |from SPARKTEST.UNIT_TEST """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST" """.stripMargin + """
       |where "C_LONG" IS NOT NULL ) "sparkora_1" on ("sparkora_0"."very_long_int_name__1_sparkora" = "sparkora_1"."very_long__long_nam_2_sparkora")
       |where  ("sparkora_0"."very_long_int_name__1_sparkora" + "sparkora_1"."very_long_int_name__1_sparkora") NOT IN ( select "C_INT"
-      |from SPARKTEST.UNIT_TEST_PARTITIONED """.stripMargin + """
+      |from "SPARKTEST"."UNIT_TEST_PARTITIONED" """.stripMargin + """
       |where ("sparkora_0"."very_long__long_nam_2_sparkora" = "C_LONG") )""".stripMargin,
     true, false
   )

@@ -43,6 +43,8 @@ case class OraInsertStatement(datasourceInfo: DataSourceInfo,
 
   val timeToExecute: DoubleAccumulator = accumalators.timeToWriteRows
 
+  protected val isQuery : Boolean = false
+
   private var conn : Connection = null
 
   private val batchSize: Int = datasourceInfo.catalogOptions.fetchSize
@@ -72,11 +74,8 @@ case class OraInsertStatement(datasourceInfo: DataSourceInfo,
 
   override def catalogOptions: OracleCatalogOptions = datasourceInfo.catalogOptions
 
-  private def executeBatch : Unit = {
-    val sTime = System.currentTimeMillis()
-    underlying.executeBatch()
-    val eTime = System.currentTimeMillis()
-    timeToExecute.add(eTime - sTime)
+  override protected def executeBatch : Unit = {
+    super.executeBatch
     accumalators.rowsWritten.add(rowCount)
     rowCount = 0
   }

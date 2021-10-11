@@ -174,6 +174,7 @@ case class OraQueryStatement(oraPart: OraPartition, timeToExecute: DoubleAccumul
   lazy val sqlTemplate: String = oraPartSQL
   lazy val bindValues: Seq[Literal] = oraPartSQLParams
   lazy val datasourceInfo : DataSourceInfo = dsInfo
+  protected val isQuery : Boolean = true
 
   lazy val underlying: PreparedStatement = {
     conn = {

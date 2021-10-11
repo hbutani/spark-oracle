@@ -24,7 +24,8 @@
 
 package org.apache.spark.sql.connector.catalog.oracle
 
-import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
+import oracle.spark.datastructs.SQLIdentifierMap
+
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.AbstractTest
 
@@ -36,6 +37,6 @@ trait OraMetadataMgrInternalTest { self: AbstractTest =>
     oraCat.getMetadataManager
   }
 
-  def catalogTableMap: CaseInsensitiveMap[Set[String]] = mdMgr.tableMap
+  def catalogTableMap: SQLIdentifierMap[Set[String]] = mdMgr.tableMap
 
 }
