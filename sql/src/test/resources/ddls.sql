@@ -18,7 +18,7 @@ CREATE TABLE sales_range_partition (
     PARTITION sales_q4_2014 VALUES LESS THAN (TO_DATE('01-JAN-2015','dd-MON-yyyy'))
 );
 
-grant all privileges on sales_range_partition to public;
+grant SELECT on sales_range_partition to public;
 
 -- SELECT DBMS_METADATA.get_sxml ('TABLE', 'SALES_RANGE_PARTITION', USER) from dual;
 
@@ -35,7 +35,7 @@ create table interval_par_demo (
     PARTITION interval_par_demo_p2 VALUES LESS THAN (TO_DATE('1-7-2007', 'DD-MM-YYYY')),
     PARTITION interval_par_demo_p3 VALUES LESS THAN (TO_DATE('1-8-2007', 'DD-MM-YYYY'))
 );
-grant all privileges on interval_par_demo to public;
+grant SELECT on interval_par_demo to public;
 -- SELECT DBMS_METADATA.get_sxml ('TABLE', 'INTERVAL_PAR_DEMO', USER) from dual;
 
 -- list partitioned
@@ -56,7 +56,7 @@ CREATE TABLE sales_by_region (
     PARTITION region_central
         VALUES ('OH','ND','SD','MO','IL','MI','IA')
 );
-grant all privileges on sales_by_region to public;
+grant SELECT on sales_by_region to public;
 
 -- SELECT DBMS_METADATA.get_sxml ('TABLE', 'SALES_BY_REGION', USER) from dual;
 
@@ -85,7 +85,7 @@ CREATE TABLE sales_by_region_and_channel
     PARTITION rest VALUES (DEFAULT)
     )
 ;
-grant all privileges on sales_by_region_and_channel to public;
+grant SELECT on sales_by_region_and_channel to public;
 
 -- SELECT DBMS_METADATA.get_sxml ('TABLE', 'SALES_BY_REGION_AND_CHANNEL', USER) from dual;
 
@@ -95,7 +95,7 @@ create table hash_partition_table
     partition by hash ( x )
     partitions 8
 ;
-grant all privileges on hash_partition_table to public;
+grant SELECT on hash_partition_table to public;
 
 -- SELECT DBMS_METADATA.get_sxml ('TABLE', 'T', USER) from dual;
 
@@ -131,7 +131,7 @@ create table COMP
         (TIMESTAMP' 2011-01-01 00:00:00')
 )
 ;
-grant all privileges on COMP to public;
+grant SELECT on COMP to public;
 
 -- SELECT DBMS_METADATA.get_sxml ('TABLE', 'COMP', USER) from dual;
 
@@ -151,7 +151,7 @@ CREATE TABLE sales_by_region_unknown_values
     PARTITION unknown VALUES (DEFAULT)
 )
 ;
-grant all privileges on sales_by_region_unknown_values to public;
+grant SELECT on sales_by_region_unknown_values to public;
 
 
 -- range list
@@ -250,7 +250,7 @@ CREATE TABLE quarterly_regional_sales (
           )
 )
 ;
-grant all privileges on quarterly_regional_sales to public;
+grant SELECT on quarterly_regional_sales to public;
 
 CREATE TABLE regions
 ( region_id      NUMBER
@@ -259,7 +259,7 @@ CREATE TABLE regions
       PRIMARY KEY (region_id)
     , region_name    VARCHAR2(25)
 );
-grant all privileges on regions to public;
+grant SELECT on regions to public;
 
 CREATE TABLE countries2
 ( country_id      CHAR(2)
@@ -274,34 +274,34 @@ CREATE TABLE countries2
 )
     ORGANIZATION INDEX
 ;
-grant all privileges on countries2 to public;
+grant SELECT on countries2 to public;
 
 
 CREATE TABLE "mixed_case_name"(
     name varchar2(100)
 );
-grant all privileges on "mixed_case_name" to public;
+grant SELECT on "mixed_case_name" to public;
 
 CREATE TABLE "Mixed_case_name"(
     name varchar2(100)
 );
-grant all privileges on "Mixed_case_name" to public;
+grant SELECT on "Mixed_case_name" to public;
 
 CREATE TABLE MIXED_CASE_NAME(
     name varchar2(100)
 );
-grant all privileges on MIXED_CASE_NAME to public;
+grant SELECT on MIXED_CASE_NAME to public;
 
 -- create an external table
 BEGIN
     DBMS_CLOUD.CREATE_EXTERNAL_TABLE(
             table_name      =>'SPARK_TEST_T1',
             credential_name =>'OS_EXT_OCI',
-            file_uri_list   =>'https://objectstorage.us-ashburn-1.oraclecloud.com/n/idlxex3qf8sf/b/SparkTest/o/t1.parquet',
+            file_uri_list   =>'<oci object store uri>',
             format          => json_object('type' value 'parquet', 'schema' value 'first'),
             column_list     => 'name VARCHAR2(4000),
                         age NUMBER(10)');
 END;
 /
-grant all privileges on SPARK_TEST_T1 to public;
+grant SELECT on SPARK_TEST_T1 to public;
 

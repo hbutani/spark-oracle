@@ -27,6 +27,7 @@ package org.apache.spark.sql.connector.catalog.oracle.sharding.routing
 import scala.language.implicitConversions
 
 import oracle.spark.datastructs.{Interval, IntervalTree, QResult, RedBlackIntervalTree}
+import oracle.spark.sharding.HashGenerator
 import oracle.sql.{Datum, NUMBER}
 
 import org.apache.spark.internal.Logging
@@ -34,7 +35,6 @@ import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.connector.catalog.oracle.OracleMetadata
 import org.apache.spark.sql.connector.catalog.oracle.sharding._
 import org.apache.spark.sql.oracle.expressions.OraLiterals
-import org.apache.spark.util.Utils
 
 trait RoutingKeyRanges { self: RoutingTable =>
 
@@ -309,14 +309,7 @@ object RoutingTable {
     rTab
   }
 
-  private lazy val oracleHashMethod = {
-    val cSymbol = Utils.classForName("oracle.jdbc.pool.KggHashGenerator")
-    val m = cSymbol.getMethod("hash", classOf[Array[Byte]])
-    m.setAccessible(true)
-    m
-  }
-
   def hash(var0: Array[Byte]) : Long = {
-    Integer.toUnsignedLong(oracleHashMethod.invoke(0, var0).asInstanceOf[Int]) % 4294967296L
+    Integer.toUnsignedLong(HashGenerator.hash(var0)) % 4294967296L
   }
 }
