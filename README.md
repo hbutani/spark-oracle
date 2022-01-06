@@ -8,7 +8,7 @@
   - Operating Spark clusters are expensive, because of lack of administration tooling
     and gaps in data management. **So price-performance advantages of Spark are overstated.**
 
-![current deployments](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/uploads/currentDeploymentDrawbacks.png)
+![current deployments](https://github.com/oracle/spark-oracle/wiki/uploads/currentDeploymentDrawbacks.png)
 
 This project fixes these issues:
 - A single Catalog = Oracle Data Dictionary
@@ -24,34 +24,34 @@ This project fixes these issues:
     - Co-processors are isolated and limited. So easy to manage
 - Enable simpler, smaller Spark clusters
 
-![spark on oracle](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/uploads/spark-on-oracle.png)
+![spark on oracle](https://github.com/oracle/spark-oracle/wiki/uploads/spark-on-oracle.png)
 
 **Feature summary:**
-- Catalog integration(see [this page](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Oracle-Catalog) for details)
-- Significant support for SQL pushdown(see [Operator](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Operator-Translation)
-  and [Expression](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Expression-Translation) translation pages)
-  to the extent that more than 95(of 99) [TPCDS queries](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/TPCDS-Queries)
+- Catalog integration(see [this page](https://github.com/oracle/spark-oracle/wiki/Oracle-Catalog) for details)
+- Significant support for SQL pushdown(see [Operator](https://github.com/oracle/spark-oracle/wiki/Operator-Translation)
+  and [Expression](https://github.com/oracle/spark-oracle/wiki/Expression-Translation) translation pages)
+  to the extent that more than 95(of 99) [TPCDS queries](https://github.com/oracle/spark-oracle/wiki/TPCDS-Queries)
   are completely pushed to Oracle instance.
 - Deployable as a spark extension jar for Spark 3 environments.
-- [Language integration beyond SQL](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Language-Integration)
-  and [DML](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/-/wikis/Write-Path-Flow) support.
+- [Language integration beyond SQL](https://github.com/oracle/spark-oracle/wiki/Language-Integration)
+  and [DML](https://github.com/oracle/spark-oracle/wiki/Write-Path-Flow) support.
 
-See [Project Wiki](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/home) for complete documenation.
+See [Project Wiki](https://github.com/oracle/spark-oracle/wiki/home) for complete documenation.
 
 
 ## Installation
 
 Spark_on_Oracle can be deployed on any Spark 3.1 or above environment.
-See the [Quick Start Guide](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Quick-Start-Guide)
+See the [Quick Start Guide](https://github.com/oracle/spark-oracle/wiki/Quick-Start-Guide)
 
 ## Documentation
 
-See the [wiki](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/home)
+See the [wiki](https://github.com/oracle/spark-oracle/wiki/home)
 
 
 ## Examples
 
-The [Demo script](https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle/wikis/Demo) walks you
+The [Demo script](https://github.com/oracle/spark-oracle/wiki/Demo) walks you
 through the features of the library.
 
 ## Help

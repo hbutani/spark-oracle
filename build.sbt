@@ -29,7 +29,7 @@ import sbt._
 ThisBuild / scalaVersion := Versions.scalaVersion
 ThisBuild / crossScalaVersions := Seq(Versions.scalaVersion)
 
-ThisBuild / homepage := Some(url("https://orahub.oci.oraclecorp.com/harish_butani/spark-oracle"))
+ThisBuild / homepage := Some(url("https://github.com/oracle/spark-oracle"))
 ThisBuild / licenses := List("Apache 2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
 ThisBuild / organization := "com.oracle.spark"
 ThisBuild / organizationName := "Oracle"
