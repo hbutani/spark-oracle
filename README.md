@@ -1,6 +1,6 @@
 # Spark_On_Oracle
 
-- Currently, data lakes comprising Oracle Data Warehouse and Apache Spark have these characteristics:
+- Currently, data lakes comprising Oracle Data Warehouse and [Apache Spark](https://spark.apache.org/) have these characteristics:
   - They have **separate data catalogs,** even if they access the same data in an object store.
   - Applications built entirely on Spark have to **compensate for gaps in data management.**
   - Applications that federate across Spark and Oracle usually suffer from
