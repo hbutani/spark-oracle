@@ -134,6 +134,7 @@ object ORAMetadataSQLs {
         |select "OWNER", "TABLE_NAME"
         |from "SYS"."ALL_TABLES"
         |where "OWNER" in (select "USERNAME" from "SYS"."ALL_USERS" where "ORACLE_MAINTAINED" = 'N')
+        |      and not ("TABLE_NAME" like 'ORA_ICE_%')
         |order by "OWNER", "TABLE_NAME"
         |""".stripMargin,
       "list non oracle maintained users",
