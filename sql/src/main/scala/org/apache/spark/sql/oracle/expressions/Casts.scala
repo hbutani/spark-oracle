@@ -50,16 +50,19 @@ object Casts extends OraSQLImplicits with Logging {
     }
 
     override def children: Seq[OraExpression] = Seq(childOE)
+
+    override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraExpression])
+    : OraExpression = copy(childOE = newChildren.head)
   }
 
   def unapply(e: Expression): Option[OraExpression] = {
     Option(e match {
-      case CheckOverflow(PromotePrecision(cE@Cast(OraExpression(oE), _, _)), _, nullOnOverflow) =>
+      case CheckOverflow(PromotePrecision(cE@Cast(OraExpression(oE), _, _, _)), _, nullOnOverflow)
+      => Casting(cE, oE, nullOnOverflow)
+      case CheckOverflow(cE@Cast(OraExpression(oE), _, _, _), _, nullOnOverflow) =>
         Casting(cE, oE, nullOnOverflow)
-      case CheckOverflow(cE@Cast(OraExpression(oE), _, _), _, nullOnOverflow) =>
-        Casting(cE, oE, nullOnOverflow)
-      case PromotePrecision(cE@Cast(OraExpression(oE), _, _)) => Casting(cE, oE, false)
-      case cE@Cast(OraExpression(oE), _, _) => Casting(cE, oE, false)
+      case PromotePrecision(cE@Cast(OraExpression(oE), _, _, _)) => Casting(cE, oE, false)
+      case cE@Cast(OraExpression(oE), _, _, _) => Casting(cE, oE, false)
       case _ => null
     }).flatMap {
       /*

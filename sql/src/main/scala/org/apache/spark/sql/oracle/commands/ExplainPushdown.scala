@@ -25,11 +25,12 @@
 package org.apache.spark.sql.oracle.commands
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.control.NonFatal
 
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession}
-import org.apache.spark.sql.catalyst.errors.TreeNodeException
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, Expression, PlanExpression}
 import org.apache.spark.sql.catalyst.plans.QueryPlan
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.StringUtils.PlanStringConcat
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.{BaseSubqueryExec, SparkPlan}
@@ -40,7 +41,6 @@ import org.apache.spark.sql.oracle.querysplit.{OraSplitStrategy, PlanInfo}
 import org.apache.spark.sql.oracle.sqlexec.SQLTemplate
 import org.apache.spark.sql.types.StringType
 import org.apache.spark.util.Utils
-
 
 case class ExplainPushdown(sparkPlan: SparkPlan) extends RunnableCommand {
 
@@ -119,7 +119,7 @@ case class ExplainPushdown(sparkPlan: SparkPlan) extends RunnableCommand {
       var i: Integer = 0
 
       plan foreach {
-        case dsv2@BatchScanExec(_, oraScan: OraScan) =>
+        case dsv2@BatchScanExec(_, oraScan: OraScan, _) =>
           explainOraScan(dsv2, oraScan, append)
         case _ => ()
       }
@@ -191,11 +191,13 @@ case class ExplainPushdown(sparkPlan: SparkPlan) extends RunnableCommand {
     val outputString =
       Utils.redact(sparkSession.sessionState.conf.stringRedactionPattern, concat.toString)
     Seq(Row(outputString))
-  } catch { case cause: TreeNodeException[_] =>
+  } catch { case NonFatal(cause) =>
     (
     Seq("Error occurred during executing explain pushdown: ") ++
       cause.getMessage.split("\n")
       ).map(Row(_))
   }
 
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[LogicalPlan])
+  : LogicalPlan = legacyWithNewChildren(newChildren)
 }

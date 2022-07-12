@@ -62,6 +62,16 @@ object Windows {
       }
     }
 
+    override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraExpression])
+    : OraExpression = {
+      copy(
+        partitionSpec = newChildren.slice(0, partitionSpec.length),
+        orderSpec =
+          newChildren.slice(partitionSpec.length, partitionSpec.length + orderSpec.length),
+        frameSpecification = newChildren.last.asInstanceOf[OraWindowFrame]
+      )
+    }
+
   }
 
   case class OraWindowExpression(catalystExpr : WindowExpression,
@@ -72,6 +82,9 @@ object Windows {
     override def orasql: SQLSnippet = {
       osql"${windowFunction} ${windowSpec}"
     }
+    override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraExpression])
+    : OraExpression = copy(windowFunction = newChildren.head,
+      windowSpec = newChildren.last.asInstanceOf[OraWindowSpec])
   }
 
   /**

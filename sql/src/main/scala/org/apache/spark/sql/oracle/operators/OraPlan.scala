@@ -89,6 +89,9 @@ abstract class OraPlan extends TreeNode[OraPlan] with SQLSnippetProvider {
 
   override def verboseString(maxFields: Int): String = simpleString(maxFields)
 
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraPlan])
+  : OraPlan = ???
+
 }
 
 object OraPlan {

@@ -200,7 +200,7 @@ private[parsing] class SparkOraExtensionsParser(val baseParser : ParserInterface
   private def createCommand(mId: Seq[String],
                            cmdString : String,
                            createCmd : OracleTable => LogicalPlan) : LogicalPlan = {
-    val tab = UnresolvedTable(mId, cmdString)
+    val tab = UnresolvedTable(mId, cmdString, None)
     val resolvedTab = sparkSession.sessionState.analyzer.execute(tab)
     if (resolvedTab.isInstanceOf[ResolvedTable]) {
       val resovTab = resolvedTab.asInstanceOf[ResolvedTable]

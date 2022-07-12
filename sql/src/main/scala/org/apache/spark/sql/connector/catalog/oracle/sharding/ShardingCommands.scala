@@ -28,11 +28,12 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.QualifiedTableName
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
+import org.apache.spark.sql.catalyst.plans.logical.{LeafCommand, LogicalPlan}
 import org.apache.spark.sql.connector.catalog.oracle.{OracleCatalog, OracleMetadata, OracleTable}
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.types.{IntegerType, StringType}
 
-trait ShardingCommands extends RunnableCommand with Logging {
+trait ShardingCommands extends RunnableCommand with LeafCommand with Logging {
 
   protected def oracleCatalog(sparkSession: SparkSession): OracleCatalog =
     sparkSession.sessionState.catalogManager.catalog("oracle").asInstanceOf[OracleCatalog]
@@ -47,6 +48,7 @@ trait ShardingCommands extends RunnableCommand with Logging {
   }
 
   protected def _run(sparkSession: SparkSession, shardingMetadata: ShardingMetadata): Seq[Row]
+
 }
 
 case object ListShardInstances extends ShardingCommands {
@@ -64,6 +66,7 @@ case object ListShardInstances extends ShardingCommands {
       Row(sI.name, sI.connectString)
     }
   }
+
 }
 
 case object ListTableFamilies extends ShardingCommands {

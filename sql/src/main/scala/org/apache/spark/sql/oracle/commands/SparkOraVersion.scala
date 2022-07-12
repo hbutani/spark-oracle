@@ -27,6 +27,7 @@ package org.apache.spark.sql.oracle.commands
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.oracle.BuildInfo
 import org.apache.spark.sql.types.StringType
@@ -45,4 +46,7 @@ case class SparkOraVersion(dummyArg: String = null) extends RunnableCommand with
       s"git_branch  : ${BuildInfo.spark_ora_branch}",
       s"build_date  : ${BuildInfo.spark_ora_build_date}").map(Row(_))
   }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[LogicalPlan])
+  : LogicalPlan = legacyWithNewChildren(newChildren)
 }

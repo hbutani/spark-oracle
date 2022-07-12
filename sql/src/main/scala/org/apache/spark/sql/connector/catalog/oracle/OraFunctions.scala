@@ -330,6 +330,11 @@ case class OraNativeRowFuncInvoke(fnDef : OracleMetadata.OraFuncDef,
   override def nullable: Boolean = true
 
   override def dataType: DataType = overloadFuncDef.retType.catalystType
+
+  override def name: String = fnDef.qualNm
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
+    copy(children = newChildren)
 }
 
 case class OraNativeAggFuncInvoke(fnDef : OracleMetadata.OraFuncDef,
@@ -346,6 +351,11 @@ extends UnevaluableAggregate with Logging
   override def nullable: Boolean = true
 
   override def dataType: DataType = overloadFuncDef.retType.catalystType
+
+  override def name: String = fnDef.qualNm
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression =
+    copy(children = newChildren)
 }
 
 /**
@@ -364,7 +374,8 @@ trait OraCatalogFunctionActions {self : OracleCatalog =>
     val fnName = sparkFuncName.getOrElse(funcName)
     val fnId = FunctionIdentifier(fnName, Some(name()))
 
-    fnRegistry.registerFunction(fnId, new OraNativeRowFuncInvokeBuilder(oraFuncDef))
+    fnRegistry.registerFunction(fnId, new OraNativeRowFuncInvokeBuilder(oraFuncDef),
+      OraFunctions.ORA_FUNCTION_SOURCE_NAME)
 
     oraFuncDef.toString
 
@@ -390,4 +401,8 @@ trait OraCatalogFunctionActions {self : OracleCatalog =>
     }
     sb.toString()
   }
+}
+
+object OraFunctions {
+  val ORA_FUNCTION_SOURCE_NAME = "scala_udf"
 }

@@ -37,14 +37,14 @@ import org.apache.spark.sql.oracle.rules.OraSQLPushdownRule
 object Subquery {
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
-      case sq@ScalarSubquery(plan, _, _) =>
+      case sq@ScalarSubquery(plan, _, _, _) =>
         val pushdownPlan = OraSQLPushdownRule(plan)
         pushdownPlan match {
           case DataSourceV2ScanRelation(_, oraScan: OraScan, _) =>
             OraSubQuery(sq, oraScan.oraPlan)
           case _ => null
         }
-      case lq@ListQuery(plan, _, _, _) =>
+      case lq@ListQuery(plan, _, _, _, _) =>
         val pushdownPlan = OraSQLPushdownRule(plan)
         pushdownPlan match {
           case DataSourceV2ScanRelation(_, oraScan: OraScan, _) =>
@@ -91,13 +91,16 @@ object Subquery {
     }
 
     override val children: Seq[OraExpression] = joiningExprs
+
+    override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraExpression])
+    : OraExpression = copy(joiningExprs = newChildren)
+
   }
 
   case class OraSubQuery(catalystExpr : SubqueryExpression,
-                         oraPlan : OraPlan) extends OraSubqueryExpression {
+                         oraPlan : OraPlan) extends OraSubqueryExpression with OraLeafExpression {
     override def orasql: SQLSnippet =
       osql" ( ${oraPlan} )"
-    override val children: Seq[OraExpression] = Seq.empty
   }
 
   /**
@@ -110,5 +113,7 @@ object Subquery {
                                   sq : OraSubQuery) extends OraExpression {
     override def orasql: SQLSnippet = osql"${op} ${sq.orasql}"
     override val children: Seq[OraExpression] = Seq(sq)
+    override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraExpression])
+    : OraExpression = copy(sq = newChildren.head.asInstanceOf[OraSubQuery])
   }
 }

@@ -26,6 +26,7 @@ package org.apache.spark.sql.oracle.commands
 
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.connector.catalog.oracle.OracleTable
 import org.apache.spark.sql.execution.command.RunnableCommand
 import org.apache.spark.sql.types.StringType
@@ -38,4 +39,7 @@ case class OraShowPartitions(oraTab : OracleTable) extends RunnableCommand {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     oraTab.showPartitions.map(Row(_))
   }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[LogicalPlan])
+  : LogicalPlan = legacyWithNewChildren(newChildren)
 }

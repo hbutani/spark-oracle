@@ -41,6 +41,9 @@ object DateTime {
       osql" extract(${literalSnippet(extractComponent)} from ${child}) "
 
     override def children: Seq[OraExpression] = Seq(child)
+
+    override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraExpression])
+    : OraExpression = copy(child = newChildren.head)
   }
 
   def unapply(e: Expression): Option[OraExpression] =

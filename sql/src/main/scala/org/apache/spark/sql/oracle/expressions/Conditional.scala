@@ -32,6 +32,17 @@ import org.apache.spark.sql.oracle.{OraSparkUtils, SQLSnippet}
  */
 object Conditional {
 
+  private def newCases(newChildren: IndexedSeq[OraExpression])
+  : (Seq[(OraExpression, OraExpression)], Option[OraExpression]) = {
+    val hasElse = newChildren.size % 2 == 1
+    val newBranches =
+      (0 until newChildren.size / 2).map(i => (newChildren(i * 2), newChildren(i * 2 + 1)))
+
+    (newBranches,
+      if (hasElse) Some(newChildren.last) else None
+    )
+  }
+
   case class OraSimpleCase(
       catalystExpr: If,
       cases: Seq[(OraExpression, OraExpression)],
@@ -44,6 +55,12 @@ object Conditional {
 
     override def children: Seq[OraExpression] =
       cases.flatMap(t => Seq(t._1, t._2)) ++ elseCase.toSeq
+
+    override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraExpression])
+    : OraExpression = {
+      val (newBranches, newElseCase) = newCases(newChildren)
+      copy(cases = newBranches, elseCase = newElseCase)
+    }
   }
 
   case class OraSearchedCase(
@@ -58,6 +75,12 @@ object Conditional {
 
     override def children: Seq[OraExpression] =
       branches.flatMap(t => Seq(t._1, t._2)) ++ elseCase.toSeq
+
+    override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraExpression])
+    : OraExpression = {
+      val (newBranches, newElseCase) = newCases(newChildren)
+      copy(branches = newBranches, elseCase = newElseCase)
+    }
   }
 
   private object CaseBranch {

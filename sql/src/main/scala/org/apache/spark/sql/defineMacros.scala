@@ -28,6 +28,7 @@ import scala.language.experimental.macros
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
 
+import org.apache.spark.sql.connector.catalog.oracle.OraFunctions
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.sqlmacros.{SQLMacro, _}
 
@@ -49,7 +50,10 @@ object defineMacros {
         case Left(fn) =>
           sparkSession.udf.register(nm, udf(fn))
         case Right(sqlMacroBldr) =>
-          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(
+            nm, sqlMacroBldr,
+            OraFunctions.ORA_FUNCTION_SOURCE_NAME
+          )
       }
     }
 
@@ -63,7 +67,10 @@ object defineMacros {
         case Left(fn) =>
           sparkSession.udf.register(nm, udf(fn))
         case Right(sqlMacroBldr) =>
-          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(
+            nm, sqlMacroBldr,
+            OraFunctions.ORA_FUNCTION_SOURCE_NAME
+          )
       }
     }
 
@@ -79,7 +86,10 @@ object defineMacros {
         case Left(fn) =>
           sparkSession.udf.register(nm, udf(fn))
         case Right(sqlMacroBldr) =>
-          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(
+            nm, sqlMacroBldr,
+            OraFunctions.ORA_FUNCTION_SOURCE_NAME
+          )
       }
     }
 
@@ -94,7 +104,9 @@ object defineMacros {
         case Left(fn) =>
           sparkSession.udf.register(nm, udf(fn))
         case Right(sqlMacroBldr) =>
-          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(
+            nm, sqlMacroBldr,
+            OraFunctions.ORA_FUNCTION_SOURCE_NAME)
       }
     }
 
@@ -109,7 +121,9 @@ object defineMacros {
         case Left(fn) =>
           sparkSession.udf.register(nm, udf(fn))
         case Right(sqlMacroBldr) =>
-          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(
+            nm, sqlMacroBldr,
+            OraFunctions.ORA_FUNCTION_SOURCE_NAME)
       }
     }
 
@@ -124,7 +138,10 @@ object defineMacros {
         case Left(fn) =>
           sparkSession.udf.register(nm, udf(fn))
         case Right(sqlMacroBldr) =>
-          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(
+            nm, sqlMacroBldr,
+            OraFunctions.ORA_FUNCTION_SOURCE_NAME
+          )
       }
     }
 
@@ -139,7 +156,10 @@ object defineMacros {
         case Left(fn) =>
           sparkSession.udf.register(nm, udf(fn))
         case Right(sqlMacroBldr) =>
-          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(
+            nm, sqlMacroBldr,
+            OraFunctions.ORA_FUNCTION_SOURCE_NAME
+          )
       }
     }
 
@@ -154,7 +174,10 @@ object defineMacros {
         case Left(fn) =>
           sparkSession.udf.register(nm, udf(fn))
         case Right(sqlMacroBldr) =>
-          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(
+            nm, sqlMacroBldr,
+            OraFunctions.ORA_FUNCTION_SOURCE_NAME
+          )
       }
     }
 
@@ -169,7 +192,10 @@ object defineMacros {
         case Left(fn) =>
           sparkSession.udf.register(nm, udf(fn))
         case Right(sqlMacroBldr) =>
-          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(
+            nm, sqlMacroBldr,
+            OraFunctions.ORA_FUNCTION_SOURCE_NAME
+          )
       }
     }
 
@@ -184,7 +210,10 @@ object defineMacros {
         case Left(fn) =>
           sparkSession.udf.register(nm, udf(fn))
         case Right(sqlMacroBldr) =>
-          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(nm, sqlMacroBldr)
+          sparkSession.sessionState.functionRegistry.createOrReplaceTempFunction(
+            nm, sqlMacroBldr,
+            OraFunctions.ORA_FUNCTION_SOURCE_NAME
+          )
       }
     }
   }

@@ -87,6 +87,9 @@ object Named {
     lazy val children: Seq[OraExpression] = Seq(child)
 
     def outNmInOraSQL : String = getOraFixedAlias.getOrElse(catalystExpr.name)
+
+    override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraExpression])
+    : OraExpression = copy(child = newChildren.head)
   }
 
   case class OraColumnRef(catalystExpr: AttributeReference)
