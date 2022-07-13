@@ -25,10 +25,10 @@
 package org.apache.spark.sql.oracle.writepath
 
 import org.apache.spark.sql.{DataFrame, Dataset}
-import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.{QueryPlanningTracker, TableIdentifier}
 import org.apache.spark.sql.connector.catalog.Table
 import org.apache.spark.sql.connector.catalog.oracle.OraMetadataMgrInternalTest
-import org.apache.spark.sql.execution.{QueryExecution, SparkPlan}
+import org.apache.spark.sql.execution.{CommandExecutionMode, QueryExecution, SparkPlan}
 import org.apache.spark.sql.execution.datasources.v2.{AppendDataExec, DeleteFromTableExec, OverwriteByExpressionExec, OverwritePartitionsDynamicExec, V2CommandExec, V2TableWriteExec}
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
 import org.apache.spark.sql.oracle.readpath.AbstractReadTests
@@ -55,19 +55,21 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
    * @param sql
    * @return
    */
-  def getAroundTestBugQE(sql: String): QueryExecution = {
+  def getAroundTestBugQE(sql: String,
+                         mode: CommandExecutionMode.Value): QueryExecution = {
     val plan = TestOracleHive.sparkSession.sessionState.sqlParser.parsePlan(sql)
-    new QueryExecution(TestOracleHive.sparkSession, plan)
+    new QueryExecution(TestOracleHive.sparkSession, plan, new QueryPlanningTracker, mode)
   }
 
   def getAroundTestBugDF(sql: String): DataFrame = {
-    val qE = getAroundTestBugQE(sql)
+    val qE = getAroundTestBugQE(sql, CommandExecutionMode.ALL)
     Dataset.ofRows(TestOracleHive.sparkSession, qE.analyzed)
   }
 
-  def scenarioQE(scenario : WriteScenario) : Seq[QueryExecution] = scenario match {
-    case cs : CompositeInsertScenario => cs.steps.map(scenarioQE).flatten
-    case _ => Seq(getAroundTestBugQE(scenario.sql))
+  def scenarioQE(scenario : WriteScenario,
+                 mode: CommandExecutionMode.Value) : Seq[QueryExecution] = scenario match {
+    case cs : CompositeInsertScenario => cs.steps.map(s => scenarioQE(s, mode)).flatten
+    case _ => Seq(getAroundTestBugQE(scenario.sql, mode))
   }
 
   def scenarioDF(scenario : WriteScenario) : Seq[DataFrame] = scenario match {
@@ -80,11 +82,16 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
 
     import scala.collection.JavaConverters._
 
+    /*
+     * AppendDataExec: no table, writeOptions
+     * OverwriteByExpressionExec: no table, deleteWhere, writeOptions
+     * OverwritePartitionsDynamicExec: no table, writeOptions
+     */
+
     def appendDetails(op: AppendDataExec): String = {
       s"""
          |Append Operation:
-         |  Destination table = ${op.table.name()}
-         |  WriteOptions = ${op.writeOptions.asScala.mkString(",")}
+         |  Destination table = ${op}
          |Input query plan:
          |${op.query.treeString}
          |""".stripMargin
@@ -93,9 +100,7 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
     def overWrtByExprDetails(op: OverwriteByExpressionExec): String = {
       s"""
          |OverwriteByExpression Operation:
-         |  Destination table = ${op.table.name()}
-         |  Delete Filters = ${op.deleteWhere.mkString(", ")}
-         |  WriteOptions = ${op.writeOptions.asScala.mkString(",")}
+         |  Destination table = ${op}
          |Input query plan:
          |${op.query.treeString}
          |""".stripMargin
@@ -104,8 +109,7 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
     def overWrtPartDynDetails(op: OverwritePartitionsDynamicExec): String = {
       s"""
          |OverwritePartitionsDynamic Operation:
-         |  Destination table = ${op.table.name()}
-         |  WriteOptions = ${op.writeOptions.asScala.mkString(",")}
+         |  Destination table = ${op}
          |Input query plan:
          |${op.query.treeString}
          |""".stripMargin
@@ -150,7 +154,7 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
         )
       }
 
-      val r = for (qe <- scenarioQE(scenario)) yield {
+      val r = for (qe <- scenarioQE(scenario, CommandExecutionMode.SKIP)) yield {
 
         (s"""Scenario: ${scenario}
            |Write Operation details: ${writeOpInfo(qe.sparkPlan)}
@@ -191,7 +195,7 @@ abstract class AbstractWriteTests extends AbstractReadTests with OraMetadataMgrI
           )
         }
 
-        val (qEs, steps) = (scenarioQE(scenario), scenario.steps)
+        val (qEs, steps) = (scenarioQE(scenario, CommandExecutionMode.SKIP), scenario.steps)
 
         for((qe, step) <- qEs.zip(steps)) {
           println(
