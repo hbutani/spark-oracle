@@ -24,8 +24,9 @@
 
 package org.apache.spark.sql.oracle.expressions
 
-import org.apache.spark.sql.catalyst.expressions.Expression
-import org.apache.spark.sql.connector.catalog.oracle.{OracleMetadata, OraNativeAggFuncInvoke, OraNativeRowFuncInvoke}
+import org.apache.spark.sql.catalyst.expressions.{ApplyFunctionExpression, Expression}
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Complete, V2Aggregator}
+import org.apache.spark.sql.connector.catalog.oracle._
 
 object OraNativeFunctions {
 
@@ -54,6 +55,12 @@ object OraNativeFunctions {
         oraFnInvokeExpr(fnDef, cE, oEs)
       case cE@OraNativeAggFuncInvoke(fnDef, _, OraExpressions(oEs @ _*)) =>
         oraFnInvokeExpr(fnDef, cE, oEs)
+      case cE@ApplyFunctionExpression(oraFunc : OraScalarFunction, OraExpressions(oEs @ _*)) =>
+        oraFnInvokeExpr(oraFunc.fnDef, cE, oEs)
+      case cE@AggregateExpression(
+      V2Aggregator(aggFunc : OraAggregateFunction, OraExpressions(oEs @ _*), _, _),
+      Complete, _, _, _) =>
+        oraFnInvokeExpr(aggFunc.fnDef, cE, oEs)
       case _ => null
     })
 

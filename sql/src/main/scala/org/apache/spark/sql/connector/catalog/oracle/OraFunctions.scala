@@ -24,20 +24,24 @@
 
 package org.apache.spark.sql.connector.catalog.oracle
 
+import java.io.{Serializable => JSerializable}
 import java.util.Locale
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, Map => MMap}
 import scala.util.control.Breaks._
 
 import oracle.spark.ORASQLUtils.performDSQuery
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{AnalysisException, SparkSession}
-import org.apache.spark.sql.catalyst.FunctionIdentifier
+import org.apache.spark.sql.catalyst.{FunctionIdentifier, InternalRow}
+import org.apache.spark.sql.catalyst.analysis.{NoSuchFunctionException, NoSuchNamespaceException}
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Unevaluable, UnevaluableAggregate, UserDefinedExpression}
+import org.apache.spark.sql.connector.catalog.Identifier
+import org.apache.spark.sql.connector.catalog.functions.{AggregateFunction, BoundFunction, ScalarFunction, UnboundFunction}
 import org.apache.spark.sql.oracle.SQLSnippet
 import org.apache.spark.sql.oracle.expressions.{JDBCGetSet, OraLiterals}
-import org.apache.spark.sql.types.{DataType, IntegerType, StringType}
+import org.apache.spark.sql.types.{DataType, IntegerType, StringType, StructType}
 
 trait OraFunctionDefs { self : OracleMetadata.type =>
 
@@ -266,12 +270,20 @@ trait OraFunctionDefLoader { self : OracleMetadataManager =>
  *
  * @param fnDef
  */
-class OraNativeRowFuncInvokeBuilder(val fnDef : OracleMetadata.OraFuncDef)
-  extends Function1[Seq[Expression], Expression] {
+class OraNativeRowFuncInvokeBuilder(val name : String, val fnDef : OracleMetadata.OraFuncDef)
+  extends Function1[Seq[Expression], Expression] with UnboundFunction {
 
   private def isMatch(args: Seq[Expression],
                       fnDef : OracleMetadata.OraFunctionSignature
                      ) : Boolean = {
+    (args.size <= fnDef.args.size) &&
+      args.zip(fnDef.args).forall(t => Cast.canCast(t._1.dataType, t._2.dataType.catalystType))
+  }
+
+  private def isMatch(inputType: StructType,
+                      fnDef : OracleMetadata.OraFunctionSignature
+                     ) : Boolean = {
+    val args = inputType.fields
     (args.size <= fnDef.args.size) &&
       args.zip(fnDef.args).forall(t => Cast.canCast(t._1.dataType, t._2.dataType.catalystType))
   }
@@ -288,7 +300,7 @@ class OraNativeRowFuncInvokeBuilder(val fnDef : OracleMetadata.OraFuncDef)
     }
   }
 
-  private def oraNativeFunc(fnDef : OracleMetadata.OraFuncDef,
+  private def oraNativeFuncInvoke(fnDef : OracleMetadata.OraFuncDef,
                             sigIdx : Int,
                             children : Seq[Expression]) : Expression = {
     if (fnDef.isAggregate) {
@@ -298,17 +310,68 @@ class OraNativeRowFuncInvokeBuilder(val fnDef : OracleMetadata.OraFuncDef)
     }
   }
 
+  private def oraNativeFunc(fnDef : OracleMetadata.OraFuncDef,
+                            sigIdx : Int,
+                            inputType: StructType) : BoundFunction = {
+    if (fnDef.isAggregate) {
+      OraAggregateFunction(name, fnDef, sigIdx, inputType)
+    } else {
+      OraScalarFunction(name, fnDef, sigIdx, inputType)
+    }
+  }
+
   override def apply(args: Seq[Expression]): Expression = {
     val sig = (0 until fnDef.sigs.size).find(i => isMatch(args, fnDef.sigs(i)))
 
     sig.
-      map(i => oraNativeFunc(fnDef, i, fnArgs(args, i))).
+      map(i => oraNativeFuncInvoke(fnDef, i, fnArgs(args, i))).
       getOrElse(
         throw new AnalysisException(
           s"""Failed to resolve invocation on oracle function ${fnDef.name} on:
              |  ${args.mkString(",")}""".stripMargin)
       )
   }
+
+  override def bind(inputType: StructType): BoundFunction = {
+    val sig = (0 until fnDef.sigs.size).find(i => isMatch(inputType, fnDef.sigs(i)))
+
+    sig.
+      map(i => oraNativeFunc(fnDef, i, inputType)).
+      getOrElse(
+        throw new AnalysisException(
+          s"""Failed to resolve invocation on oracle function ${fnDef.name} on:
+             |  ${inputType}""".stripMargin)
+      )
+  }
+
+  override def description(): String = fnDef.toString
+}
+
+case class OraScalarFunction(name : String,
+                              fnDef : OracleMetadata.OraFuncDef,
+                             sigIdx : Int,
+                             inputType: StructType) extends ScalarFunction[Any] {
+  val inputTypes: Array[DataType] = inputType.fields.map(_.dataType)
+  val resultType: DataType = fnDef.sigs(sigIdx).retType.catalystType
+}
+
+case class OraAggregateFunction(name : String,
+                              fnDef : OracleMetadata.OraFuncDef,
+                              sigIdx : Int,
+                              inputType: StructType
+                               ) extends AggregateFunction[JSerializable, Any] {
+  val inputTypes: Array[DataType] = inputType.fields.map(_.dataType)
+  val resultType: DataType = fnDef.sigs(sigIdx).retType.catalystType
+
+  override def newAggregationState(): JSerializable = ???
+
+  override def update(state: JSerializable, input: InternalRow): JSerializable = ???
+
+  override def merge(leftState: JSerializable, rightState: JSerializable): JSerializable = ???
+
+  override def produceResult(state: JSerializable): Any = ???
+
+
 }
 
 /**
@@ -360,8 +423,36 @@ extends UnevaluableAggregate with Logging
 
 /**
  * function actions supported on an [[OracleCatalog]]
+ *
+ * For Spark 3.2 also functions of [[org.apache.spark.sql.connector.catalog.FunctionCatalog]]
+ *  - Functions are registered locally in the [[OracleCatalog]] instance.
+ *  - [[OraNativeRowFuncInvokeBuilder]] is now an [[UnboundFunction]]
+ *  - the bind call returns either [[OraScalarFunction]] or [[OraAggregateFunction]]
+ *  - [[OraScalarFunction]], [[OraAggregateFunction]] are placeholder markers that get
+ *     transformed into an [[org.apache.spark.sql.oracle.expressions.OraExpression]] by
+ *     [[OraNativeFunctions]] pattern match.
+ *
  */
 trait OraCatalogFunctionActions {self : OracleCatalog =>
+
+  private val functions : MMap[Identifier, OraNativeRowFuncInvokeBuilder] = MMap.empty
+
+  @throws[NoSuchNamespaceException]
+  def listFunctions(namespace: Array[String]): Array[Identifier] = {
+    if (namespace.isEmpty) {
+      functions.keySet.toArray
+    } else {
+      Array.empty
+    }
+  }
+
+  @throws[NoSuchFunctionException]
+  def loadFunction (ident: Identifier) : UnboundFunction =
+    functions.getOrElse(ident,
+      functions.getOrElse(Identifier.of(ident.namespace(), ident.name().toUpperCase()),
+        throw new NoSuchFunctionException(ident.toString, None)
+      )
+    )
 
   def registerOracleFunction(packageName : Option[String],
                              funcName : String,
@@ -370,12 +461,23 @@ trait OraCatalogFunctionActions {self : OracleCatalog =>
                             ) : String = {
 
     val oraFuncDef = getMetadataManager.loadFunctionDef(packageName, funcName)
-    val fnRegistry = sparkSession.sessionState.functionRegistry
     val fnName = sparkFuncName.getOrElse(funcName)
-    val fnId = FunctionIdentifier(fnName, Some(name()))
 
-    fnRegistry.registerFunction(fnId, new OraNativeRowFuncInvokeBuilder(oraFuncDef),
-      OraFunctions.ORA_FUNCTION_SOURCE_NAME)
+    if (true) { // Spark3.2
+      val fnId2 = Identifier.of(Array.empty, fnName)
+      val oraFuncBldr = new OraNativeRowFuncInvokeBuilder(fnName, oraFuncDef)
+      functions(fnId2) = oraFuncBldr
+      val fnIdUpperCase = Identifier.of(Array.empty, fnName.toUpperCase())
+
+      if (!functions.contains(fnIdUpperCase)) {
+        functions(fnIdUpperCase) = oraFuncBldr
+      }
+    } else { // old style for Spark 3.1.2
+      val fnRegistry = sparkSession.sessionState.functionRegistry
+      val fnId = FunctionIdentifier(fnName, Some(name()))
+      fnRegistry.registerFunction(fnId, new OraNativeRowFuncInvokeBuilder(fnName, oraFuncDef),
+        OraFunctions.ORA_FUNCTION_SOURCE_NAME)
+    }
 
     oraFuncDef.toString
 

@@ -56,6 +56,7 @@ class OracleCatalog
   extends CatalogPlugin
     with CatalogExtension
     with StagingTableCatalog
+    with FunctionCatalog
     with OraExternalTableDDLSupport
     with OraCatalogFunctionActions
     with OraCatalogTypesActions {
