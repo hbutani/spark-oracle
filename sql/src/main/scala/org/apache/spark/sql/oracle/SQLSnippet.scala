@@ -231,6 +231,12 @@ object SQLSnippet {
     val fnSnip = literalSnippet(fn)
     osql"$fnSnip(${join(args, comma, true)})"
   }
+
+  def condCall(fn: String, cond : SQLSnippet, arg: SQLSnippet): SQLSnippet = {
+    val fnSnip = literalSnippet(fn)
+    osql"$fnSnip(case when $cond then $arg end)"
+  }
+
   def operator(op: String, args: SQLSnippet*): SQLSnippet = {
     val opSnip = literalSnippet(op)
     osql"(${join(args, opSnip, true)})"

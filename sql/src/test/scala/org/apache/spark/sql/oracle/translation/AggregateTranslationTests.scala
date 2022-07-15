@@ -26,68 +26,73 @@ package org.apache.spark.sql.oracle.translation
 // scalastyle:off line.size.limit println
 class AggregateTranslationTests extends AbstractTranslationTest {
 
-    testPushdown("distinct",
-      """select c_int as ci, c_long as cl,
-        |       sum(distinct c_decimal_scale_8) + count(distinct c_decimal_scale_5)
-        |from sparktest.unit_test
-        |group by  c_int + c_long, c_int, c_long
-        |having sum(distinct c_decimal_scale_8) + count(distinct c_decimal_scale_5) is null and c_int is null
+  private val distinct = """select c_int as ci, c_long as cl,
+                           |       sum(distinct c_decimal_scale_8) + count(distinct c_decimal_scale_5)
+                           |from sparktest.unit_test
+                           |group by  c_int + c_long, c_int, c_long
+                           |having sum(distinct c_decimal_scale_8) + count(distinct c_decimal_scale_5) is null and c_int is null
       """.stripMargin
-    )
 
-  testPushdown("rollup1",
-    """
-      |select i_category
-      |                  ,d_year
-      |                  ,d_qoy
-      |                  ,d_moy
-      |                  ,s_store_id
-      |                  ,sum(ss_sales_price*ss_quantity) sumsales
-      |            from store_sales
-      |                ,date_dim
-      |                ,store
-      |                ,item
-      |       where  ss_sold_date_sk=d_date_sk
-      |          and ss_item_sk=i_item_sk
-      |          and ss_store_sk = s_store_sk
-      |          and d_month_seq between 1200 and 1200+11
-      |       group by  rollup(i_category, d_year, d_qoy, d_moy,s_store_id)
-      |""".stripMargin)
+  private val rollup1 = """
+                          |select i_category
+                          |                  ,d_year
+                          |                  ,d_qoy
+                          |                  ,d_moy
+                          |                  ,s_store_id
+                          |                  ,sum(ss_sales_price*ss_quantity) sumsales
+                          |            from store_sales
+                          |                ,date_dim
+                          |                ,store
+                          |                ,item
+                          |       where  ss_sold_date_sk=d_date_sk
+                          |          and ss_item_sk=i_item_sk
+                          |          and ss_store_sk = s_store_sk
+                          |          and d_month_seq between 1200 and 1200+11
+                          |       group by  rollup(i_category, d_year, d_qoy, d_moy,s_store_id)
+                          |""".stripMargin
 
-  testPushdown("rollup2",
-    """select c_int as ci, c_long as cl,
-      |       sum(c_decimal_scale_8) + count(c_decimal_scale_5)
-      |from sparktest.unit_test
-      |group by  rollup(c_int + c_long, c_int, c_long)
+  private val rollup2 = """select c_int as ci, c_long as cl,
+                          |       sum(c_decimal_scale_8) + count(c_decimal_scale_5)
+                          |from sparktest.unit_test
+                          |group by  rollup(c_int + c_long, c_int, c_long)
       """.stripMargin
-  )
 
-  testPushdown("cube1",
-    """select c_int as ci, c_long as cl,
-      |       sum(c_decimal_scale_8) + count(c_decimal_scale_5)
-      |from sparktest.unit_test
-      |group by  cube(c_int + c_long, c_int, c_long)
-      |having (ci = 578749213 or cl = 10769230982617020) and
-      |       ( sum(c_decimal_scale_8) + count(c_decimal_scale_5) is not null)
+  private val cube1 = """select c_int as ci, c_long as cl,
+                        |       sum(c_decimal_scale_8) + count(c_decimal_scale_5)
+                        |from sparktest.unit_test
+                        |group by  cube(c_int + c_long, c_int, c_long)
+                        |having (ci = 578749213 or cl = 10769230982617020) and
+                        |       ( sum(c_decimal_scale_8) + count(c_decimal_scale_5) is not null)
       """.stripMargin
-  )
 
+  private val cube2 = """
+                        |select i_category
+                        |                  ,d_year + d_qoy
+                        |                  ,s_store_id
+                        |                  ,sum(ss_sales_price*ss_quantity) sumsales
+                        |            from store_sales
+                        |                ,date_dim
+                        |                ,store
+                        |                ,item
+                        |       where  ss_sold_date_sk=d_date_sk
+                        |          and ss_item_sk=i_item_sk
+                        |          and ss_store_sk = s_store_sk
+                        |          and d_month_seq between 1200 and 1200+11
+                        |       group by  cube(i_category, d_year + d_qoy, s_store_id)""".stripMargin
 
-  testPushdown("cube2",
-    """
-      |select i_category
-      |                  ,d_year + d_qoy
-      |                  ,s_store_id
-      |                  ,sum(ss_sales_price*ss_quantity) sumsales
-      |            from store_sales
-      |                ,date_dim
-      |                ,store
-      |                ,item
-      |       where  ss_sold_date_sk=d_date_sk
-      |          and ss_item_sk=i_item_sk
-      |          and ss_store_sk = s_store_sk
-      |          and d_month_seq between 1200 and 1200+11
-      |       group by  cube(i_category, d_year + d_qoy, s_store_id)""".stripMargin
+  val test_queries = Seq(distinct, rollup1, rollup2, cube1, cube2)
+
+  ignore("aggregation_debug") {td =>
+    for (q <- test_queries) {
+      debugPushdown(td.name, q)
+    }
+  }
+
+  testPushdown("distinct", distinct)
+  testPushdown("rollup1", rollup1)
+  testPushdown("rollup2", rollup2)
+  testPushdown("cube1", cube1)
+  testPushdown("cube2", cube2
   )
 
 }

@@ -27,7 +27,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.connector.read.oracle.OraScan
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2ScanRelation
 import org.apache.spark.sql.hive.test.oracle.TestOracleHive
-import org.apache.spark.sql.oracle.{AbstractTest, PlanTestHelpers}
+import org.apache.spark.sql.oracle.{AbstractTest, OraSparkConfig, PlanTestHelpers}
 import org.apache.spark.sql.oracle.operators.OraQueryBlock
 
 abstract class AbstractTranslationTest extends AbstractTest with PlanTestHelpers {
@@ -48,6 +48,40 @@ abstract class AbstractTranslationTest extends AbstractTest with PlanTestHelpers
         assert(scans(0).oraPlan.orasql.sql == oraSQL)
       }
       doSQL(nm, Right(df), showPlan, showResults, 1000)
+    }
+  }
+
+  /**
+   * Use utility to debug pushdown issues.
+   *  - shows non-pushdown plan
+   *  - pushdown plan should only have 1 OraScan; shows pushdown sql
+   *  - checks that non-pushdown and pushdown results are the same
+   *
+   * @param testName
+   * @param sqlStr
+   */
+  def debugPushdown(testName : String,
+                    sqlStr : String) : Unit = {
+    OraSparkConfig.setConf(OraSparkConfig.ENABLE_ORA_PUSHDOWN, false)
+    val df1 = TestOracleHive.sql(sqlStr)
+
+    // scalastyle:off println
+    System.out.println(
+      s"""Non pushdown plan:
+         |${df1.queryExecution.optimizedPlan}""".stripMargin)
+    // scalastyle:on println
+
+    OraSparkConfig.setConf(OraSparkConfig.ENABLE_ORA_PUSHDOWN, true)
+    val df2 = TestOracleHive.sql(sqlStr)
+    val scans = collectScans(df2.queryExecution.optimizedPlan)
+    assert(scans.size == 1)
+    scans(0).showOraSQL(testName)
+
+    isTwoDataFrameEqual(df1, df2, 0.0, false, true, System.out)
+
+    if (false) {
+      doSQL(testName, Right(df1), true, true, 1000)
+      doSQL(testName, Right(df2), true, true, 1000)
     }
   }
 }

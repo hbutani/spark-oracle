@@ -60,6 +60,20 @@ object Aggregates {
     : OraExpression = copy(children = newChildren)
   }
 
+  case class OraCondAgg(aggOE : OraUnaryFnExpression,
+                        condOE : OraExpression,
+                         catalystExpr: Expression)
+    extends OraExpression {
+    val children: Seq[OraExpression] = Seq(aggOE, condOE)
+    private def args = children.map(_.orasql)
+    override def orasql: SQLSnippet =
+      SQLSnippet.condCall(aggOE.fn, condOE.orasql, aggOE.child.orasql)
+
+    override protected def withNewChildrenInternal(newChildren: IndexedSeq[OraExpression])
+    : OraExpression = copy(aggOE = newChildren.head.asInstanceOf[OraUnaryFnExpression],
+      condOE = newChildren.last)
+  }
+
   def unapply(e: Expression): Option[OraExpression] =
     Option(e match {
       case cE @ NthValue(OraExpression(inOE), OraExpression(offsetOE), ignoreN) =>
@@ -72,6 +86,8 @@ object Aggregates {
       case cE @ RowNumber() => OraNoArgFnExpression(ROW_NUMBER, cE)
       case cE @ Average(OraExpression(oE), _) => OraUnaryFnExpression(AVG, cE, oE)
       case cE @ Sum(OraExpression(oE), _) => OraUnaryFnExpression(SUM, cE, oE)
+      case cE @ Count(OraExpressions(oEs @ _*)) if (oEs.size == 1) =>
+        OraUnaryFnExpression(COUNT, cE, oEs.head)
       case cE @ Count(OraExpressions(oEs @ _*)) => OraFnExpression(COUNT, cE, oEs)
       case cE @ Min(OraExpression(oE)) => OraUnaryFnExpression(MIN, cE, oE)
       case cE @ Max(OraExpression(oE)) => OraUnaryFnExpression(MAX, cE, oE)
@@ -91,6 +107,10 @@ object Aggregates {
       case cE @ Corr(OraExpression(lE), OraExpression(rE), _) =>
         OraBinaryFnExpression(CORR, cE, lE, rE)
       case AggregateExpression(OraExpression(oE), Complete, false, None, _) => oE
+      case cE@AggregateExpression(
+      OraExpression(oE), Complete, false, Some(OraExpression(condOE)), _)
+        if (oE.isInstanceOf[OraUnaryFnExpression]) =>
+        OraCondAgg(oE.asInstanceOf[OraUnaryFnExpression], condOE, cE)
       case AggregateExpression(OraExpression(oE), Complete, true, None, _) => oE match {
         case OraFnExpression(COUNT, cE, oEs) => OraAggDistinct(COUNT, cE, oEs)
         case OraFnExpression(SUM, cE, oEs) => OraAggDistinct(SUM, cE, oEs)
