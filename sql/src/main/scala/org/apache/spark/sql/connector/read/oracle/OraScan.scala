@@ -50,8 +50,7 @@ trait OraScan {
   self: Scan
     with Batch
     with SupportsReportStatistics
-    with SupportsMetadata
-    with SupportsReportPartitioning =>
+    with SupportsMetadata =>
   // scalastyle:on
 
   def sparkSession: SparkSession
@@ -87,7 +86,7 @@ trait OraScan {
     }).toArray
   }
 
-  override def outputPartitioning(): Partitioning = splitStrategy.partitioning
+  // override def outputPartitioning(): Partitioning = splitStrategy.partitioning
 
   override def createReaderFactory(): PartitionReaderFactory = {
     OraPartitionReaderFactory(
@@ -127,7 +126,6 @@ case class OraFileScan(
                         partitionFilters: Seq[Expression],
                         dataFilters: Seq[Expression])
     extends FileScan
-    with SupportsReportPartitioning
     with OraScan {
 
   lazy val fileIndex: PartitioningAwareFileIndex = {
@@ -199,7 +197,6 @@ case class OraPushdownScan(sparkSession: SparkSession, dsKey: DataSourceKey, ora
     with Batch
     with SupportsReportStatistics
     with SupportsMetadata
-    with SupportsReportPartitioning
     with OraScan {
 
   lazy val readSchema = StructType.fromAttributes(oraPlan.catalystAttributes)
